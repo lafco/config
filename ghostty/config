@@ -1,0 +1,53 @@
+# https://ghostty.org/docs/config
+
+# Theme
+theme = Catppuccin Mocha
+
+# Font
+font-family = "Jetbrains Mono"
+font-style = Regular
+font-size = 11
+
+# Window
+window-padding-x = 20,20
+window-padding-y = 20,20
+window-decoration = none
+window-colorspace = "display-p3"
+window-height = 35
+window-width = 130
+window-position-x = 1
+window-position-y = 1
+quit-after-last-window-closed=true
+background-opacity = 99
+background-blur-radius = 100
+confirm-close-surface=false
+resize-overlay = never
+
+# Cursor styling
+cursor-style = "block"
+cursor-style-blink = false
+shell-integration-features = no-cursor,sudo,no-title
+mouse-hide-while-typing = true
+auto-update = off
+
+confirm-close-surface = false
+shell-integration = fish
+
+# Keyboard bindings
+# keybind = ctrl+t=toggle_maximize
+# keybind = ctrl+u=clear_screen
+# keybind = ctrl+q=close_surface
+# 
+# keybind = ctrl+h=goto_split:left
+# keybind = ctrl+shift+h=new_split:left
+# keybind = ctrl+k=goto_split:up
+# keybind = ctrl+shift+k=new_split:up
+# keybind = ctrl+j=goto_split:down
+# keybind = ctrl+shift+j=new_split:down
+# keybind = ctrl+l=goto_split:right
+# keybind = ctrl+shift+l=new_split:right
+# 
+# keybind = alt+h=resize_split:left,10
+# keybind = alt+l=resize_split:right,10
+# keybind = alt+k=resize_split:up,10
+# keybind = alt+j=resize_split:down,10

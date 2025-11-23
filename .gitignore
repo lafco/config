@@ -1,0 +1,22 @@
+# Lock files
+*-lock.*
+*-lock.json
+*.lock
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+composer.lock
+Gemfile.lock
+poetry.lock
+Cargo.lock
+CLAUDE.md
+tt.*
+.tests
+doc/tags
+debug
+file-history
+history.jsonl
+.repro
+foo.*
+*.log
+data

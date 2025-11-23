@@ -1,0 +1,56 @@
+local lazypath = vim.fn.stdpath 'data' .. '/lazy/lazy.nvim'
+if not (vim.uv or vim.loop).fs_stat(lazypath) then
+  local lazyrepo = 'https://github.com/folke/lazy.nvim.git'
+  local out = vim.fn.system { 'git', 'clone', '--filter=blob:none', '--branch=stable', lazyrepo, lazypath }
+  if vim.v.shell_error ~= 0 then
+    error('Error cloning lazy.nvim:\n' .. out)
+  end
+end
+
+---@type vim.Option
+local rtp = vim.opt.rtp
+rtp:prepend(lazypath)
+
+-- Map the <Leader> key to <Space>.
+vim.g.mapleader = " "
+vim.g.maplocalleader = " "
+
+-- Disable some in-built features which are unnecessary (and probably affects performance?)
+vim.g.loaded_python3_provider = 0
+vim.g.loaded_ruby_provider = 0
+vim.g.loaded_perl_provider = 0
+vim.g.loaded_node_provider = 0
+
+require("lazy").setup("plugins", {
+  performance = {
+    rtp = {
+      disabled_plugins = { -- Disable certain in-built plugins which are useful af.
+        "gzip",
+        "matchit",
+        "matchparen",
+        "tarPlugin",
+        "tohtml",
+        "tutor",
+        "zipPlugin",
+        "rplugin",
+        "man",
+        "spellfile",
+      },
+    },
+  },
+  rocks = {
+    enabled = false,
+  },
+})
+
+for _, module in ipairs({ "options", "autocmds", "keymaps" }) do
+  local ok, error = pcall(require, module)
+
+  if not ok then
+    print("Error loading module: " .. error)
+  end
+end
+
+
+-- The line beneath this is called `modeline`. See `:help modeline`
+-- vim: ts=2 sts=2 sw=2 et

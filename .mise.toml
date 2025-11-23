@@ -1,0 +1,9 @@
+[tools]
+node = "lts"
+python = "latest"
+rust = "latest"
+"npm:@anthropic-ai/claude-code" = "latest"
+
+[settings]
+auto_install = true
+verbose = false
