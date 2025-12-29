@@ -12,8 +12,8 @@ $character"""
 
 [character]
 disabled = false
-success_symbol = '[  ❯](bold green)'
-error_symbol = '[  ❯](bold red)'
+success_symbol = '[❯](bold green)'
+error_symbol = '[❯](bold red)'
 vimcmd_symbol = '[N ❯](bold green)'
 vimcmd_replace_one_symbol = '[R ❯](bold mauve)'
 vimcmd_replace_symbol = '[R ❯](bold mauve)'
