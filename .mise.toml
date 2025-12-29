@@ -5,5 +5,5 @@ rust = "latest"
 "npm:@anthropic-ai/claude-code" = "latest"
 
 [settings]
-auto_install = true
+auto_install = false
 verbose = false
