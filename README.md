@@ -1,20 +1,20 @@
 # dotfiles
 
-> ⚡ **Só precisa do Pi.** O resto é com ele.
+> ⚡ **Só precisa do Pi.** O bootstrap não instala nada — só clona o repo e ativa a skill.
 
 ```bash
 # 1. Instalar o Pi
 curl -fsSL https://pi.ai/install.sh | bash
 
-# 2. Clonar + ativar a skill de setup
-git clone git@github.com:lafco/dotfiles.git ~/dotfiles
-mkdir -p ~/.pi/agent/skills
-ln -s ~/dotfiles/pi/.pi/agent/skills/os-setup ~/.pi/agent/skills/os-setup
+# 2. Bootstrap (clona + ativa a skill)
+curl -fsSL https://raw.githubusercontent.com/lafco/dotfiles/main/bootstrap.sh | bash
 
 # 3. Abrir o Pi e pedir
 pi
 > setup my machine
 ```
+
+> 💡 Quer ver o que o bootstrap faz? São só 3 comandos: [`bootstrap.sh`](bootstrap.sh)
 
 O Pi vai detectar teu SO (Linux ou WSL), mostrar cada passo e **pedir confirmação antes de qualquer mudança** — nada roda sem você aprovar.
 
