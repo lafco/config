@@ -51,7 +51,7 @@ Show the user what was detected and ask: "Este é o ambiente correto? Continuar?
 **Only on Debian/Ubuntu/WSL.** Present the list to the user:
 
 ```bash
-sudo apt update && sudo apt install -y stow git curl build-essential
+sudo apt update && sudo apt install -y stow git curl build-essential bash-completion
 ```
 
 Explain each package:
@@ -59,6 +59,7 @@ Explain each package:
 - `git` — version control
 - `curl` — download tool
 - `build-essential` — compilers for building tools (needed for cargo/television)
+- `bash-completion` — autocompletion for git, docker, ssh, etc.
 
 ⚠️ **Ask the user before running sudo commands.** Say: "Vou instalar pacotes do sistema com apt. Posso executar?"
 

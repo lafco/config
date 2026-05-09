@@ -24,7 +24,7 @@ O Pi vai detectar teu SO (Linux ou WSL), mostrar cada passo e **pedir confirmaç
 
 | Categoria | Ferramenta | Como |
 |---|---|---|
-| Sistema | `stow`, `git`, `curl`, `build-essential` | apt |
+| Sistema | `stow`, `git`, `curl`, `build-essential`, `bash-completion` | apt |
 | Fontes | JetBrains Mono Nerd Font | curl |
 | Version mgr | `mise` | curl (mise.run) |
 | Shell | starship, zoxide, television, bat, eza, fd, ripgrep, atuin | mise |

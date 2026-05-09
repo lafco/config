@@ -25,6 +25,22 @@ shopt -s globstar
 shopt -s autocd
 shopt -s cdspell
 
+# ── Bash completion ──────────────────────────────────────────────────────────
+# System-wide completions (git, docker, ssh, etc.)
+if [[ -f /usr/share/bash-completion/bash_completion ]]; then
+    source /usr/share/bash-completion/bash_completion
+elif [[ -f /etc/bash_completion ]]; then
+    source /etc/bash_completion
+fi
+
+# Tool-specific completions not covered by bash-completion package
+if command -v gh &>/dev/null; then
+    eval "$(gh completion -s bash)"
+fi
+if command -v zellij &>/dev/null; then
+    eval "$(zellij setup --generate-completion bash 2>/dev/null || true)"
+fi
+
 # ── mise (runtime + tool manager) ────────────────────────────────────────────
 if [[ -f "$HOME/.local/bin/mise" ]]; then
     eval "$("$HOME/.local/bin/mise" activate bash)"
