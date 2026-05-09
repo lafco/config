@@ -39,6 +39,19 @@ O Pi só instala o que você confirmar — pode pular ferramentas que não quise
 
 ---
 
+## Pós-instalação manual
+
+Coisas que o Pi não pode fazer por você (exigem navegador/interação):
+
+```bash
+gh auth login           # autenticar no GitHub
+gh copilot auth         # autenticar Copilot (opencode)
+atuin register          # criar conta no Atuin (sync de histórico)
+atuin sync              # sincronizar histórico
+```
+
+---
+
 ## Estrutura (GNU Stow)
 
 Cada pasta é um "pacote". `stow nome/` cria symlinks de `~/dotfiles/nome/` para `~/`.
@@ -106,19 +119,6 @@ stow meu-novo-app
 
 # Commitar
 git add meu-novo-app && git commit -m "add meu-novo-app config"
-```
-
----
-
-## Pós-instalação manual
-
-Coisas que o Pi não pode fazer por você (exigem navegador/interação):
-
-```bash
-gh auth login           # autenticar no GitHub
-gh copilot auth         # autenticar Copilot (opencode)
-atuin register          # criar conta no Atuin (sync de histórico)
-atuin sync              # sincronizar histórico
 ```
 
 ---
