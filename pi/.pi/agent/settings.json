@@ -1,0 +1,15 @@
+{
+  "lastChangelogVersion": "0.74.0",
+  "defaultProvider": "opencode-go",
+  "defaultModel": "deepseek-v4-pro",
+  "defaultThinkingLevel": "high",
+  "enabledModels": [
+    "github-copilot/gpt-4.1",
+    "opencode-go/deepseek-v4-flash",
+    "opencode-go/deepseek-v4-pro",
+    "opencode-go/glm-5.1",
+    "opencode-go/kimi-k2.6",
+    "opencode-go/qwen3.6-plus"
+  ],
+  "hideThinkingBlock": true
+}

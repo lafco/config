@@ -1,0 +1,90 @@
+# bash aliases
+
+# ── Modern CLI replacements ───────────────────────────────────────────────────
+if command -v eza &>/dev/null; then
+    alias ls='eza --icons --group-directories-first'
+    alias ll='eza --icons --group-directories-first -la --git'
+    alias la='eza --icons --group-directories-first -a'
+    alias lt='eza --icons --tree --level=2'
+    alias llt='eza --icons --tree --level=2 -la --git'
+else
+    alias ls='ls --color=auto'
+    alias ll='ls -lahF --color=auto'
+    alias la='ls -AF --color=auto'
+fi
+
+if command -v bat &>/dev/null; then
+    alias cat='bat --paging=never'
+fi
+
+if command -v rg &>/dev/null; then
+    alias grep='rg'
+fi
+
+# cd / zoxide (z is already set by zoxide init, but keep zi for interactive)
+# zoxide provides: z, zi
+
+# ── Git ───────────────────────────────────────────────────────────────────────
+alias g='git'
+alias gs='git status'
+alias ga='git add'
+alias gaa='git add --all'
+alias gc='git commit'
+alias gca='git commit --amend'
+alias gco='git checkout'
+alias gb='git branch'
+alias gbd='git branch -d'
+alias gd='git diff'
+alias gds='git diff --staged'
+alias gl='git log --oneline --graph --decorate'
+alias gll='git log --graph --decorate --pretty=format:"%C(yellow)%h%Creset %s %C(blue)(%an, %ar)%Creset"'
+alias gp='git push'
+alias gpl='git pull'
+alias gf='git fetch'
+alias grb='git rebase'
+alias gst='git stash'
+alias gstp='git stash pop'
+
+# lazygit
+alias lg='lazygit'
+
+# ── GitHub CLI shortcuts ──────────────────────────────────────────────────────
+alias ghl='gh auth login'
+alias ghv='gh repo view --web'
+alias ghc='gh repo clone'
+alias ghpr='gh pr list'
+alias ghprc='gh pr create'
+alias ghprv='gh pr view --web'
+alias ghprco='gh pr checkout'
+alias ghprm='gh pr merge'
+alias ghi='gh issue list'
+alias ghic='gh issue create'
+alias ghiv='gh issue view --web'
+alias ghw='gh workflow list'
+alias ghwr='gh run list'
+alias ghrl='gh release list'
+
+# ── Docker ────────────────────────────────────────────────────────────────────
+alias dc='docker compose'
+alias dcu='docker compose up -d'
+alias dcd='docker compose down'
+alias dcl='docker compose logs -f'
+alias dcp='docker compose pull'
+
+# ── Filesystem convenience ────────────────────────────────────────────────────
+alias ..='cd ..'
+alias ...='cd ../..'
+alias ....='cd ../../..'
+alias mkdir='mkdir -pv'
+alias cp='cp -iv'
+alias mv='mv -iv'
+alias rm='rm -Iv'
+
+# ── Misc ──────────────────────────────────────────────────────────────────────
+alias v='nvim'
+alias vi='nvim'
+alias vim='nvim'
+alias own='sudo chown -R $(whoami)'
+alias ownp='sudo chown -R $(whoami):$(whoami)'
+alias reload='source ~/.bashrc'
+alias path='echo -e ${PATH//:/\\n}'

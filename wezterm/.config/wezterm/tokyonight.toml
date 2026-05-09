@@ -1,0 +1,16 @@
+-- nightwolf theme for wezterm
+-- optimized from https://github.com/mao-santaella-rs/NightWolfTheme
+return {
+  foreground = "#c8d3f5",
+  background = "#222436",
+  cursor_bg = "#c8d3f5",
+  cursor_border = "#c8d3f5",
+  cursor_fg = "#222436",
+  selection_bg = "#2d3f76",
+  selection_fg = "#c8d3f5",
+  split = "#82aaff",
+  compose_cursor = "#ff966c",
+  scrollbar_thumb = "#2f334d",
+  ansi = {"#1b1d2b", "#ff757f", "#c3e88d", "#ffc777", "#82aaff", "#c099ff", "#86e1fc", "#828bb8"},
+  brights = {"#444a73", "#ff8d94", "#c7fb6d", "#ffd8ab", "#9ab8ff", "#caabff", "#b2ebff", "#c8d3f5"},
+}

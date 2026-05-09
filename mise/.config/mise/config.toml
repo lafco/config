@@ -1,0 +1,48 @@
+# mise configuration - manages all developer tools and runtimes
+# https://mise.jdx.dev
+#
+# Install everything: mise install
+# Update all tools:   mise upgrade
+
+[tools]
+# ── Runtimes ─────────────────────────────────────────────────────────────────
+node    = "lts"
+python  = "latest"
+
+# ── Shell utilities ───────────────────────────────────────────────────────────
+ripgrep  = "latest"  # rg  – fast grep
+"aqua:nushell/nushell" = "latest"  # nu – modern shell
+fd       = "latest"  # fd  – fast find
+bat      = "latest"  # bat – cat with syntax highlighting
+eza      = "latest"  # eza – modern ls
+zoxide   = "latest"  # z   – smart cd
+fzf      = "latest"  # fzf – fuzzy finder
+atuin    = "latest"  # atuin – shell history sync
+
+# ── Git tooling ───────────────────────────────────────────────────────────────
+lazygit                 = "latest"
+jj                      = "latest"   # jujutsu vcs
+github-cli              = "latest"   # gh
+"github:dlvhdr/gh-dash"  = "latest"   # gh-dash  – GitHub dashboard TUI
+"github:dlvhdr/diffnav" = "latest"   # diffnav  – diff pager used by gh-dash
+
+# ── Editor & prompt ───────────────────────────────────────────────────────────
+neovim   = "latest"
+starship = "latest"
+
+# ── Terminal multiplexer ──────────────────────────────────────────────────────
+zellij = "latest"
+
+# ── Terminal emulator ─────────────────────────────────────────────────────────
+# wezterm is not in the mise registry; install via github backend
+"github:wez/wezterm" = "latest"
+
+# ── System tools ─────────────────────────────────────────────────────────────
+btop = "latest"
+
+# ── AI tools ─────────────────────────────────────────────────────────────────
+# opencode requires node (declared above) to be installed first
+"npm:opencode-ai" = "latest"
+
+[settings]
+experimental = true

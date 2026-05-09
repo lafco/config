@@ -1,0 +1,13 @@
+# Pi agent — sensitive files
+pi/.pi/agent/auth.json
+pi/.pi/agent/sessions/
+pi/.pi/agent/bin/
+
+# Editor / system
+*~
+*.swp
+*.swo
+.DS_Store
+
+# Zellij runtime
+zellij/.config/zellij/plugins/*.wasm
