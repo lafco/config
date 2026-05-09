@@ -41,20 +41,28 @@ extract() {
     fi
 }
 
-# fcd: fuzzy-find and cd into a directory under current path
+# fcd: fuzzy-find and cd into a directory (uses television)
 fcd() {
-    local dir
-    dir=$(fd --type d --hidden --follow --exclude .git 2>/dev/null | \
-          fzf --preview 'eza --tree --level=2 {} 2>/dev/null || ls {}') && \
-    cd "$dir"
+    if command -v tv &>/dev/null; then
+        tv dirs
+    else
+        local dir
+        dir=$(fd --type d --hidden --follow --exclude .git 2>/dev/null | \
+              fzf --preview 'eza --tree --level=2 {} 2>/dev/null || ls {}') && \
+        cd "$dir"
+    fi
 }
 
-# fopen: fuzzy-find a file and open it in $EDITOR
+# fopen: fuzzy-find a file and open it in $EDITOR (uses television)
 fopen() {
-    local file
-    file=$(fd --type f --hidden --follow --exclude .git 2>/dev/null | \
-           fzf --preview 'bat --color=always --line-range=:50 {}') && \
-    ${EDITOR:-nvim} "$file"
+    if command -v tv &>/dev/null; then
+        tv files
+    else
+        local file
+        file=$(fd --type f --hidden --follow --exclude .git 2>/dev/null | \
+               fzf --preview 'bat --color=always --line-range=:50 {}') && \
+        ${EDITOR:-nvim} "$file"
+    fi
 }
 
 # port: show what's listening on a given port

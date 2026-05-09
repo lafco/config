@@ -1,0 +1,26 @@
+[metadata]
+name = "git-branch"
+description = "Git branches"
+requirements = ["git"]
+
+[source]
+command = "git --no-pager branch --all --format=\"%(refname:short)\""
+output = "{split: :0}"
+
+[preview]
+command = "git show -p --stat --pretty=fuller --color=always '{0}'"
+
+[keybindings]
+shortcut = "f4"
+enter = "actions:checkout"
+ctrl-d = "actions:delete"
+
+[actions.checkout]
+description = "Checkout branch"
+command = "git checkout '{0}'"
+mode = "execute"
+
+[actions.delete]
+description = "Delete branch"
+command = "git branch -d '{0}'"
+mode = "execute"

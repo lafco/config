@@ -24,16 +24,15 @@ O Pi vai detectar teu SO (Linux ou WSL), mostrar cada passo e **pedir confirmaç
 
 | Categoria | Ferramenta | Como |
 |---|---|---|
-| Sistema | `stow`, `git`, `curl`, `build-essential`, `fish` | apt |
+| Sistema | `stow`, `git`, `curl`, `build-essential` | apt |
 | Fontes | JetBrains Mono Nerd Font | curl |
 | Version mgr | `mise` | curl (mise.run) |
-| Shell | starship, zoxide, fzf, bat, eza, fd, ripgrep, atuin | mise |
+| Shell | starship, zoxide, television, bat, eza, fd, ripgrep, atuin | mise |
 | Editor | neovim (LazyVim) | mise |
-| Terminal | zellij, wezterm | mise |
+| Terminal | zellij, wezterm (default) | mise |
 | Git | lazygit, jj, gh, gh-dash | mise |
 | Runtimes | node (LTS), python (latest) | mise |
-| AI | opencode-ai | mise |
-| Configs | bash, nvim, pi, wezterm, zellij, starship, mise | stow |
+| Configs | bash, nvim, pi, wezterm, zellij, television, starship, mise | stow |
 
 O Pi só instala o que você confirmar — pode pular ferramentas que não quiser.
 
@@ -63,6 +62,7 @@ Cada pasta é um "pacote". `stow nome/` cria symlinks de `~/dotfiles/nome/` para
 ├── pi/           → ~/.pi/agent/              (settings, extensions, skills)
 ├── wezterm/      → ~/.config/wezterm/        (terminal emulator)
 ├── zellij/       → ~/.config/zellij/         (terminal multiplexer)
+├── television/   → ~/.config/television/      (fuzzy finder)
 ├── starship/     → ~/.config/starship.toml   (prompt)
 └── mise/         → ~/.config/mise/config.toml (dev tools)
 ```

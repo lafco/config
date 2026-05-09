@@ -1,0 +1,20 @@
+[metadata]
+name = "git-files"
+description = "Files tracked by git"
+requirements = ["git", "bat"]
+
+[source]
+command = "git ls-files $(git rev-parse --show-toplevel 2>/dev/null || echo '.')"
+
+[preview]
+command = "bat -n --color=always '{}'"
+env = { BAT_THEME = "ansi" }
+
+[keybindings]
+shortcut = "f3"
+enter = "actions:edit"
+
+[actions.edit]
+description = "Open with nvim"
+command = "nvim '{}'"
+mode = "execute"

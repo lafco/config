@@ -1,0 +1,23 @@
+[metadata]
+name = "git-log"
+description = "Git commit history"
+requirements = ["git"]
+
+[source]
+command = "git log --graph --pretty=format:'%C(yellow)%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit --color=always"
+output = "{strip_ansi|split: :1}"
+ansi = true
+no_sort = true
+frecency = false
+
+[preview]
+command = "git show -p --stat --pretty=fuller --color=always '{strip_ansi|split: :1}' | head -n 1000"
+
+[keybindings]
+shortcut = "f5"
+enter = "actions:checkout"
+
+[actions.checkout]
+description = "Checkout commit"
+command = "git checkout '{strip_ansi|split: :1}'"
+mode = "execute"

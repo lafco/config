@@ -1,0 +1,26 @@
+[metadata]
+name = "text"
+description = "Search text in files (ripgrep)"
+requirements = ["rg", "bat"]
+
+[source]
+command = [
+  "rg . --no-heading --line-number --colors 'match:fg:white' --colors 'path:fg:blue' --color=always",
+  "rg . --no-heading --line-number --hidden --colors 'match:fg:white' --colors 'path:fg:blue' --color=always",
+]
+ansi = true
+output = "{strip_ansi|split:\\::..2}"
+
+[preview]
+command = "bat -n --color=always '{strip_ansi|split:\\::0}'"
+env = { BAT_THEME = "ansi" }
+offset = '{strip_ansi|split:\::1}'
+
+[keybindings]
+shortcut = "f6"
+enter = "actions:edit"
+
+[actions.edit]
+description = "Open file at line with nvim"
+command = "nvim '+{strip_ansi|split:\\::1}' '{strip_ansi|split:\\::0}'"
+mode = "execute"

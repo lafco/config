@@ -18,16 +18,15 @@ This skill turns Pi into a complete environment bootstrapper. With just Pi insta
 
 | Layer | Tool | Purpose |
 |---|---|---|
-| System | `stow`, `git`, `curl`, `build-essential`, `fish` | Package manager + dotfiles |
+| System | `stow`, `git`, `curl`, `build-essential` | Package manager + dotfiles |
 | System | JetBrains Mono Nerd Font | Terminal font |
 | Version mgr | `mise` | Manages all dev tools |
-| Shell | `starship`, `zoxide`, `fzf`, `bat`, `eza`, `fd`, `ripgrep`, `atuin` | Modern terminal experience |
+| Shell | `starship`, `zoxide`, `television`, `bat`, `eza`, `fd`, `ripgrep`, `atuin` | Modern terminal experience |
 | Editor | `neovim` | Editor configured via dotfiles |
-| Terminal | `zellij`, `wezterm` | Multiplexer + emulator |
+| Terminal | `zellij`, `wezterm` (default) | Multiplexer + emulator |
 | Git | `lazygit`, `jj`, `gh`, `gh-dash` | Git tooling |
 | Runtimes | `node` (LTS), `python` (latest) | Dev runtimes |
-| AI | `opencode-ai` | AI coding assistant |
-| Config | `dotfiles` (via Stow) | bash, nvim, pi, wezterm, zellij, starship, mise |
+| Config | `dotfiles` (via Stow) | bash, nvim, pi, wezterm, zellij, television, starship, mise |
 
 ## Step-by-step workflow
 
@@ -52,15 +51,14 @@ Show the user what was detected and ask: "Este é o ambiente correto? Continuar?
 **Only on Debian/Ubuntu/WSL.** Present the list to the user:
 
 ```bash
-sudo apt update && sudo apt install -y stow git curl build-essential fish
+sudo apt update && sudo apt install -y stow git curl build-essential
 ```
 
 Explain each package:
 - `stow` — symlink farm manager (gerencia os dotfiles)
 - `git` — version control
 - `curl` — download tool
-- `build-essential` — compilers for building tools
-- `fish` — modern shell (opcional, o dotfiles funciona com bash também)
+- `build-essential` — compilers for building tools (needed for cargo/television)
 
 ⚠️ **Ask the user before running sudo commands.** Say: "Vou instalar pacotes do sistema com apt. Posso executar?"
 
@@ -98,7 +96,7 @@ The dotfiles repo contains `mise/.config/mise/config.toml` with all tool definit
 cd ~/dotfiles && mise install
 ```
 
-This installs: neovim, starship, zellij, wezterm, lazygit, gh, ripgrep, fd, bat, eza, zoxide, fzf, atuin, node, python, btop, opencode-ai, jj, gh-dash.
+This installs: neovim, starship, zellij, wezterm, lazygit, gh, ripgrep, fd, bat, eza, zoxide, television, atuin, node, python, btop, jj, gh-dash.
 
 ⚠️ This can take 5-10 minutes. Tell the user: "Isso pode demorar alguns minutos. Quer prosseguir?"
 
@@ -152,15 +150,27 @@ ls -la ~/.config/nvim  # should be symlink → ~/dotfiles/nvim/.config/nvim
 ls -la ~/.pi/agent/settings.json  # should be symlink
 ```
 
-### Step 8: Manual auth setup (inform the user)
+### Step 8: WezTerm as default terminal (WSL)
+
+If running on WSL, guide the user to set WezTerm as the default terminal:
+
+1. WezTerm is installed via mise and configured via Stow (`wezterm/.config/wezterm/`)
+2. On Windows side, create a desktop shortcut for WezTerm (WSL):
+   ```bash
+   # In WSL terminal:
+   wezterm start --class wezterm 2>/dev/null &
+   ```
+3. Tell the user: "Você pode fixar o WezTerm na barra de tarefas do Windows. O atalho `WezTerm (WSL)` já deve aparecer no menu Iniciar após a instalação."
+4. Optional: Set WezTerm as the default terminal emulator in Windows Terminal settings, or replace Windows Terminal entirely with WezTerm.
+
+### Step 9: Manual auth setup (inform the user)
 
 These require user interaction and cannot be automated:
 
 1. **GitHub auth:** `gh auth login`
-2. **Copilot (opencode):** `gh copilot auth`
-3. **Atuin (shell history sync):** `atuin register` then `atuin sync`
-4. **Pi auth:** Configure API keys for your AI providers
-5. **Jira token:** Set `JIRA_API_TOKEN` in your shell (already configured if env vars are in .bashrc)
+2. **Atuin (shell history sync):** `atuin register` then `atuin sync`
+3. **Pi auth:** Configure API keys for your AI providers
+4. **Jira token:** Set `JIRA_API_TOKEN` in your shell (already configured if env vars are in .bashrc)
 
 Tell the user: "Estes passos precisam ser feitos manualmente. Quer que eu explique cada um?"
 

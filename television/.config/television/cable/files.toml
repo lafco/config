@@ -1,0 +1,29 @@
+[metadata]
+name = "files"
+description = "Find files and directories (fd)"
+requirements = ["fd", "bat"]
+
+[source]
+command = ["fd -t f", "fd -t f -H", "fd -t f -H -I"]
+
+[preview]
+command = "bat -n --color=always '{}'"
+env = { BAT_THEME = "ansi" }
+
+[keybindings]
+shortcut = "f1"
+enter = "actions:edit"
+ctrl-up = "actions:goto_parent_dir"
+
+[actions.edit]
+description = "Open with nvim"
+command = "nvim '{}'"
+mode = "execute"
+
+[actions.goto_parent_dir]
+description = "Go to parent directory"
+command = "tv files .."
+mode = "execute"
+
+[ui.preview_panel]
+hidden = true

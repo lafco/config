@@ -47,17 +47,9 @@ if command -v atuin &>/dev/null; then
     eval "$(atuin init bash)"
 fi
 
-# ── fzf ──────────────────────────────────────────────────────────────────────
-if command -v fzf &>/dev/null; then
-    export FZF_DEFAULT_COMMAND="fd --type f --hidden --follow --exclude .git"
-    export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
-    export FZF_ALT_C_COMMAND="fd --type d --hidden --follow --exclude .git"
-    export FZF_DEFAULT_OPTS="--height 40% --layout=reverse --border --bind ctrl-y:accept"
-    if [[ -f /usr/share/fzf/key-bindings.bash ]]; then
-        source /usr/share/fzf/key-bindings.bash
-    elif [[ -f /usr/share/doc/fzf/examples/key-bindings.bash ]]; then
-        source /usr/share/doc/fzf/examples/key-bindings.bash
-    fi
+# ── television (fuzzy finder) ────────────────────────────────────────────────
+if command -v tv &>/dev/null; then
+    eval "$(tv init bash)"
 fi
 
 # ── bat ───────────────────────────────────────────────────────────────────────

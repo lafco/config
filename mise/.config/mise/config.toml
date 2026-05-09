@@ -16,7 +16,7 @@ fd       = "latest"  # fd  – fast find
 bat      = "latest"  # bat – cat with syntax highlighting
 eza      = "latest"  # eza – modern ls
 zoxide   = "latest"  # z   – smart cd
-fzf      = "latest"  # fzf – fuzzy finder
+"cargo:television" = "latest"  # tv – fast fuzzy finder (replaces fzf)
 atuin    = "latest"  # atuin – shell history sync
 
 # ── Git tooling ───────────────────────────────────────────────────────────────
@@ -39,10 +39,6 @@ zellij = "latest"
 
 # ── System tools ─────────────────────────────────────────────────────────────
 btop = "latest"
-
-# ── AI tools ─────────────────────────────────────────────────────────────────
-# opencode requires node (declared above) to be installed first
-"npm:opencode-ai" = "latest"
 
 [settings]
 experimental = true
