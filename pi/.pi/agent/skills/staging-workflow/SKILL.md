@@ -118,9 +118,10 @@ When the user mentions implementing something:
    - Ask: "Tem issue no Jira? Se sim, qual a key?"
    - If not, offer the template: "Quer preencher o template de issue primeiro? (staging/.template/00-issue.md)"
 3. **Consult prdbook**: Call `get_product_knowledge` for the affected product(s). Read key files (architecture, integrations, services, data-models) to gather context about the systems involved.
-4. **Show refinement summary** — "Entendi que a issue é sobre X. O prdbook já responde Y e Z."
-5. **Ask only remaining questions** — never ask about scope, dependencies, or data models that are already documented in prdbook.
-6. **Wait for confirmation** before proceeding to Step 1
+4. **Check for examples**: While consulting prdbook, verify if the endpoints/entities involved already have example documents in `examples/`. If an endpoint or database collection used by the feature has no example file, flag it for the [example gathering checkpoint](#-example-gathering-checkpoint).
+5. **Show refinement summary** — "Entendi que a issue é sobre X. O prdbook já responde Y e Z."
+6. **Ask only remaining questions** — never ask about scope, dependencies, or data models that are already documented in prdbook.
+7. **Wait for confirmation** before proceeding to Step 1
 
 ### Step 1: Init
 
@@ -148,7 +149,7 @@ Write exact before/after code blocks. ⚠️ Show summary to user before applyin
 
 ### Step 5: Merge plan (fill 04-merge-plan.md)
 
-Specify which vault documents will be created/updated/removed.
+Specify which vault documents will be created/updated/removed. **Include any new example files** identified by the [example gathering checkpoint](#-example-gathering-checkpoint) — these go under `{product}/examples/` in the vault.
 
 ### Step 6: ⚠️ GATE 1 — Confirm code changes
 
@@ -184,6 +185,68 @@ Call `feature_archive` with the PR/commit reference.
 
 ---
 
+## 📋 Example gathering checkpoint
+
+**Every feature that touches a new endpoint, database collection, or API response format MUST contribute an example to the vault.** This keeps the prdbook populated with realistic data for debugging and integration.
+
+### When to gather examples
+
+Triggered when the feature involves:
+- A **new endpoint** (creating or modifying an API route)
+- A **new database collection** or new fields in an existing collection
+- A **new integration point** between systems (new request/response payload)
+
+### Checkpoint flow
+
+1. **During Step 0 (refinement)**: While consulting prdbook, check if `{product}/examples/` has example files for the affected entities/endpoints.
+2. **During Step 2 (analyze)**: When tracing the code flow, identify the exact request/response payloads and document structures involved. Note any that have no existing example.
+3. **After Gate 1 (code implemented)**: If the implementation produces new payloads or document shapes, ask the user:
+
+   > 📋 Esta feature usa os seguintes endpoints/coleções sem exemplo no prdbook:
+   > - `POST /rostering/novoEndpoint` — sem example document
+   > - Collection `nova_colecao` — sem example document
+   > 
+   > Pode fornecer exemplos reais (anonimizados) para eu adicionar ao vault?
+
+4. **Collect examples**: Take the user's response and create example files under `{product}/examples/`. Follow the convention:
+   - One file per entity or endpoint group
+   - Realistic anonymized data (consistent company code, plausible dates, descriptive keys)
+   - Cross-reference to the main schema doc
+   - Register in `examples/index.md` catalog
+5. **Include in 04-merge-plan.md**: List the new example files in the merge plan so they are applied to the vault.
+
+### Example file template
+
+```markdown
+---
+tags: [exemplo, example, {entity}, mongodb, document]
+---
+
+# Exemplo: {Description}
+
+Documento real (anonimizado) da coleção `{collection}` / endpoint `{endpoint}`.
+
+## Contexto
+
+{1-2 sentences about what this example represents}
+
+**Schemas relacionados:** [{file}.md](../{file}.md)
+
+## Documento / Payload
+
+```json
+{realistic anonymized data}
+```
+```
+
+### Database document examples
+
+For MongoDB collections, show the document exactly as stored (ISODate, ObjectId, etc.). Include common variations (DSR vs work day, blocked period vs open period).
+
+### API response examples
+
+For endpoints, show both **request** (params/body) and **response** (full JSON). Group related endpoints in the same file when they share response shapes.
+
 ## Important rules
 
 1. **NEVER skip confirmation gates** — this is the single most important rule
@@ -193,3 +256,4 @@ Call `feature_archive` with the PR/commit reference.
 5. **Merge plan must be explicit** — "update section X of file Y with content Z", not vague instructions
 6. **Archive after merge** — don't leave stale staging folders
 7. **Allow adjustments** — if user wants changes after seeing preview, edit the staging docs and re-preview
+8. **Gather examples for new endpoints/entities** — every feature that touches a new endpoint or collection must contribute at least one example file to `{product}/examples/`. Ask the user for realistic data if none exists.

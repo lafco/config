@@ -5,9 +5,8 @@ import { readFileSync, readdirSync, statSync, mkdirSync, existsSync } from "node
 import { join, relative, dirname } from "node:path";
 import { createHash } from "node:crypto";
 
-const HOME = process.env.HOME || "/home/unknown";
-const VAULT_PATH = `${HOME}/prdbook`;
-const DB_PATH = `${HOME}/.pi/prdbook-index.db`;
+const VAULT_PATH = "/home/vinicius.falconi@sp01.local/prdbook";
+const DB_PATH = "/home/vinicius.falconi@sp01.local/.pi/prdbook-index.db";
 
 /** Max files to auto-inject per product (keep context lean) */
 const MAX_AUTO_INJECT_FILES = 3;
