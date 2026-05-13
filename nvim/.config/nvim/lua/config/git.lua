@@ -1,0 +1,46 @@
+-- Git plugins: gitsigns, diffview, neogit
+
+local map = require('utils').map
+
+-- Diffview
+require('diffview').setup()
+
+-- Gitsigns
+require('gitsigns').setup({
+  on_attach = function(bufnr)
+    local gitsigns = require('gitsigns')
+
+    map('n', ']c', function() gitsigns.nav_hunk('next') end, { desc = 'Jump to next git change' })
+    map('n', '[c', function() gitsigns.nav_hunk('prev') end, { desc = 'Jump to previous git change' })
+
+    map('v', '<leader>hs', function() gitsigns.stage_hunk({ vim.fn.line('.'), vim.fn.line('v') }) end, { desc = 'git stage hunk' })
+    map('v', '<leader>hr', function() gitsigns.reset_hunk({ vim.fn.line('.'), vim.fn.line('v') }) end, { desc = 'git reset hunk' })
+
+    map('n', '<leader>hs', gitsigns.stage_hunk, { desc = 'Stage hunk' })
+    map('n', '<leader>hu', gitsigns.undo_stage_hunk, { desc = 'Undo stage hunk' })
+    map('n', '<leader>hr', gitsigns.reset_hunk, { desc = 'Reset hunk' })
+    map('n', '<leader>hR', gitsigns.reset_buffer, { desc = 'Reset buffer' })
+    map('n', '<leader>hp', gitsigns.preview_hunk, { desc = 'Preview hunk' })
+    map('n', '<leader>hb', gitsigns.blame_line, { desc = 'Blame line' })
+
+    map('n', '<leader>tb', gitsigns.toggle_current_line_blame, { desc = 'Git show blame line' })
+    map('n', '<leader>ti', gitsigns.preview_hunk_inline, { desc = 'Git show deleted' })
+  end,
+})
+
+-- Neogit
+require('neogit').setup({
+  graph_style = 'unicode',
+  notification_icon = '',
+  signs = {
+    item = { '', '' },
+    section = { '', '' },
+  },
+  disable_commit_confirmation = true,
+  integrations = {
+    telescope = true,
+    diffview = true,
+  },
+})
+
+map('n', '<leader>gg', '<cmd>Neogit<cr>', { desc = 'Neogit' })
