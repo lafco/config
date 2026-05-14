@@ -82,7 +82,7 @@ alias rm='rm -Iv'
 
 # ── work layout (compose 2x2 + prdbook) ──────────────────────────────────────
 alias prd='zellij attach work 2>/dev/null || zellij -s work -n work'
-alias zjprd='zellij kill-session work 2>/dev/null; zellij -s work -n work'
+alias zjprd='zellij delete-session work 2>/dev/null; zellij -s work -n work'
 
 # ── Misc ──────────────────────────────────────────────────────────────────────
 alias v='nvim'
