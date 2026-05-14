@@ -3,11 +3,15 @@ layout {
     tab name="compose" focus=true hide_floating_panes=true {
         pane split_direction="horizontal" {
             pane size="50%" split_direction="vertical" {
-                pane cwd="ahg/compose" focus=true size="50%"
+                pane command="sudo" cwd="ahg/compose" focus=true size="50%" {
+                    args "wg-quick" "up" "ahgora-wg"
+                }
                 pane cwd="ahg/compose" size="50%"
             }
             pane size="50%" split_direction="vertical" {
-                pane cwd="ahg/compose" size="50%"
+                pane command="c" cwd="ahg/compose" size="50%" {
+                    args "up" "ahpi"
+                }
                 pane cwd="ahg/compose" size="50%"
             }
         }
