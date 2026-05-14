@@ -80,10 +80,8 @@ alias cp='cp -iv'
 alias mv='mv -iv'
 alias rm='rm -Iv'
 
-# ── pi + nvim workspace ──────────────────────────────────────────────────────
-# Opens zellij with nvim (60%) + pi (40%) in ~/prdbook; attaches if session exists
-alias npi='zellij attach npi 2>/dev/null || zellij -s npi -l npi'
-alias zjnpi='zellij kill-session npi 2>/dev/null; zellij -s npi -l npi'
+# ── work layout (compose 2x2 + prdbook) ──────────────────────────────────────
+alias prd='zellij attach work 2>/dev/null || zellij -s work -n work'
 
 # ── Misc ──────────────────────────────────────────────────────────────────────
 alias v='nvim'
