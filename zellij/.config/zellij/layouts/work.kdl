@@ -1,7 +1,7 @@
 layout {
     cwd "~"
     tab name="compose" focus=true hide_floating_panes=true {
-        pane split_direction="vertical" {
+        pane split_direction="horizontal" {
             pane size="50%" split_direction="vertical" {
                 pane cwd="ahg/compose" focus=true size="50%"
                 pane cwd="ahg/compose" size="50%"
