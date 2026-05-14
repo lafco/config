@@ -87,3 +87,6 @@ export COMPOSE_DOCKER_CLI_BUILD=1
 DOTFILES_DIR="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"
 [[ -f "$DOTFILES_DIR/.aliases" ]]   && source "$DOTFILES_DIR/.aliases"
 [[ -f "$DOTFILES_DIR/.functions" ]] && source "$DOTFILES_DIR/.functions"
+
+# Inclui aliases pessoais fora do repositório de dotfiles
+[ -f ~/aliases.bash ] && source ~/aliases.bash

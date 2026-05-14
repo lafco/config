@@ -1,38 +1,66 @@
 # dotfiles
 
-> ⚡ **Só precisa do Pi.** O bootstrap não instala nada — só clona o repo e ativa a skill.
+> ⚡ **Para funcionar, só precisa instalar o Pi primeiro.**
+
+## Instalação rápida (recomendada)
+
+1. **Instale o Pi** (requer bash, curl e git)
 
 ```bash
-# 1. Instalar o Pi
 curl -fsSL https://pi.ai/install.sh | bash
+```
 
-# 2. Bootstrap (clona + ativa a skill)
+2. **Clone o repo e ative a skill**
+
+```bash
 curl -fsSL https://raw.githubusercontent.com/lafco/dotfiles/main/bootstrap.sh | bash
+```
 
-# 3. Abrir o Pi e pedir
+> Se der erro de permissão ou comando não encontrado, reinicie o terminal e tente de novo.
+
+3. **Abra o Pi e rode o setup interativo**
+
+```bash
 pi
+# No prompt do Pi:
 > setup my machine
 ```
 
-> 💡 Quer ver o que o bootstrap faz? São só 3 comandos: [`bootstrap.sh`](bootstrap.sh)
+🟢 O Pi vai detectar seu SO (Linux/WSL), instalar só o que você aceitar e mostrar cada passo antes de executar!
 
-O Pi vai detectar teu SO (Linux ou WSL), mostrar cada passo e **pedir confirmação antes de qualquer mudança** — nada roda sem você aprovar.
+---
+
+## Se o script não funcionar:
+
+- **Confirme se o Pi está no PATH:**
+  ```bash
+  which pi
+  ```
+  Se não encontrar, feche/abra o terminal, ou rode o instalador do Pi novamente.
+
+- **Clone manualmente e aponte a skill:**
+  ```bash
+  git clone https://github.com/lafco/dotfiles.git ~/dotfiles
+  mkdir -p ~/.pi/agent/skills
+  ln -sf ~/dotfiles/pi/.pi/agent/skills/os-setup ~/.pi/agent/skills/os-setup
+  ```
+- Depois, siga pro passo "pi" acima normalmente.
 
 ---
 
 ## O que o Pi instala
 
-| Categoria | Ferramenta | Como |
-|---|---|---|
-| Sistema | `stow`, `git`, `curl`, `build-essential`, `bash-completion` | apt |
-| Fontes | JetBrains Mono Nerd Font | curl |
-| Version mgr | `mise` | curl (mise.run) |
-| Shell | starship, zoxide, television, bat, eza, fd, ripgrep, atuin | mise |
-| Editor | neovim (LazyVim) | mise |
-| Terminal | zellij, wezterm (default) | mise |
-| Git | lazygit, jj, gh, gh-dash | mise |
-| Runtimes | node (LTS), python (latest) | mise |
-| Configs | bash, nvim, pi, wezterm, zellij, television, starship, mise | stow |
+| Categoria     | Ferramenta                                             | Como         |
+|--------------|--------------------------------------------------------|--------------|
+| Sistema      | stow, git, curl, build-essential, bash-completion      | apt          |
+| Fontes       | JetBrains Mono Nerd Font                               | curl         |
+| Version mgr  | mise                                                   | curl (mise)  |
+| Shell        | starship, zoxide, television, bat, eza, fd, rg, atuin  | mise         |
+| Editor       | neovim (LazyVim)                                       | mise         |
+| Terminal     | zellij, wezterm (default)                              | mise         |
+| Git          | lazygit, jj, gh, gh-dash                               | mise         |
+| Runtimes     | node (LTS), python (latest)                            | mise         |
+| Configs      | bash, nvim, pi, wezterm, zellij, television, etc       | stow         |
 
 O Pi só instala o que você confirmar — pode pular ferramentas que não quiser.
 
@@ -40,7 +68,7 @@ O Pi só instala o que você confirmar — pode pular ferramentas que não quise
 
 ## Pós-instalação manual
 
-Coisas que o Pi não pode fazer por você (exigem navegador/interação):
+Alguns passos precisam ser feitos manualmente (por segurança/credenciais):
 
 ```bash
 gh auth login           # autenticar no GitHub
@@ -53,7 +81,7 @@ atuin sync              # sincronizar histórico
 
 ## Estrutura (GNU Stow)
 
-Cada pasta é um "pacote". `stow nome/` cria symlinks de `~/dotfiles/nome/` para `~/`.
+Cada pasta é um "pacote". `stow nome/` cria symlinks de `~/dotfiles/nome/` pra `~/`.
 
 ```
 ~/dotfiles/
@@ -62,7 +90,7 @@ Cada pasta é um "pacote". `stow nome/` cria symlinks de `~/dotfiles/nome/` para
 ├── pi/           → ~/.pi/agent/              (settings, extensions, skills)
 ├── wezterm/      → ~/.config/wezterm/        (terminal emulator)
 ├── zellij/       → ~/.config/zellij/         (terminal multiplexer)
-├── television/   → ~/.config/television/      (fuzzy finder)
+├── television/   → ~/.config/television/     (fuzzy finder)
 ├── starship/     → ~/.config/starship.toml   (prompt)
 └── mise/         → ~/.config/mise/config.toml (dev tools)
 ```
@@ -74,7 +102,7 @@ Cada pasta é um "pacote". `stow nome/` cria symlinks de `~/dotfiles/nome/` para
 ```bash
 cd ~/dotfiles
 
-# Ver o que mudaria (dry-run — recomendado antes de qualquer ação)
+# Ver o que mudaria (dry-run, recomendado)
 stow -n */
 
 # Aplicar todos os pacotes
@@ -90,7 +118,7 @@ stow -D nvim
 stow -R nvim
 
 # Se houver conflito (arquivo já existe), tomar posse:
-stow --adopt nvim    # move o arquivo existente pra dentro do repo
+stow --adopt nvim    # move o arquivo existente para dentro do repo
 ```
 
 ---
@@ -125,13 +153,13 @@ git add meu-novo-app && git commit -m "add meu-novo-app config"
 
 ## Por que Stow + Pi?
 
-| | Script tradicional | **Stow + Pi skill** |
-|---|---|---|
-| Pré-requisito | bash, git, curl, etc | **Só Pi** |
-| Instalação | Script monolítico, difícil de debugar | Pi interativo, passo a passo |
-| Erro em 1 passo | Para tudo, difícil de retomar | Pi explica e oferece alternativas |
-| Symlinks | Lógica customizada pra cada OS | `stow */` (comando padrão Unix) |
-| Dry-run | Não tem | `stow -n */` |
-| Desfazer | Manual | `stow -D nome/` |
-| Adicionar config | Editar script | Criar pasta + `stow nome/` |
-| Documentação | README estático | **Skill viva** — o Pi explica enquanto faz |
+|                           | Script tradicional      | **Stow + Pi skill**       |
+|---------------------------|------------------------|---------------------------|
+| Pré-requisito             | bash, git, curl, etc   | **Só Pi**                |
+| Instalação                | Script monolítico      | Pi interativo, passo a passo|
+| Erro em 1 passo           | Para tudo              | Alternativas + explicação |
+| Symlinks                  | Lógica própria         | `stow */` (Unix padrão)   |
+| Dry-run                   | Quase nunca tem        | `stow -n */`              |
+| Desfazer                  | Manual                 | `stow -D nome/`           |
+| Adicionar config          | Editar script          | Adiciona pasta + stow     |
+| Documentação              | README estático        | Pi explica enquanto faz   |
