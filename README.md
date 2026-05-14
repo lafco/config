@@ -7,13 +7,13 @@
 1. **Instale o Pi** (requer bash, curl e git)
 
 ```bash
-curl -fsSL https://pi.ai/install.sh | bash
+curl -fsSL https://get.pi.dev/install.sh | bash
 ```
 
 2. **Clone o repo e ative a skill**
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/lafco/dotfiles/main/bootstrap.sh | bash
+curl -fsSL https://raw.githubusercontent.com/lafco/config/main/bootstrap.sh | bash
 ```
 
 > Se der erro de permissão ou comando não encontrado, reinicie o terminal e tente de novo.
@@ -40,7 +40,7 @@ pi
 
 - **Clone manualmente e aponte a skill:**
   ```bash
-  git clone https://github.com/lafco/dotfiles.git ~/dotfiles
+  git clone https://github.com/lafco/config.git ~/dotfiles
   mkdir -p ~/.pi/agent/skills
   ln -sf ~/dotfiles/pi/.pi/agent/skills/os-setup ~/.pi/agent/skills/os-setup
   ```
