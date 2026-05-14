@@ -37,6 +37,9 @@ config.window_padding = {
   bottom = 5,
 }
 
+-- Shell
+config.default_prog = { '/usr/bin/bash', '-l' }
+
 -- Miscellaneous settings
 config.max_fps = 120
 config.prefer_egl = true
