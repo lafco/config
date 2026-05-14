@@ -1,0 +1,106 @@
+## Atuin configuration
+## https://docs.atuin.sh/configuration/config/
+
+## ── Storage paths (defaults shown, uncomment to override) ────────────────────
+# db_path = "~/.local/share/atuin/history.db"
+# key_path = "~/.local/share/atuin/key"
+# session_path = "~/.local/share/atuin/session"
+
+## ── Date / locale ─────────────────────────────────────────────────────────────
+# dialect = "us"          # "us" or "uk"
+# timezone = "local"      # "local" or UTC offset e.g. "+02:00"
+
+## ── Sync ──────────────────────────────────────────────────────────────────────
+# auto_sync = true
+# update_check = true
+# sync_address = "https://api.atuin.sh"
+# sync_frequency = "10m"  # set to "0" to sync after every command
+
+## ── Search ────────────────────────────────────────────────────────────────────
+search_mode = "fuzzy"       # prefix | fulltext | fuzzy | skim
+
+# filter_mode controls the default scope of history shown in the TUI.
+# "global"    – all hosts, all sessions
+# "host"      – current machine only
+# "session"   – current terminal session only
+# "directory" – commands run in the current directory tree
+filter_mode = "global"
+
+# When using the up-arrow binding, restrict to host history for less noise.
+filter_mode_shell_up_key_binding = "host"
+
+# Workspace filtering: show commands from the whole git repo tree, not just cwd.
+workspaces = true
+
+## ── UI ────────────────────────────────────────────────────────────────────────
+style = "compact"           # auto | full | compact
+
+# Show a preview of the selected command (useful for long commands)
+show_preview = true
+max_preview_height = 4
+
+# inline_height = 0         # 0 = always full-screen
+# invert = false            # put search bar at the top
+
+# exit_mode = "return-original"   # return-original | return-query
+
+## ── Behaviour ─────────────────────────────────────────────────────────────────
+# Press Enter to immediately execute the selected command (Tab returns to shell to edit).
+enter_accept = true
+
+# keymap_mode = "auto"       # auto | emacs | vim-insert | vim-normal
+
+## ── Privacy ───────────────────────────────────────────────────────────────────
+# Prevent secrets from being saved to history.
+secrets_filter = true
+
+# Block specific commands from being saved (regex, unanchored).
+# history_filter = [
+#   "^secret-cmd",
+#   "^innocuous-cmd .*--secret=.+",
+# ]
+
+# Block commands run from specific directories.
+# cwd_filter = [
+#   "^/very/secret/area",
+# ]
+
+## ── Stats ─────────────────────────────────────────────────────────────────────
+[stats]
+# Track sub-commands for richer statistics (e.g. "git commit" vs just "git").
+common_subcommands = [
+  "apt",
+  "cargo",
+  "docker",
+  "git",
+  "go",
+  "kubectl",
+  "mise",
+  "npm",
+  "pnpm",
+  "systemctl",
+  "tmux",
+]
+
+# Strip sudo prefix from stats so "sudo apt" counts as "apt".
+common_prefix = ["sudo"]
+
+# Commands too generic to be useful in stats.
+ignored_commands = [
+  "cd",
+  "ls",
+  "ll",
+  "la",
+  "z",
+  "exit",
+  "clear",
+]
+
+## ── Keys ──────────────────────────────────────────────────────────────────────
+[keys]
+# Prevent accidentally exiting the TUI when scrolling past the last entry.
+scroll_exits = false
+
+## ── Sync v2 ───────────────────────────────────────────────────────────────────
+[sync]
+records = true
