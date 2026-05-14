@@ -40,6 +40,14 @@ require('telescope').setup({
       },
       initial_mode = 'normal',
     },
+    live_grep = {
+      show_line = false,       -- exibe só filename:lnum, não o texto do match
+      only_sort_text = true,   -- mas continua buscando/filtrando pelo texto
+    },
+    grep_string = {
+      show_line = false,
+      only_sort_text = true,
+    },
   },
   extensions = {
     undo = {

@@ -12,13 +12,7 @@ layout {
     }
     // Tab 2: nvim (60%) + pi (40%) em ~/prdbook
     tab {
-        pane size="60%" {
-            command "nvim"
-            cwd "/home/vinicius.falconi@sp01.local/prdbook"
-        }
-        pane size="40%" {
-            command "pi"
-            cwd "/home/vinicius.falconi@sp01.local/prdbook"
-        }
+        pane size="60%" command="nvim" cwd="/home/vinicius.falconi@sp01.local/prdbook"
+        pane size="40%" command="pi" cwd="/home/vinicius.falconi@sp01.local/prdbook"
     }
 }
