@@ -42,7 +42,6 @@ require('telescope').setup({
     },
     zoxide = {
       path_display = { 'filename_first', 'truncate' },
-      sorting_strategy = 'ascending',
     },
     live_grep = {
       show_line = false,       -- exibe só filename:lnum, não o texto do match
