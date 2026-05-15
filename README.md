@@ -7,7 +7,7 @@
 1. **Instale o Pi** (requer bash, curl e git)
 
 ```bash
-curl -fsSL https://get.pi.dev/install.sh | bash
+curl -fsSL https://pi.dev/install.sh | sh
 ```
 
 2. **Clone o repo e ative a skill**
