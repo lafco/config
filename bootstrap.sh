@@ -4,7 +4,7 @@
 set -e
 
 DOTFILES_DIR="${HOME}/dotfiles"
-REPO_URL="https://github.com/lafco/dotfiles.git"
+REPO_URL="https://github.com/lafco/config.git"
 
 echo "→ Clonando dotfiles..."
 if [ -d "$DOTFILES_DIR" ]; then
