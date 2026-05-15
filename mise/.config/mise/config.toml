@@ -8,6 +8,7 @@
 # ── Runtimes ─────────────────────────────────────────────────────────────────
 node    = "lts"
 python  = "latest"
+rust    = "latest"    # required by cargo:television
 
 # ── Shell utilities ───────────────────────────────────────────────────────────
 ripgrep  = "latest"  # rg  – fast grep
