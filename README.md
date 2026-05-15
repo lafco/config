@@ -17,7 +17,6 @@ pi
 # No prompt do Pi:
 > setup my machine
 ```
-🟢 O Pi vai detectar seu SO (Linux/WSL), instalar só o que você aceitar e mostrar cada passo antes de executar!
 ---
 ## Pós-instalação manual
 Alguns passos precisam ser feitos manualmente (por segurança/credenciais):
@@ -70,7 +69,6 @@ stow -R nvim
 # Se houver conflito (arquivo já existe), tomar posse:
 stow --adopt nvim    # move o arquivo existente para dentro do repo
 ```
----
 ## Atualizar depois de um `git pull`
 ```bash
 cd ~/dotfiles
@@ -88,4 +86,3 @@ stow meu-novo-app
 # Commitar
 git add meu-novo-app && git commit -m "add meu-novo-app config"
 ```
----
