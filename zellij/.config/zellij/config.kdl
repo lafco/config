@@ -51,8 +51,10 @@ keybinds clear-defaults=true {
         bind "up" { ScrollUp; }
         bind "home" { ScrollToTop; SwitchToMode "normal"; }
         bind "end" { ScrollToBottom; SwitchToMode "normal"; }
+        bind "Ctrl c" { Copy; }
         bind "d" { HalfPageScrollDown; }
         bind "Ctrl d" { PageScrollDown; }
+        bind "e" { EditScrollback; }
         bind "f" { SwitchToMode "entersearch"; SearchInput 0; }
         bind "j" { ScrollDown; }
         bind "Shift j" { ScrollToBottom; SwitchToMode "normal"; }
@@ -61,6 +63,7 @@ keybinds clear-defaults=true {
         bind "Alt s" { SwitchToMode "normal"; }
         bind "u" { HalfPageScrollUp; }
         bind "Ctrl u" { PageScrollUp; }
+        bind "y" { Copy; }
     }
     search {
         bind "c" { SearchToggleOption "CaseSensitivity"; }
@@ -79,13 +82,9 @@ keybinds clear-defaults=true {
         bind "Alt b" { NewPane "right"; }
         bind "Alt d" { Detach; }
         bind "Alt g" { SwitchToMode "locked"; }
-        bind "Ctrl h" { MoveFocus "left"; }
         bind "Alt h" { MoveFocus "left"; }
-        bind "Ctrl j" { MoveFocus "down"; }
         bind "Alt j" { MoveFocus "down"; }
-        bind "Ctrl k" { MoveFocus "up"; }
         bind "Alt k" { MoveFocus "up"; }
-        bind "Ctrl l" { MoveFocus "right"; }
         bind "Alt l" { MoveFocus "right"; }
         bind "Alt o" {
             LaunchOrFocusPlugin "session-manager" {
@@ -298,7 +297,7 @@ default_layout "default"
 //   - true (default)
 //   - false
 // 
-mouse_mode false
+mouse_mode true
  
 // Toggle having pane frames around the panes
 // Options:
@@ -482,6 +481,10 @@ styled_underlines false
 // Default: true
 // 
 show_startup_tips false
+
+// Enable automatic copying of selection when releasing mouse
+// Default: true
+copy_on_select true
  
 // Whether to show release notes on first version run
 // Default: true

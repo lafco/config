@@ -92,6 +92,13 @@ vim.api.nvim_create_user_command('Prdbook', function()
 end, { desc = 'Open prdbook knowledge base' })
 map('n', '<leader>fp', '<cmd>Prdbook<cr>', { desc = 'Open prdbook' })
 
+-- Prdbook staging: open feature staging folder
+vim.api.nvim_create_user_command('Staging', function()
+  vim.cmd('cd ~/prdbook/staging')
+  require('mini.files').open('~/prdbook/staging')
+end, { desc = 'Open staging folder' })
+map('n', '<leader>fs', '<cmd>Staging<cr>', { desc = 'Open staging folder' })
+
 -- Diagnostics navigation
 local diagnostic_goto = function(next, severity)
   return function()
