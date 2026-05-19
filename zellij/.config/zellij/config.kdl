@@ -154,7 +154,7 @@ plugins {
     welcome-screen location="zellij:session-manager" {
         welcome_screen true
     }
-    zjstatus location="~/.config/zellij/plugins/zjstatus.wasm" {
+    zjstatus location="file:~/.config/zellij/plugins/zjstatus.wasm" {
         border_enabled true
         color_base "#232136"
         color_foam "#9ccfd8"
@@ -200,7 +200,7 @@ plugins {
 // eg. "file:/path/to/my-plugin.wasm"
 // eg. "https://example.com/my-plugin.wasm"
 load_plugins {
-    "~/.config/zellij/plugins/zjstatus.wasm" {
+    "file:~/.config/zellij/plugins/zjstatus.wasm" {
         border_enabled true
         color_base "#232136"
         color_foam "#9ccfd8"
@@ -239,7 +239,7 @@ load_plugins {
         tab_normal_sync "#[fg=$subtle] {name} #[]"
         tab_separator "|"
     }
-    "~/.config/zellij/plugins/zjframes.wasm" {
+    "file:~/.config/zellij/plugins/zjframes.wasm" {
         hide_frame_except_for_fullscreen false
         hide_frame_except_for_search false
         hide_frame_for_single_pane false
