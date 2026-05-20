@@ -26,6 +26,9 @@ config.window_padding = {
 -- Shell
 config.default_prog = { '/usr/bin/bash', '-l' }
 
+-- Kitty keyboard protocol (required by pi for modifier key detection)
+config.enable_kitty_keyboard = true
+
 -- Miscellaneous settings
 config.max_fps = 120
 config.prefer_egl = true

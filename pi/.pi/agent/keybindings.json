@@ -3,6 +3,7 @@
   "tui.editor.deleteCharForward": ["delete"],
   "app.clear": ["ctrl+c", "ctrl+backspace"],
   "app.exit": [],
+  "app.session.deleteNoninvasive": [],
   "app.tree.foldOrUp": ["ctrl+left", "alt+left", "ctrl+p"],
   "app.tree.unfoldOrDown": ["ctrl+right", "alt+right", "ctrl+n"]
 }
