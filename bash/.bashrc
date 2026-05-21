@@ -93,3 +93,6 @@ DOTFILES_DIR="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"
 
 # ── Secrets (tokens, credenciais) — NUNCA versionar ───────────────────────────
 [ -f ~/.secrets ] && source ~/.secrets
+
+# Pi
+export PATH="/home/lafco/.local/share/mise/installs/node/24.15.0/bin:$PATH"
