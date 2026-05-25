@@ -1,7 +1,8 @@
 {
 
+  "tui.editor.deleteWordBackward": ["ctrl+w", "alt+backspace", "ctrl+backspace"],
   "tui.editor.deleteCharForward": ["delete"],
-  "app.clear": ["ctrl+c", "ctrl+backspace"],
+  "app.clear": ["ctrl+c"],
   "app.exit": [],
   "app.session.deleteNoninvasive": [],
   "app.tree.foldOrUp": ["ctrl+left", "alt+left", "ctrl+p"],
