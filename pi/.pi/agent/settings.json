@@ -1,7 +1,7 @@
 {
   "lastChangelogVersion": "0.75.5",
-  "defaultProvider": "opencode-go",
-  "defaultModel": "deepseek-v4-pro",
+  "defaultProvider": "dta",
+  "defaultModel": "claude-sonnet-4",
   "defaultThinkingLevel": "high",
   "enabledModels": [
     "github-copilot/gpt-4.1",
@@ -9,17 +9,7 @@
     "opencode-go/deepseek-v4-pro",
     "opencode-go/glm-5.1",
     "opencode-go/kimi-k2.6",
-    "opencode-go/qwen3.6-plus",
-    "dta/gpt-5.5",
-    "dta/gpt-5.4-mini",
-    "dta/gpt-5.4-nano",
-    "dta/gpt-4o-mini",
-    "dta/gpt-4.1-nano",
-    "dta/claude-sonnet-4",
-    "dta/claude-opus-4-5-aws",
-    "dta/gemini-2.5-pro",
-    "dta/gemini-2.5-flash",
-    "dta/o3"
+    "opencode-go/qwen3.6-plus"
   ],
   "hideThinkingBlock": false,
   "packages": []

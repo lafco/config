@@ -90,9 +90,9 @@ DOTFILES_DIR="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"
 
 # Inclui aliases pessoais fora do repositório de dotfiles
 [ -f ~/aliases.bash ] && source ~/aliases.bash
+[ -f ~/.bash_aliases ] && source ~/.bash_aliases
 
 # ── Secrets (tokens, credenciais) — NUNCA versionar ───────────────────────────
 [ -f ~/.secrets ] && source ~/.secrets
 
-# Pi
-export PATH="/home/lafco/.local/share/mise/installs/node/24.15.0/bin:$PATH"
+source ~/.prdbook-env

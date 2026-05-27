@@ -297,7 +297,7 @@ default_layout "default"
 //   - true (default)
 //   - false
 // 
-mouse_mode true
+mouse_mode false
  
 // Toggle having pane frames around the panes
 // Options:
@@ -484,7 +484,7 @@ show_startup_tips false
 
 // Enable automatic copying of selection when releasing mouse
 // Default: true
-copy_on_select true
+copy_on_select false
  
 // Whether to show release notes on first version run
 // Default: true
