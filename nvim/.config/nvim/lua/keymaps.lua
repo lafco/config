@@ -89,10 +89,22 @@ map('n', ']h', '*', { desc = 'Next word under cursor' })
 
 -- Messages: view auto-dismissed messages (Neovim 0.12 messagesopt wait:1)
 map('n', '<leader>tm', function()
-  local ch = vim.o.cmdheight
-  vim.o.cmdheight = 1
-  vim.cmd('messages')
-  vim.defer_fn(function() vim.o.cmdheight = ch end, 10)
+  local output = vim.fn.execute('messages')
+  if output == '' or output == '\n' then
+    vim.notify('No messages', vim.log.levels.INFO)
+    return
+  end
+  local lines = vim.split(output:gsub('\n$', ''), '\n')
+  local buf = vim.api.nvim_create_buf(false, true)
+  vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+  vim.bo[buf].buftype = 'nofile'
+  vim.bo[buf].modifiable = false
+  vim.bo[buf].bufhidden = 'wipe'
+  vim.bo[buf].filetype = 'messages'
+  local height = math.min(math.max(#lines + 2, 6), 30)
+  vim.cmd('botright ' .. height .. 'split')
+  vim.api.nvim_win_set_buf(0, buf)
+  vim.keymap.set('n', 'q', '<cmd>close<cr>', { buffer = buf, silent = true, desc = 'Close messages' })
 end, { desc = 'Show Message history' })
 
 -- File explorer (mini.files)
