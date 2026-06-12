@@ -37,6 +37,7 @@ vim.opt.scrolloff = 9
 vim.opt.sessionoptions = { 'buffers', 'curdir', 'tabpages', 'winsize', 'help', 'globals', 'skiprtp', 'folds' }
 vim.opt.shiftround = true
 vim.opt.shiftwidth = 2
+vim.opt.showtabline = 0 -- never show tabline (no buffer tabs)
 -- T truncates messages instead of "Press ENTER" prompt (critical with cmdheight=0)
 -- A suppresses ATTENTION swap-file prompts
 -- F suppresses "file changed" prompts

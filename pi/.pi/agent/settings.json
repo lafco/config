@@ -1,7 +1,7 @@
 {
-  "lastChangelogVersion": "0.77.0",
-  "defaultProvider": "github-copilot",
-  "defaultModel": "gpt-4.1",
+  "lastChangelogVersion": "0.79.1",
+  "defaultProvider": "opencode-go",
+  "defaultModel": "deepseek-v4-pro",
   "defaultThinkingLevel": "high",
   "enabledModels": [
     "github-copilot/gpt-4.1",
@@ -13,5 +13,7 @@
     "dta/gpt-5.5"
   ],
   "hideThinkingBlock": false,
-  "packages": []
+  "packages": [
+    "git:github.com/vahidkowsari/pi-local-rag"
+  ]
 }

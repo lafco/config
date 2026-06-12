@@ -37,10 +37,17 @@ require('neogit').setup({
     section = { '', '' },
   },
   disable_commit_confirmation = true,
+  kind = "vsplit",  -- abre como split vertical (permite resize com Ctrl+setas)
+  mappings = {
+    status = {
+      ['[c'] = 'GoToPreviousHunkHeader',
+      [']c'] = 'GoToNextHunkHeader',
+    },
+  },
   integrations = {
     telescope = true,
     diffview = true,
   },
 })
 
-map('n', '<leader>gg', '<cmd>Neogit<cr>', { desc = 'Neogit' })
+map('n', '<leader>g', '<cmd>Neogit<cr>', { desc = 'Neogit' })

@@ -17,12 +17,16 @@ map('n', '<C-l>', '<cmd>ZellijNavigateRightTab<cr>', { desc = 'Go to Right Windo
 -- Resize windows
 map('n', '<C-Up>', '<cmd>resize +2<cr>', { desc = 'Increase Window Height' })
 map('n', '<C-Down>', '<cmd>resize -2<cr>', { desc = 'Decrease Window Height' })
-map('n', '<C-Left>', '<cmd>vertical resize -2<cr>', { desc = 'Decrease Window Width' })
-map('n', '<C-Right>', '<cmd>vertical resize +2<cr>', { desc = 'Increase Window Width' })
+map('n', '<C-Left>', '<cmd>vertical resize +2<cr>', { desc = 'Increase Window Width' })
+map('n', '<C-Right>', '<cmd>vertical resize -2<cr>', { desc = 'Decrease Window Width' })
 
 -- Move lines in insert mode
 map('i', '<A-j>', '<esc><cmd>m .+1<cr>==gi', { desc = 'Move Down' })
 map('i', '<A-k>', '<esc><cmd>m .-2<cr>==gi', { desc = 'Move Up' })
+
+-- Delete without yanking (black hole register)
+map({ 'n', 'x' }, 'x', '"_x', { desc = 'Delete without yank' })
+map({ 'n', 'x' }, 'X', '"_X', { desc = 'Delete backwards without yank' })
 
 -- Buffers
 map('n', '[b', '<cmd>bprevious<cr>', { desc = 'Prev Buffer' })
@@ -79,8 +83,17 @@ end, { desc = 'Quickfix List' })
 map('n', '[q', vim.cmd.cprev, { desc = 'Previous Quickfix' })
 map('n', ']q', vim.cmd.cnext, { desc = 'Next Quickfix' })
 
+-- Search word under cursor (like * / #)
+map('n', '[h', '#', { desc = 'Prev word under cursor' })
+map('n', ']h', '*', { desc = 'Next word under cursor' })
+
 -- Messages: view auto-dismissed messages (Neovim 0.12 messagesopt wait:1)
-map('n', '<leader>tm', '<cmd>messages<cr>', { desc = 'Toggle Message history' })
+map('n', '<leader>tm', function()
+  local ch = vim.o.cmdheight
+  vim.o.cmdheight = 1
+  vim.cmd('messages')
+  vim.defer_fn(function() vim.o.cmdheight = ch end, 10)
+end, { desc = 'Show Message history' })
 
 -- File explorer (mini.files)
 map('n', '<leader>e', '<Cmd>lua MiniFiles.open(vim.api.nvim_buf_get_name(0))<CR>', { desc = 'Open file explorer' })

@@ -34,7 +34,9 @@ require('lualine').setup({
   sections = {
     lualine_c = { 'filename', 'harpoon' },
   },
+  tabline = {},
   options = {
+    always_show_tabline = false,
     theme = {
       normal = {
         a = { bg = colors.bg, fg = colors.text, gui = 'bold' },

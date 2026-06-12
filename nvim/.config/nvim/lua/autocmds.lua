@@ -50,3 +50,20 @@ autocmd('BufReadPost', {
     end
   end,
 })
+
+-- Neogit: resize commit message to 70% when staged diff opens below
+autocmd('FileType', {
+  desc = 'Neogit commit editor: 70/30 split',
+  group = augroup('neogit_commit_resize'),
+  pattern = 'gitcommit',
+  callback = function()
+    vim.defer_fn(function()
+      local diff_win = vim.fn.win_getid(vim.fn.winnr('j'))
+      if diff_win == 0 then return end
+      local diff_ft = vim.bo[vim.api.nvim_win_get_buf(diff_win)].filetype
+      if diff_ft == 'NeogitDiffView' then
+        vim.api.nvim_win_set_height(0, math.floor(vim.o.lines * 0.7))
+      end
+    end, 50)
+  end,
+})
