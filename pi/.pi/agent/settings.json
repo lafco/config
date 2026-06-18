@@ -1,5 +1,5 @@
 {
-  "lastChangelogVersion": "0.79.1",
+  "lastChangelogVersion": "0.79.4",
   "defaultProvider": "opencode-go",
   "defaultModel": "deepseek-v4-pro",
   "defaultThinkingLevel": "high",
@@ -15,5 +15,6 @@
   "hideThinkingBlock": false,
   "packages": [
     "git:github.com/vahidkowsari/pi-local-rag"
-  ]
+  ],
+  "theme": "dark"
 }

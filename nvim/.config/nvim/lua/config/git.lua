@@ -50,4 +50,11 @@ require('neogit').setup({
   },
 })
 
-map('n', '<leader>g', '<cmd>Neogit<cr>', { desc = 'Neogit' })
+map('n', '<leader>gg', function() require('neogit').open({ kind = 'replace' }) end, { desc = 'Neogit (full screen)' })
+map('n', '<leader>gb', function() require('neogit').open({ kind = 'vsplit' }) end, { desc = 'Neogit (vertical split)' })
+map('n', '<leader>gv', function()
+  local old = vim.o.splitbelow
+  vim.o.splitbelow = true
+  require('neogit').open({ kind = 'split' })
+  vim.o.splitbelow = old
+end, { desc = 'Neogit (bottom)' })
