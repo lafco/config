@@ -115,7 +115,7 @@ vim.api.nvim_create_user_command('Prdbook', function()
   vim.cmd('cd ~/prdbook')
   require('mini.files').open('~/prdbook')
 end, { desc = 'Open prdbook knowledge base' })
-map('n', '<leader>fp', '<cmd>Prdbook<cr>', { desc = 'Open prdbook' })
+map('n', '<leader>fp', '<cmd>Staging<cr>', { desc = 'Open prdbook staging' })
 
 -- Prdbook staging: open feature staging folder
 vim.api.nvim_create_user_command('Staging', function()
