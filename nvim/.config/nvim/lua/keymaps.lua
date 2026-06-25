@@ -14,6 +14,10 @@ map('n', '<C-j>', '<cmd>ZellijNavigateDown<cr>', { desc = 'Go to Lower Window', 
 map('n', '<C-k>', '<cmd>ZellijNavigateUp<cr>', { desc = 'Go to Upper Window', remap = true })
 map('n', '<C-l>', '<cmd>ZellijNavigateRightTab<cr>', { desc = 'Go to Right Window', remap = true })
 
+-- Split windows
+map('n', '<C-w>v', '<cmd>belowright split<cr>', { desc = 'Horizontal Split (bottom)' })
+map('n', '<C-w>b', '<cmd>vsplit<cr>', { desc = 'Vertical Split' })
+
 -- Resize windows
 map('n', '<C-Up>', '<cmd>resize +2<cr>', { desc = 'Increase Window Height' })
 map('n', '<C-Down>', '<cmd>resize -2<cr>', { desc = 'Decrease Window Height' })
