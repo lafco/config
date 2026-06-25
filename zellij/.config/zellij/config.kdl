@@ -5,6 +5,8 @@ keybinds clear-defaults=true {
     pane {
         bind "down" { NewPane "down"; SwitchToMode "normal"; }
         bind "right" { NewPane "right"; SwitchToMode "normal"; }
+        bind "b" { NewPane "down"; SwitchToMode "normal"; }
+        bind "v" { NewPane "right"; SwitchToMode "normal"; }
         bind "c" { }
         bind "e" { TogglePaneEmbedOrFloating; SwitchToMode "normal"; }
         bind "f" { ToggleFocusFullscreen; SwitchToMode "normal"; }
