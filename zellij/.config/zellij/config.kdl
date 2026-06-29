@@ -81,7 +81,7 @@ keybinds clear-defaults=true {
         bind "Alt up" { Resize "Increase up"; }
         bind "Alt right" { Resize "Increase right"; }
         bind "Alt /" { ToggleFloatingPanes; SwitchToMode "normal"; }
-        bind "Alt b" { NewPane "right"; }
+        bind "Alt b" { NewPane "down"; }
         bind "Alt d" { Detach; }
         bind "Alt g" { SwitchToMode "locked"; }
         bind "Alt h" { MoveFocus "left"; }
@@ -96,7 +96,7 @@ keybinds clear-defaults=true {
             SwitchToMode "normal"
         }
         bind "Alt q" { Quit; }
-        bind "Alt v" { NewPane "down"; }
+        bind "Alt v" { NewPane "right"; }
         bind "Alt x" { CloseFocus; }
     }
     shared_except "locked" "move" {

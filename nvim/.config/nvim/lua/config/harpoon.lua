@@ -22,6 +22,7 @@ end
 
 map('n', '<leader>fh', function() toggle_telescope(harpoon:list()) end, { desc = 'Harpoon List' })
 map('n', '<leader>a', function() harpoon:list():add() end, { desc = 'Mark file' })
+map('n', '<leader>A', function() harpoon:list():remove() end, { desc = 'Unmark file' })
 
 -- Quick file access (Alt+1..6)
 for i = 1, 6 do

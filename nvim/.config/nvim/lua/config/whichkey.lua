@@ -38,5 +38,6 @@ require('which-key').setup({
     { '<leader>e', icon = '󰉋 ', desc = 'Open file explorer' },
     { '<leader>c', icon = '󰷜 ', desc = 'Format buffer' },
     { '<leader>a', icon = '󱠷 ', desc = 'Mark file' },
+    { '<leader>A', icon = '󱠸 ', desc = 'Unmark file' },
   },
 })

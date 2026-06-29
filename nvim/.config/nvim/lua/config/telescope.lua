@@ -10,16 +10,20 @@ require('telescope').setup({
     borderchars = { '─', '│', '─', '│', '┌', '┐', '┘', '└' },
     mappings = {
       i = {
+        ['<C-b>'] = actions.select_horizontal,
         ['<C-c>'] = actions.close,
         ['<C-d>'] = actions.preview_scrolling_down,
         ['<C-u>'] = actions.preview_scrolling_up,
+        ['<C-v>'] = actions.select_vertical,
         ['<c-enter>'] = 'to_fuzzy_refine',
       },
       n = {
         ['q'] = actions.close,
+        ['<C-b>'] = actions.select_horizontal,
         ['<C-c>'] = actions.close,
         ['<C-d>'] = actions.preview_scrolling_down,
         ['<C-u>'] = actions.preview_scrolling_up,
+        ['<C-v>'] = actions.select_vertical,
       },
     },
     layout_config = {
