@@ -88,8 +88,8 @@ map('n', '[q', vim.cmd.cprev, { desc = 'Previous Quickfix' })
 map('n', ']q', vim.cmd.cnext, { desc = 'Next Quickfix' })
 
 -- Search word under cursor (like * / #)
-map('n', '[h', '#', { desc = 'Prev word under cursor' })
-map('n', ']h', '*', { desc = 'Next word under cursor' })
+map('n', '[n', '#', { desc = 'Prev word under cursor' })
+map('n', ']n', '*', { desc = 'Next word under cursor' })
 
 -- Messages: view auto-dismissed messages (Neovim 0.12 messagesopt wait:1)
 map('n', '<leader>tm', function()

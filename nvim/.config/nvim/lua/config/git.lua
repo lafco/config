@@ -42,6 +42,8 @@ require('neogit').setup({
     status = {
       ['[c'] = 'GoToPreviousHunkHeader',
       [']c'] = 'GoToNextHunkHeader',
+      ['[h'] = 'GoToPreviousHunkHeader',
+      [']h'] = 'GoToNextHunkHeader',
     },
   },
   integrations = {
