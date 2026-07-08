@@ -29,6 +29,13 @@ vim.lsp.config('*', {
 
 -- ── Server-specific overrides ─────────────────────────────────────
 vim.lsp.config('ts_ls', {})
+vim.lsp.config('intelephense', {
+  settings = {
+    intelephense = {
+      files = { maxSize = 5000000 },
+    },
+  },
+})
 vim.lsp.config('lua_ls', {
   settings = {
     Lua = {
@@ -56,6 +63,7 @@ require('mason-tool-installer').setup({
   ensure_installed = {
     'ts_ls',
     'lua_ls',
+    'intelephense',
     'stylua',
   },
 })
@@ -107,8 +115,7 @@ vim.api.nvim_create_autocmd('LspAttach', {
     map('gR', vim.lsp.buf.rename, 'Rename')
     map('ga', vim.lsp.buf.code_action, 'Code Action', { 'n', 'x' })
 
-    -- Hover / Signature
-    map('K', vim.lsp.buf.hover, 'Hover')
+    -- Hover / Signature (K is handled globally in debug.lua for DAP/LSP awareness)
     map('<leader>th', function()
       vim.lsp.inlay_hint.enable(not vim.lsp.inlay_hint.is_enabled({ bufnr = event.buf }))
     end, 'Toggle Inlay Hints')
@@ -153,3 +160,29 @@ vim.diagnostic.config({
   } or {},
   virtual_text = false, -- No inline text — avoids blocking/jank
 })
+
+-- ── Global fallback: warn when LSP keymap is used but no server is attached ──
+-- Buffer-local mappings (set via LspAttach) take precedence when LSP is active.
+-- These global fallbacks fire only when no LSP is attached, showing a warning.
+local function lsp_or_warn(action, name)
+  return function()
+    if vim.lsp.get_clients({ bufnr = 0 })[1] then
+      action()
+    else
+      vim.notify(
+        'Nenhum LSP ativo — instale um servidor de linguagem via :Mason',
+        vim.log.levels.WARN,
+        { title = 'LSP: ' .. name }
+      )
+    end
+  end
+end
+vim.keymap.set('n', 'gd', lsp_or_warn(require('telescope.builtin').lsp_definitions, 'Definition'), { desc = 'LSP: Definition' })
+vim.keymap.set('n', 'gD', lsp_or_warn(vim.lsp.buf.declaration, 'Declaration'), { desc = 'LSP: Declaration' })
+vim.keymap.set('n', 'gi', lsp_or_warn(require('telescope.builtin').lsp_implementations, 'Implementation'), { desc = 'LSP: Implementation' })
+vim.keymap.set('n', 'gr', lsp_or_warn(require('telescope.builtin').lsp_references, 'References'), { desc = 'LSP: References' })
+vim.keymap.set('n', 'gt', lsp_or_warn(require('telescope.builtin').lsp_type_definitions, 'Type Definition'), { desc = 'LSP: Type Definition' })
+vim.keymap.set('n', 'gs', lsp_or_warn(require('telescope.builtin').lsp_document_symbols, 'Document Symbols'), { desc = 'LSP: Document Symbols' })
+vim.keymap.set('n', 'gw', lsp_or_warn(require('telescope.builtin').lsp_dynamic_workspace_symbols, 'Workspace Symbols'), { desc = 'LSP: Workspace Symbols' })
+vim.keymap.set('n', 'gR', lsp_or_warn(vim.lsp.buf.rename, 'Rename'), { desc = 'LSP: Rename' })
+vim.keymap.set({ 'n', 'x' }, 'ga', lsp_or_warn(vim.lsp.buf.code_action, 'Code Action'), { desc = 'LSP: Code Action' })

@@ -77,6 +77,28 @@ require('dap-go').setup({
 })
 
 -- ── Language-specific debug configurations ─────────────────────────
+-- ── PHP (XDebug) ─────────────────────────────────────────────────
+-- Adapter is auto-configured by mason-nvim-dap (ensure_installed = { 'php' })
+dap.configurations.php = {
+  -- Launch: listen for XDebug connections (matching VSCode config)
+  {
+    type = 'php',
+    request = 'launch',
+    name = 'PHP (XDebug port 9003)',
+    port = 9003,
+    pathMappings = {
+      ['/var/www'] = '${workspaceFolder}',
+    },
+    xdebugSettings = {
+      max_children = 5000,
+      max_depth = 9,
+    },
+    ignore = {
+      '**/vendor/**/*.php',
+    },
+  },
+}
+
 dap.configurations.javascript = {
   -- Launch: debug the current file directly
   {
@@ -137,3 +159,14 @@ map('n', '<C-4>', function() dap.step_out() end, { desc = 'Debug: Step Out' })
 map('n', '<leader>dt', function() dap.toggle_breakpoint() end, { desc = 'Debug: Toggle Breakpoint' })
 map('n', '<leader>db', function() dap.set_breakpoint(vim.fn.input('Breakpoint condition: ')) end, { desc = 'Debug: Set Breakpoint' })
 map('n', '<leader>dr', function() dapui.toggle() end, { desc = 'Debug: See last session result' })
+map('n', '<leader>dR', function() dap.repl.open() end, { desc = 'Debug: Open REPL' })
+-- Hover: DAP variable if debugging, LSP otherwise, warn if neither
+vim.keymap.set('n', 'K', function()
+  if dap.session() then
+    require('dap.ui.widgets').hover()
+  elseif vim.lsp.get_clients({ bufnr = 0 })[1] then
+    vim.lsp.buf.hover()
+  else
+    vim.notify('Nenhum LSP ativo — instale um servidor de linguagem via :Mason', vim.log.levels.WARN, { title = 'LSP' })
+  end
+end, { desc = 'Hover (DAP/LSP)' })
