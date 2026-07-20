@@ -84,7 +84,25 @@ require('telescope').load_extension('yank_history')
 local map = require('utils').map
 
 map('n', '<leader>fb', '<cmd>Telescope buffers<cr>', { desc = 'Buffers' })
-map('n', '<leader>ff', '<cmd>Telescope find_files<cr>', { desc = 'Find files' })
+map('n', '<leader>ff', function()
+  require('telescope.builtin').find_files({
+    -- Exclude test/tests directories (root or nested) + node_modules
+    file_ignore_patterns = { 'node_modules', '^test/', '/test/', '^tests/', '/tests/' },
+  })
+end, { desc = 'Find files' })
+map('n', '<leader>ft', function()
+  local has_fd = vim.fn.executable('fd') == 1
+  local find_command
+  if has_fd then
+    find_command = { 'fd', '--type', 'f', '--color', 'never', '--glob', '**/test/**', '--glob', '**/tests/**' }
+  else
+    find_command = { 'rg', '--files', '--color', 'never', '--glob', '**/test/**', '--glob', '**/tests/**' }
+  end
+  require('telescope.builtin').find_files({
+    find_command = find_command,
+    prompt_title = 'Test Files',
+  })
+end, { desc = 'Test files' })
 map('n', '<leader>fg', '<cmd>Telescope live_grep<cr>', { desc = 'Live grep' })
 map('n', '<leader>fo', '<cmd>Telescope oldfiles<cr>', { desc = 'Old files' })
 map('n', '<leader>fr', '<cmd>Telescope resume<cr>', { desc = 'Resume search' })
