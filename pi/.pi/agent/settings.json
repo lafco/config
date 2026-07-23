@@ -1,5 +1,5 @@
 {
-  "lastChangelogVersion": "0.80.2",
+  "lastChangelogVersion": "0.80.10",
   "defaultProvider": "opencode-go",
   "defaultModel": "deepseek-v4-pro",
   "defaultThinkingLevel": "high",
@@ -7,14 +7,11 @@
     "github-copilot/gpt-4.1",
     "dta/gemini-2.5-pro",
     "dta/gemini-2.5-flash",
-    "dta/claude-sonnet-4-5-aws",
     "dta/gpt-5.1-azure",
     "dta/gpt-5.4-mini",
     "dta/gpt-5.5"
   ],
   "hideThinkingBlock": false,
-  "packages": [
-    "git:github.com/vahidkowsari/pi-local-rag"
-  ],
+  "packages": [],
   "theme": "dark"
 }
