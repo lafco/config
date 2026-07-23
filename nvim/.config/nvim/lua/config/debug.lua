@@ -2,14 +2,14 @@
 
 local map = require('utils').map
 
--- ── Debugprint ─────────────────────────────────────────────────────
+-- ── Debugprint (prefixo <leader>p = Print) ─────────────────────────
 require('debugprint').setup({
   picker = 'telescope',
   keymaps = {
     normal = {
-      plain_below = '<leader>dl',
+      plain_below = '<leader>pl',
       plain_above = false,
-      variable_below = '<leader>dv',
+      variable_below = '<leader>pv',
       variable_above = false,
       variable_below_alwaysprompt = false,
       variable_above_alwaysprompt = false,
@@ -20,12 +20,12 @@ require('debugprint').setup({
       textobj_above = false,
       textobj_surround = false,
       toggle_comment_debug_prints = '<leader>td',
-      delete_debug_prints = '<leader>dD',
+      delete_debug_prints = '<leader>pD',
     },
   },
 })
-map('n', '<leader>ds', ':Debugprint search<CR>', { desc = 'Find debugprints' })
-map('n', '<leader>dq', ':Debugprint qflist<CR>', { desc = 'Quickfix list debugprints' })
+map('n', '<leader>ps', ':Debugprint search<CR>', { desc = 'Print: Find debugprints' })
+map('n', '<leader>pq', ':Debugprint qflist<CR>', { desc = 'Print: Quickfix list debugprints' })
 
 -- ── nvim-dap ───────────────────────────────────────────────────────
 local dap = require('dap')
@@ -66,7 +66,7 @@ for type, icon in pairs(breakpoint_icons) do
   vim.fn.sign_define(tp, { text = icon, texthl = hl, numhl = hl })
 end
 
-dap.listeners.after.event_initialized['dapui_config'] = dapui.open
+-- dapui NÃO abre automaticamente ao iniciar debug — use <leader>du para alternar
 dap.listeners.before.event_terminated['dapui_config'] = dapui.close
 dap.listeners.before.event_exited['dapui_config'] = dapui.close
 
@@ -157,9 +157,35 @@ map('n', '<C-2>', function() dap.step_over() end, { desc = 'Debug: Step Over' })
 map('n', '<C-3>', function() dap.step_into() end, { desc = 'Debug: Step Into' })
 map('n', '<C-4>', function() dap.step_out() end, { desc = 'Debug: Step Out' })
 map('n', '<leader>dt', function() dap.toggle_breakpoint() end, { desc = 'Debug: Toggle Breakpoint' })
-map('n', '<leader>db', function() dap.set_breakpoint(vim.fn.input('Breakpoint condition: ')) end, { desc = 'Debug: Set Breakpoint' })
-map('n', '<leader>dr', function() dapui.toggle() end, { desc = 'Debug: See last session result' })
+map('n', '<leader>db', function() dap.set_breakpoint(vim.fn.input('Breakpoint condition: ')) end, { desc = 'Debug: Conditional Breakpoint' })
+map('n', '<leader>dB', function() dap.clear_breakpoints() end, { desc = 'Debug: Clear All Breakpoints' })
+map('n', '<leader>dc', function() dap.continue() end, { desc = 'Debug: Start/Continue' })
+map('n', '<leader>du', function() dapui.toggle() end, { desc = 'Debug: Toggle UI (sidebar)' })
 map('n', '<leader>dR', function() dap.repl.open() end, { desc = 'Debug: Open REPL' })
+
+-- ── Individual panel toggles (float, fecha com q ou mesma tecla) ───
+local function toggle_dapui_float(name)
+  -- Procura um float já aberto para este elemento e fecha
+  for _, w in ipairs(vim.api.nvim_list_wins()) do
+    local cfg = vim.api.nvim_win_get_config(w)
+    if cfg.relative ~= '' then
+      local buf = vim.api.nvim_win_get_buf(w)
+      local ft = vim.bo[buf].filetype
+      if ft == 'dapui_' .. name then
+        vim.api.nvim_win_close(w, true)
+        return
+      end
+    end
+  end
+  -- Abre como float
+  dapui.float_element(name)
+end
+
+map('n', '<leader>dw', function() toggle_dapui_float('watches') end, { desc = 'Debug: Toggle Watches' })
+map('n', '<leader>dS', function() toggle_dapui_float('scopes') end, { desc = 'Debug: Toggle Scopes' })
+map('n', '<leader>dk', function() toggle_dapui_float('stacks') end, { desc = 'Debug: Toggle Stacks' })
+map('n', '<leader>dp', function() toggle_dapui_float('breakpoints') end, { desc = 'Debug: Toggle Breakpoints Panel' })
+map('n', '<leader>dC', function() toggle_dapui_float('console') end, { desc = 'Debug: Toggle Console' })
 -- Hover: DAP variable if debugging, LSP otherwise, warn if neither
 vim.keymap.set('n', 'K', function()
   if dap.session() then
