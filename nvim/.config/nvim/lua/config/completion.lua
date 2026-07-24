@@ -25,6 +25,8 @@ require('blink.cmp').setup({
   snippets = { preset = 'luasnip' },
   fuzzy = { implementation = 'lua' },
   signature = { enabled = true },
+  -- Não mostrar menu de comandos ao pressionar ':'
+  cmdline = { enabled = false },
 })
 
 -- Load friendly-snippets into LuaSnip
