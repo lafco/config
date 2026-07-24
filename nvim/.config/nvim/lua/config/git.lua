@@ -39,6 +39,8 @@ require('neogit').setup({
   kind = "vsplit",  -- abre como split vertical (permite resize com Ctrl+setas)
   mappings = {
     status = {
+      ['[c'] = 'GoToPreviousHunkHeader',
+      [']c'] = 'GoToNextHunkHeader',
       ['[h'] = 'GoToPreviousHunkHeader',
       [']h'] = 'GoToNextHunkHeader',
     },
@@ -47,29 +49,6 @@ require('neogit').setup({
     telescope = true,
     diffview = true,
   },
-})
-
--- ── ]c / [c no Neogit: pular entre arquivos (seções), não entre hunks ──
-local function neogit_jump_file(direction)
-  -- direction: 'n' = próximo arquivo, 'b' = arquivo anterior
-  local flags = direction == 'n' and 'W' or 'bW'
-  -- Padrão: linhas de seção do Neogit (começam com 2 espaços e não são hunk/comentário)
-  local line = vim.fn.search('^  \S', flags)
-  if line == 0 then
-    local msg = direction == 'n' and 'Último arquivo' or 'Primeiro arquivo'
-    vim.notify(msg, vim.log.levels.INFO, { title = 'Neogit' })
-  else
-    vim.cmd('normal! zt')
-  end
-end
-
-vim.api.nvim_create_autocmd('FileType', {
-  pattern = 'NeogitStatus',
-  callback = function(args)
-    local buf = args.buf
-    vim.keymap.set('n', ']c', function() neogit_jump_file('n') end, { buffer = buf, desc = 'Próximo arquivo' })
-    vim.keymap.set('n', '[c', function() neogit_jump_file('b') end, { buffer = buf, desc = 'Arquivo anterior' })
-  end,
 })
 
 map('n', '<leader>gg', function() require('neogit').open({ kind = 'replace' }) end, { desc = 'Neogit (full screen)' })
