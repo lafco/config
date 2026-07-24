@@ -152,16 +152,16 @@ dap.configurations.javascript = {
 dap.configurations.typescript = dap.configurations.javascript
 
 -- Debug keymaps
-map('n', '<C-1>', function() dap.continue() end, { desc = 'Debug: Start/Continue' })
-map('n', '<C-2>', function() dap.step_over() end, { desc = 'Debug: Step Over' })
-map('n', '<C-3>', function() dap.step_into() end, { desc = 'Debug: Step Into' })
-map('n', '<C-4>', function() dap.step_out() end, { desc = 'Debug: Step Out' })
-map('n', '<leader>dt', function() dap.toggle_breakpoint() end, { desc = 'Debug: Toggle Breakpoint' })
-map('n', '<leader>db', function() dap.set_breakpoint(vim.fn.input('Breakpoint condition: ')) end, { desc = 'Debug: Conditional Breakpoint' })
-map('n', '<leader>dB', function() dap.clear_breakpoints() end, { desc = 'Debug: Clear All Breakpoints' })
-map('n', '<leader>dc', function() dap.continue() end, { desc = 'Debug: Start/Continue' })
-map('n', '<leader>du', function() dapui.toggle() end, { desc = 'Debug: Toggle UI (sidebar)' })
-map('n', '<leader>dR', function() dap.repl.open() end, { desc = 'Debug: Open REPL' })
+map('n', '<C-1>', function() dap.continue() end, { desc = 'Start/Continue' })
+map('n', '<C-2>', function() dap.step_over() end, { desc = 'Step Over' })
+map('n', '<C-3>', function() dap.step_into() end, { desc = 'Step Into' })
+map('n', '<C-4>', function() dap.step_out() end, { desc = 'Step Out' })
+map('n', '<leader>dt', function() dap.toggle_breakpoint() end, { desc = 'Toggle: Breakpoint' })
+map('n', '<leader>db', function() dap.set_breakpoint(vim.fn.input('Breakpoint condition: ')) end, { desc = 'Conditional Breakpoint' })
+map('n', '<leader>dB', function() dap.clear_breakpoints() end, { desc = 'Clear All Breakpoints' })
+map('n', '<leader>dc', function() dap.continue() end, { desc = 'Start/Continue' })
+map('n', '<leader>du', function() dapui.toggle() end, { desc = 'Toggle: UI (sidebar)' })
+map('n', '<leader>dR', function() dap.repl.open() end, { desc = 'Open REPL' })
 
 -- ── Individual panel toggles (float, fecha com q ou mesma tecla) ───
 local function toggle_dapui_float(name)
@@ -181,18 +181,48 @@ local function toggle_dapui_float(name)
   dapui.float_element(name)
 end
 
-map('n', '<leader>dw', function() toggle_dapui_float('watches') end, { desc = 'Debug: Toggle Watches' })
-map('n', '<leader>dS', function() toggle_dapui_float('scopes') end, { desc = 'Debug: Toggle Scopes' })
-map('n', '<leader>dk', function() toggle_dapui_float('stacks') end, { desc = 'Debug: Toggle Stacks' })
-map('n', '<leader>dp', function() toggle_dapui_float('breakpoints') end, { desc = 'Debug: Toggle Breakpoints Panel' })
-map('n', '<leader>dC', function() toggle_dapui_float('console') end, { desc = 'Debug: Toggle Console' })
--- Hover: DAP variable if debugging, LSP otherwise, warn if neither
+map('n', '<leader>dw', function() toggle_dapui_float('watches') end, { desc = 'Toggle: Watches' })
+map('n', '<leader>dS', function() toggle_dapui_float('scopes') end, { desc = 'Toggle: Scopes' })
+map('n', '<leader>dk', function() toggle_dapui_float('stacks') end, { desc = 'Toggle: Stacks' })
+map('n', '<leader>dp', function() toggle_dapui_float('breakpoints') end, { desc = 'Toggle: Breakpoints Panel' })
+map('n', '<leader>dC', function() toggle_dapui_float('console') end, { desc = 'Toggle: Console' })
+-- Toggle Hover: DAP variable if debugging, LSP otherwise, warn if neither
+local hover_win = nil
+vim.api.nvim_create_autocmd('WinClosed', {
+  callback = function(args)
+    if hover_win and tonumber(args.match) == hover_win then
+      hover_win = nil
+    end
+  end,
+})
 vim.keymap.set('n', 'K', function()
+  -- Se hover já está aberto, fecha e sai
+  if hover_win and vim.api.nvim_win_is_valid(hover_win) then
+    vim.api.nvim_win_close(hover_win, true)
+    hover_win = nil
+    return
+  end
+  -- Abrir novo hover
   if dap.session() then
-    require('dap.ui.widgets').hover()
+    hover_win = require('dap.ui.widgets').hover()
   elseif vim.lsp.get_clients({ bufnr = 0 })[1] then
+    local wins_before = {}
+    for _, w in ipairs(vim.api.nvim_list_wins()) do
+      wins_before[w] = true
+    end
     vim.lsp.buf.hover()
+    vim.schedule(function()
+      for _, w in ipairs(vim.api.nvim_list_wins()) do
+        if not wins_before[w] and vim.api.nvim_win_is_valid(w) then
+          local cfg = vim.api.nvim_win_get_config(w)
+          if cfg.relative ~= '' then
+            hover_win = w
+            break
+          end
+        end
+      end
+    end)
   else
     vim.notify('Nenhum LSP ativo — instale um servidor de linguagem via :Mason', vim.log.levels.WARN, { title = 'LSP' })
   end
-end, { desc = 'Hover (DAP/LSP)' })
+end, { desc = 'Toggle Hover (DAP/LSP)' })
