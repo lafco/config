@@ -151,11 +151,80 @@ dap.configurations.javascript = {
 }
 dap.configurations.typescript = dap.configurations.javascript
 
+-- ── List breakpoints via telescope ─────────────────────────────────
+local function list_breakpoints()
+  local items = {}
+  for bufnr, lines in pairs(dap.breakpoints or {}) do
+    if vim.api.nvim_buf_is_valid(bufnr) then
+      local filename = vim.api.nvim_buf_get_name(bufnr)
+      local short = vim.fn.fnamemodify(filename, ':~:.')
+      for line, bp in pairs(lines) do
+        local display = short .. ':' .. line
+        local suffix = {}
+        if bp.condition and bp.condition ~= '' then
+          table.insert(suffix, 'cond: ' .. bp.condition)
+        end
+        if bp.logMessage and bp.logMessage ~= '' then
+          table.insert(suffix, 'log: ' .. bp.logMessage)
+        end
+        if #suffix > 0 then
+          display = display .. '  [' .. table.concat(suffix, ', ') .. ']'
+        end
+        table.insert(items, {
+          filename = filename,
+          lnum = line,
+          display = display,
+          ordinal = short .. ':' .. line,
+        })
+      end
+    end
+  end
+  if #items == 0 then
+    vim.notify('Nenhum breakpoint definido', vim.log.levels.INFO, { title = 'DAP' })
+    return
+  end
+  -- Ordena por nome de arquivo + linha
+  table.sort(items, function(a, b)
+    if a.filename == b.filename then return a.lnum < b.lnum end
+    return a.filename < b.filename
+  end)
+  local actions = require('telescope.actions')
+  local state = require('telescope.actions.state')
+  require('telescope.pickers').new({}, {
+    prompt_title = 'Breakpoints',
+    finder = require('telescope.finders').new_table({
+      results = items,
+      entry_maker = function(item)
+        return {
+          value = item,
+          display = item.display,
+          ordinal = item.ordinal,
+          filename = item.filename,
+          lnum = item.lnum,
+        }
+      end,
+    }),
+    sorter = require('telescope.config').values.generic_sorter({}),
+    attach_mappings = function(prompt_bufnr)
+      actions.select_default:replace(function()
+        local sel = state.get_selected_entry()
+        actions.close(prompt_bufnr)
+        if sel then
+          vim.cmd('edit ' .. vim.fn.fnameescape(sel.filename))
+          vim.api.nvim_win_set_cursor(0, { sel.lnum, 0 })
+        end
+      end)
+      return true
+    end,
+  }):find()
+end
+
 -- Debug keymaps
 map('n', '<C-1>', function() dap.continue() end, { desc = 'Start/Continue' })
 map('n', '<C-2>', function() dap.step_over() end, { desc = 'Step Over' })
 map('n', '<C-3>', function() dap.step_into() end, { desc = 'Step Into' })
 map('n', '<C-4>', function() dap.step_out() end, { desc = 'Step Out' })
+map('n', '<leader>df', list_breakpoints, { desc = 'Find Breakpoints' })
 map('n', '<leader>dt', function() dap.toggle_breakpoint() end, { desc = 'Toggle: Breakpoint' })
 map('n', '<leader>db', function() dap.set_breakpoint(vim.fn.input('Breakpoint condition: ')) end, { desc = 'Conditional Breakpoint' })
 map('n', '<leader>dB', function() dap.clear_breakpoints() end, { desc = 'Clear All Breakpoints' })
