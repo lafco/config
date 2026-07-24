@@ -52,6 +52,13 @@ dapui.setup({
       disconnect = '⏏',
     },
   },
+  floating = {
+    border = 'single',
+    mappings = {
+      open = '<CR>',
+      close = 'q',
+    },
+  },
 })
 
 -- Breakpoint icons
@@ -268,6 +275,7 @@ local function toggle_dapui_float(name)
       local cfg = vim.api.nvim_win_get_config(w)
       if cfg.relative ~= '' then
         dapui_floats[name] = w
+        vim.api.nvim_set_current_win(w)  -- garante foco na janela
         break
       end
     end
