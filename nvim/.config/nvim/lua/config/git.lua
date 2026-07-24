@@ -28,7 +28,25 @@ require('gitsigns').setup({
   end,
 })
 
--- Neogit
+-- Neogit: funções auxiliares para pular entre arquivos (seções)
+local function neogit_next_file()
+  -- Padrão: linha que começa com espaços + ícone de arquivo (não @ de hunk nem diff)
+  local line = vim.fn.search('^  [^@ ]', 'nW')
+  if line == 0 then
+    vim.notify('Último arquivo', vim.log.levels.INFO, { title = 'Neogit' })
+  else
+    vim.cmd('normal! zt')  -- scroll para o topo
+  end
+end
+local function neogit_prev_file()
+  local line = vim.fn.search('^  [^@ ]', 'bnW')
+  if line == 0 then
+    vim.notify('Primeiro arquivo', vim.log.levels.INFO, { title = 'Neogit' })
+  else
+    vim.cmd('normal! zt')
+  end
+end
+
 require('neogit').setup({
   graph_style = 'unicode',
   notification_icon = '',
@@ -40,8 +58,8 @@ require('neogit').setup({
   kind = "vsplit",  -- abre como split vertical (permite resize com Ctrl+setas)
   mappings = {
     status = {
-      ['[c'] = 'GoToPreviousHunkHeader',
-      [']c'] = 'GoToNextHunkHeader',
+      ['[c'] = neogit_prev_file,
+      [']c'] = neogit_next_file,
       ['[h'] = 'GoToPreviousHunkHeader',
       [']h'] = 'GoToNextHunkHeader',
     },
