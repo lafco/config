@@ -95,7 +95,6 @@ vim.pack.add({
   { src = 'https://github.com/leoluz/nvim-dap-go',              name = 'nvim-dap-go' },
 
   -- ── Zellij ──────────────────────────────────────────────────────
-  { src = 'https://github.com/swaits/zellij-nav.nvim',           name = 'zellij-nav.nvim' },
 }, { load = true })
 
 -- ── Plugin Configuration ──────────────────────────────────────────
@@ -114,7 +113,6 @@ require('config.whichkey')
 require('config.harpoon')
 require('config.yanky')
 require('config.debug')
-require('config.zellij')
 
 -- ── Keymaps & Autocommands ────────────────────────────────────────
 require('keymaps')

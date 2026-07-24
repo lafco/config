@@ -8,12 +8,6 @@ map({ 'n', 'x' }, '<Down>', "v:count == 0 ? 'gj' : 'j'", { desc = 'Down', expr =
 map({ 'n', 'x' }, 'k', "v:count == 0 ? 'gk' : 'k'", { desc = 'Up', expr = true, silent = true })
 map({ 'n', 'x' }, '<Up>', "v:count == 0 ? 'gk' : 'k'", { desc = 'Up', expr = true, silent = true })
 
--- Move between zellij/nvim windows
-map('n', '<C-h>', '<cmd>ZellijNavigateLeftTab<cr>', { desc = 'Go to Left Window', remap = true })
-map('n', '<C-j>', '<cmd>ZellijNavigateDown<cr>', { desc = 'Go to Lower Window', remap = true })
-map('n', '<C-k>', '<cmd>ZellijNavigateUp<cr>', { desc = 'Go to Upper Window', remap = true })
-map('n', '<C-l>', '<cmd>ZellijNavigateRightTab<cr>', { desc = 'Go to Right Window', remap = true })
-
 -- Split windows
 map('n', '<C-w>v', '<cmd>vsplit<cr>', { desc = 'Vertical Split' })
 map('n', '<C-w>b', '<cmd>belowright split<cr>', { desc = 'Horizontal Split (bottom)' })
