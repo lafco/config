@@ -28,25 +28,6 @@ require('gitsigns').setup({
   end,
 })
 
--- Neogit: funções auxiliares para pular entre arquivos (seções)
-local function neogit_next_file()
-  -- Padrão: linha que começa com espaços + ícone de arquivo (não @ de hunk nem diff)
-  local line = vim.fn.search('^  [^@ ]', 'nW')
-  if line == 0 then
-    vim.notify('Último arquivo', vim.log.levels.INFO, { title = 'Neogit' })
-  else
-    vim.cmd('normal! zt')  -- scroll para o topo
-  end
-end
-local function neogit_prev_file()
-  local line = vim.fn.search('^  [^@ ]', 'bnW')
-  if line == 0 then
-    vim.notify('Primeiro arquivo', vim.log.levels.INFO, { title = 'Neogit' })
-  else
-    vim.cmd('normal! zt')
-  end
-end
-
 require('neogit').setup({
   graph_style = 'unicode',
   notification_icon = '',
@@ -58,8 +39,6 @@ require('neogit').setup({
   kind = "vsplit",  -- abre como split vertical (permite resize com Ctrl+setas)
   mappings = {
     status = {
-      ['[c'] = neogit_prev_file,
-      [']c'] = neogit_next_file,
       ['[h'] = 'GoToPreviousHunkHeader',
       [']h'] = 'GoToNextHunkHeader',
     },
@@ -68,6 +47,29 @@ require('neogit').setup({
     telescope = true,
     diffview = true,
   },
+})
+
+-- ── ]c / [c no Neogit: pular entre arquivos (seções), não entre hunks ──
+local function neogit_jump_file(direction)
+  -- direction: 'n' = próximo arquivo, 'b' = arquivo anterior
+  local flags = direction == 'n' and 'W' or 'bW'
+  -- Padrão: linhas de seção do Neogit (começam com 2 espaços e não são hunk/comentário)
+  local line = vim.fn.search('^  \S', flags)
+  if line == 0 then
+    local msg = direction == 'n' and 'Último arquivo' or 'Primeiro arquivo'
+    vim.notify(msg, vim.log.levels.INFO, { title = 'Neogit' })
+  else
+    vim.cmd('normal! zt')
+  end
+end
+
+vim.api.nvim_create_autocmd('FileType', {
+  pattern = 'NeogitStatus',
+  callback = function(args)
+    local buf = args.buf
+    vim.keymap.set('n', ']c', function() neogit_jump_file('n') end, { buffer = buf, desc = 'Próximo arquivo' })
+    vim.keymap.set('n', '[c', function() neogit_jump_file('b') end, { buffer = buf, desc = 'Arquivo anterior' })
+  end,
 })
 
 map('n', '<leader>gg', function() require('neogit').open({ kind = 'replace' }) end, { desc = 'Neogit (full screen)' })
