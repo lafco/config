@@ -256,11 +256,6 @@ map('n', '<leader>dk', function() toggle_dapui_float('stacks') end, { desc = 'To
 map('n', '<leader>dp', function() toggle_dapui_float('breakpoints') end, { desc = 'Toggle: Breakpoints Panel' })
 map('n', '<leader>dC', function() toggle_dapui_float('console') end, { desc = 'Toggle: Console' })
 -- Toggle Hover: DAP variable if debugging, LSP otherwise. K toggles open/close.
--- LSP hover is configured focusable=false so any cursor move also closes it.
-vim.lsp.handlers['textDocument/hover'] = vim.lsp.with(vim.lsp.handlers.hover, {
-  focusable = false,
-})
-
 vim.keymap.set('n', 'K', function()
   -- Fecha qualquer hover já aberto (DAP ou LSP)
   for _, win in ipairs(vim.api.nvim_list_wins()) do
