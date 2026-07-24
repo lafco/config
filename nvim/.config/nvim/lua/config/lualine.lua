@@ -30,9 +30,20 @@ end
 
 local colors = get_colorscheme_colors()
 
+-- ── DAP status component ───────────────────────────────────────────
+local function dap_status()
+  local ok, dap = pcall(require, 'dap')
+  if not ok then return '' end
+  if not dap.session() then return '' end
+  local status = dap.status()
+  if status == '' then return '' end
+  return '󰃤 ' .. status
+end
+
 require('lualine').setup({
   sections = {
     lualine_c = { 'filename', 'harpoon' },
+    lualine_x = { dap_status },
   },
   tabline = {},
   options = {
