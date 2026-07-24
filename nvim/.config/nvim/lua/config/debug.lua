@@ -255,42 +255,31 @@ map('n', '<leader>dS', function() toggle_dapui_float('scopes') end, { desc = 'To
 map('n', '<leader>dk', function() toggle_dapui_float('stacks') end, { desc = 'Toggle: Stacks' })
 map('n', '<leader>dp', function() toggle_dapui_float('breakpoints') end, { desc = 'Toggle: Breakpoints Panel' })
 map('n', '<leader>dC', function() toggle_dapui_float('console') end, { desc = 'Toggle: Console' })
--- Toggle Hover: DAP variable if debugging, LSP otherwise, warn if neither
-local hover_win = nil
-vim.api.nvim_create_autocmd('WinClosed', {
-  callback = function(args)
-    if hover_win and tonumber(args.match) == hover_win then
-      hover_win = nil
-    end
-  end,
+-- Toggle Hover: DAP variable if debugging, LSP otherwise. K toggles open/close.
+-- LSP hover is configured focusable=false so any cursor move also closes it.
+vim.lsp.handlers['textDocument/hover'] = vim.lsp.with(vim.lsp.handlers.hover, {
+  focusable = false,
 })
+
 vim.keymap.set('n', 'K', function()
-  -- Se hover já está aberto, fecha e sai
-  if hover_win and vim.api.nvim_win_is_valid(hover_win) then
-    vim.api.nvim_win_close(hover_win, true)
-    hover_win = nil
-    return
+  -- Fecha qualquer hover já aberto (DAP ou LSP)
+  for _, win in ipairs(vim.api.nvim_list_wins()) do
+    local cfg = vim.api.nvim_win_get_config(win)
+    if cfg.relative ~= '' and not cfg.footer then  -- floating window
+      local buf = vim.api.nvim_win_get_buf(win)
+      local ft = vim.bo[buf].filetype
+      -- DAP hover tem filetype 'dapui_hover'; LSP hover geralmente é 'markdown' ou ''
+      if ft == 'dapui_hover' or ft == 'markdown' or (ft == '' and vim.bo[buf].buftype == 'nofile') then
+        vim.api.nvim_win_close(win, true)
+        return
+      end
+    end
   end
   -- Abrir novo hover
   if dap.session() then
-    hover_win = require('dap.ui.widgets').hover()
+    require('dap.ui.widgets').hover()
   elseif vim.lsp.get_clients({ bufnr = 0 })[1] then
-    local wins_before = {}
-    for _, w in ipairs(vim.api.nvim_list_wins()) do
-      wins_before[w] = true
-    end
     vim.lsp.buf.hover()
-    vim.schedule(function()
-      for _, w in ipairs(vim.api.nvim_list_wins()) do
-        if not wins_before[w] and vim.api.nvim_win_is_valid(w) then
-          local cfg = vim.api.nvim_win_get_config(w)
-          if cfg.relative ~= '' then
-            hover_win = w
-            break
-          end
-        end
-      end
-    end)
   else
     vim.notify('Nenhum LSP ativo — instale um servidor de linguagem via :Mason', vim.log.levels.WARN, { title = 'LSP' })
   end
