@@ -232,22 +232,46 @@ map('n', '<leader>dc', function() dap.continue() end, { desc = 'Start/Continue' 
 map('n', '<leader>du', function() dapui.toggle() end, { desc = 'Toggle: UI (sidebar)' })
 map('n', '<leader>dR', function() dap.repl.open() end, { desc = 'Open REPL' })
 
--- ── Individual panel toggles (float, fecha com q ou mesma tecla) ───
+-- ── Individual panel toggles (float, abre/fecha com a mesma tecla) ───
+local dapui_floats = {}  -- { watches = winid, scopes = winid, ... }
+
+-- Limpa tracking quando a janela é fechada manualmente (q, :q, etc.)
+vim.api.nvim_create_autocmd('WinClosed', {
+  callback = function(args)
+    local closed = tonumber(args.match)
+    for name, win in pairs(dapui_floats) do
+      if win == closed then
+        dapui_floats[name] = nil
+        break
+      end
+    end
+  end,
+})
+
 local function toggle_dapui_float(name)
-  -- Procura um float já aberto para este elemento e fecha
+  local existing = dapui_floats[name]
+  if existing and vim.api.nvim_win_is_valid(existing) then
+    vim.api.nvim_win_close(existing, true)
+    dapui_floats[name] = nil
+    return
+  end
+  dapui_floats[name] = nil  -- limpa stale entry
+  -- Abre e captura o window ID
+  local wins_before = {}
   for _, w in ipairs(vim.api.nvim_list_wins()) do
-    local cfg = vim.api.nvim_win_get_config(w)
-    if cfg.relative ~= '' then
-      local buf = vim.api.nvim_win_get_buf(w)
-      local ft = vim.bo[buf].filetype
-      if ft == 'dapui_' .. name then
-        vim.api.nvim_win_close(w, true)
-        return
+    wins_before[w] = true
+  end
+  dapui.float_element(name)
+  -- dapui.float_element é síncrono, a janela já deve existir
+  for _, w in ipairs(vim.api.nvim_list_wins()) do
+    if not wins_before[w] and vim.api.nvim_win_is_valid(w) then
+      local cfg = vim.api.nvim_win_get_config(w)
+      if cfg.relative ~= '' then
+        dapui_floats[name] = w
+        break
       end
     end
   end
-  -- Abre como float
-  dapui.float_element(name)
 end
 
 map('n', '<leader>dw', function() toggle_dapui_float('watches') end, { desc = 'Toggle: Watches' })
