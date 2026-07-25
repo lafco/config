@@ -233,11 +233,11 @@ map('n', '<C-3>', function() dap.step_into() end, { desc = 'Step Into' })
 map('n', '<C-4>', function() dap.step_out() end, { desc = 'Step Out' })
 map('n', '<leader>df', list_breakpoints, { desc = 'Find Breakpoints' })
 map('n', '<leader>dt', function() dap.toggle_breakpoint() end, { desc = 'Toggle: Breakpoint' })
-map('n', '<leader>db', function() dap.set_breakpoint(vim.fn.input('Breakpoint condition: ')) end, { desc = 'Conditional Breakpoint' })
-map('n', '<leader>dB', function() dap.clear_breakpoints() end, { desc = 'Clear All Breakpoints' })
-map('n', '<leader>dc', function() dap.continue() end, { desc = 'Start/Continue' })
+map('n', '<leader>dc', function() dap.set_breakpoint(vim.fn.input('Breakpoint condition: ')) end, { desc = 'Conditional Breakpoint' })
+map('n', '<leader>dx', function() dap.clear_breakpoints() end, { desc = 'Clear All Breakpoints' })
+map('n', '<leader>ds', function() dap.continue() end, { desc = 'Start/Continue' })
 map('n', '<leader>du', function() dapui.toggle() end, { desc = 'Toggle: UI (sidebar)' })
-map('n', '<leader>dR', function() dap.repl.open() end, { desc = 'Open REPL' })
+map('n', '<leader>dr', function() dap.repl.open() end, { desc = 'Open REPL' })
 
 -- ── Individual panel toggles (float, abre/fecha com a mesma tecla) ───
 local dapui_floats = {}  -- { watches = winid, scopes = winid, ... }
@@ -282,11 +282,7 @@ local function toggle_dapui_float(name)
   end
 end
 
-map('n', '<leader>dw', function() toggle_dapui_float('watches') end, { desc = 'Toggle: Watches' })
-map('n', '<leader>dS', function() toggle_dapui_float('scopes') end, { desc = 'Toggle: Scopes' })
 map('n', '<leader>dk', function() toggle_dapui_float('stacks') end, { desc = 'Toggle: Stacks' })
-map('n', '<leader>dp', function() toggle_dapui_float('breakpoints') end, { desc = 'Toggle: Breakpoints Panel' })
-map('n', '<leader>dC', function() toggle_dapui_float('console') end, { desc = 'Toggle: Console' })
 -- Toggle Hover: DAP variable if debugging, LSP otherwise. K toggles open/close.
 vim.keymap.set('n', 'K', function()
   -- Fecha qualquer hover já aberto (DAP ou LSP)

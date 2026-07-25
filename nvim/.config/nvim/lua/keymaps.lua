@@ -12,6 +12,12 @@ map({ 'n', 'x' }, '<Up>', "v:count == 0 ? 'gk' : 'k'", { desc = 'Up', expr = tru
 map('n', '<C-w>v', '<cmd>vsplit<cr>', { desc = 'Vertical Split' })
 map('n', '<C-w>b', '<cmd>belowright split<cr>', { desc = 'Horizontal Split (bottom)' })
 
+-- Window navigation (Ctrl+hjkl moves focus, like Ctrl-w hjkl)
+map('n', '<C-h>', '<C-w>h', { desc = 'Go to Left Window' })
+map('n', '<C-j>', '<C-w>j', { desc = 'Go to Lower Window' })
+map('n', '<C-k>', '<C-w>k', { desc = 'Go to Upper Window' })
+map('n', '<C-l>', '<C-w>l', { desc = 'Go to Right Window' })
+
 -- Resize windows
 map('n', '<C-Up>', '<cmd>resize +2<cr>', { desc = 'Increase Window Height' })
 map('n', '<C-Down>', '<cmd>resize -2<cr>', { desc = 'Decrease Window Height' })
