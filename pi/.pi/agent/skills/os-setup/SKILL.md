@@ -24,10 +24,10 @@ This skill turns Pi into a complete environment bootstrapper. With just Pi insta
 | Version mgr | `mise` | Manages all dev tools |
 | Shell | `starship`, `zoxide`, `television`, `bat`, `eza`, `fd`, `ripgrep`, `atuin` | Modern terminal experience |
 | Editor | `neovim` | Editor configured via dotfiles |
-| Terminal | `zellij`, `wezterm` (default) | Multiplexer + emulator |
+| Terminal | `herdr`, `zellij`, `wezterm` (default) | Multiplexer + AI workspace manager + emulator |
 | Git | `lazygit`, `jj`, `gh`, `gh-dash` | Git tooling |
 | Runtimes | `node` (LTS), `python` (latest), `rust` | Dev runtimes |
-| Config | `dotfiles` (via Stow) | bash, nvim, pi, wezterm, zellij, television, starship, mise |
+| Config | `dotfiles` (via Stow) | bash, nvim, pi, wezterm, zellij, herdr, television, starship, mise |
 
 ## Step-by-step workflow
 
@@ -74,6 +74,7 @@ Explain each package:
 - `bash-completion` — autocompletion for git, docker, ssh, etc.
 - `fontconfig` — font cache manager (needed for `fc-cache` after font install)
 - `cpio` — archive extractor (Fedora: needed to extract WezTerm RPM if applicable)
+- `xsel` ou `xclip` (Linux) — clipboard integration (herdr copy-on-select)
 
 ⚠️ **Ask the user before running sudo commands.** Say: "Vou instalar pacotes do sistema. Posso executar?"
 
@@ -95,7 +96,7 @@ Verify: `mise --version`
 
 ### Step 3: Clone dotfiles repo
 
-Ask the user which repo URL to clone. Default: `https://github.com/lafco/dotfiles.git` (update to the actual repo URL after pushing).
+Ask the user which repo URL to clone. Default: `https://github.com/lafco/config.git`.
 
 ```bash
 git clone <repo-url> ~/dotfiles
@@ -189,10 +190,12 @@ Verify everything works:
 nvim --version      # neovim
 starship --version  # prompt
 zellij --version    # multiplexer
+herdr --version     # AI workspace manager
 mise --version      # version manager
 mise ls             # all installed tools
 ls -la ~/.bashrc    # should be symlink → ~/dotfiles/bash/.bashrc
 ls -la ~/.config/nvim  # should be symlink → ~/dotfiles/nvim/.config/nvim
+ls -la ~/.config/herdr # should be symlink → ~/dotfiles/herdr/.config/herdr
 ls -la ~/.pi/agent/settings.json  # should be symlink
 ```
 
@@ -252,7 +255,7 @@ Tell the user: "Estes passos precisam ser feitos manualmente. Quer que eu expliq
 curl -fsSL https://pi.ai/install.sh | bash
 
 # 2. Clone dotfiles
-git clone git@github.com:lafco/dotfiles.git ~/dotfiles
+git clone git@github.com:lafco/config.git ~/dotfiles
 
 # 3. Link the skill (so Pi reads it before stow runs)
 mkdir -p ~/.pi/agent/skills
