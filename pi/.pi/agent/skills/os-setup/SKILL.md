@@ -133,23 +133,7 @@ retry the ones that failed:
 MISE_CONFIG_FILE=~/dotfiles/mise/.config/mise/config.toml mise install btop "github:wez/wezterm"
 ```
 
-### Step 5: Install herdr (AI workspace manager)
-
-Herdr is not in the mise registry — it has its own installer and updater.
-
-```bash
-curl -fsSL https://herdr.dev/install.sh | bash
-```
-
-Verify:
-```bash
-herdr --version
-```
-
-⚠️ Herdr manages its own updates via `herdr update`. Mise does NOT track it.
-The config is already stowed at `~/.config/herdr/config.toml` after Step 7.
-
-### Step 6: Install fonts
+### Step 5: Install fonts
 
 JetBrains Mono Nerd Font is needed for icons in neovim and starship.
 
@@ -168,7 +152,7 @@ already in place. Install `fontconfig` via system packages if needed.
 
 **Windows (WSL):** Also tell the user to install the font on Windows side (for Windows Terminal/WezTerm GUI). Link: https://github.com/ryanoasis/nerd-fonts/releases/latest/download/JetBrainsMono.zip
 
-### Step 7: Stow dotfiles
+### Step 6: Stow dotfiles
 
 This creates all the symlinks. Show the user what will be linked:
 
@@ -198,7 +182,7 @@ cd ~/dotfiles && stow --adopt */  # now stow can re-create it properly
 After `--adopt`, the original files are moved into `~/dotfiles/`. If you want to restore
 the dotfiles versions (not your old configs), run `git -C ~/dotfiles checkout .`
 
-### Step 8: Post-install checks
+### Step 7: Post-install checks
 
 Verify everything works:
 
@@ -215,7 +199,7 @@ ls -la ~/.config/herdr # should be symlink → ~/dotfiles/herdr/.config/herdr
 ls -la ~/.pi/agent/settings.json  # should be symlink
 ```
 
-### Step 9: WezTerm as default terminal (WSL)
+### Step 8: WezTerm as default terminal (WSL)
 
 WezTerm runs as a **Windows GUI app** that connects to WSL — it does not need the Linux binary
 to work. The mise-installed WezTerm RPM may not extract or run correctly on Fedora
@@ -240,7 +224,7 @@ Tell the user:
 - "Você pode fixar o WezTerm na barra de tarefas do Windows."
 - "O WezTerm GUI do Windows conecta automaticamente no WSL — não precisa do binário Linux."
 
-### Step 10: Manual auth setup (inform the user)
+### Step 9: Manual auth setup (inform the user)
 
 These require user interaction and cannot be automated:
 

@@ -31,8 +31,9 @@ github-cli              = "latest"   # gh
 neovim   = "latest"
 starship = "latest"
 
-# ── Terminal multiplexer ──────────────────────────────────────────────────────
+# ── Terminal multiplexer & AI workspace manager ───────────────────────────────
 zellij = "latest"
+"github:ogulcancelik/herdr" = "latest"  # herdr – AI workspace manager
 
 # ── Terminal emulator ─────────────────────────────────────────────────────────
 # wezterm is not in the mise registry; install via github backend
