@@ -108,8 +108,8 @@ vim.api.nvim_create_autocmd('LspAttach', {
     map('gi', require('telescope.builtin').lsp_implementations, 'Implementation')
     map('gr', require('telescope.builtin').lsp_references, 'References')
     map('gt', require('telescope.builtin').lsp_type_definitions, 'Type Definition')
-    map('gs', require('telescope.builtin').lsp_document_symbols, 'Document Symbols')
-    map('gw', require('telescope.builtin').lsp_dynamic_workspace_symbols, 'Workspace Symbols')
+    map('gf', require('telescope.builtin').lsp_document_symbols, 'Document Symbols')
+    map('gp', require('telescope.builtin').lsp_dynamic_workspace_symbols, 'Workspace Symbols')
 
     -- Actions
     map('gR', vim.lsp.buf.rename, 'Rename')
@@ -182,7 +182,7 @@ vim.keymap.set('n', 'gD', lsp_or_warn(vim.lsp.buf.declaration, 'Declaration'), {
 vim.keymap.set('n', 'gi', lsp_or_warn(require('telescope.builtin').lsp_implementations, 'Implementation'), { desc = 'LSP: Implementation' })
 vim.keymap.set('n', 'gr', lsp_or_warn(require('telescope.builtin').lsp_references, 'References'), { desc = 'LSP: References' })
 vim.keymap.set('n', 'gt', lsp_or_warn(require('telescope.builtin').lsp_type_definitions, 'Type Definition'), { desc = 'LSP: Type Definition' })
-vim.keymap.set('n', 'gs', lsp_or_warn(require('telescope.builtin').lsp_document_symbols, 'Document Symbols'), { desc = 'LSP: Document Symbols' })
-vim.keymap.set('n', 'gw', lsp_or_warn(require('telescope.builtin').lsp_dynamic_workspace_symbols, 'Workspace Symbols'), { desc = 'LSP: Workspace Symbols' })
+vim.keymap.set('n', 'gf', lsp_or_warn(require('telescope.builtin').lsp_document_symbols, 'Document Symbols'), { desc = 'LSP: Document Symbols' })
+vim.keymap.set('n', 'gp', lsp_or_warn(require('telescope.builtin').lsp_dynamic_workspace_symbols, 'Workspace Symbols'), { desc = 'LSP: Workspace Symbols' })
 vim.keymap.set('n', 'gR', lsp_or_warn(vim.lsp.buf.rename, 'Rename'), { desc = 'LSP: Rename' })
 vim.keymap.set({ 'n', 'x' }, 'ga', lsp_or_warn(vim.lsp.buf.code_action, 'Code Action'), { desc = 'LSP: Code Action' })
