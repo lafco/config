@@ -1,0 +1,136 @@
+# herdr configuration — dotfiles (lafco)
+# Hotkeys seguem o esquema do Zellij (Alt+key → prefix+key)
+
+[theme]
+name = "catppuccin"
+
+[terminal]
+default_shell = "bash"
+new_cwd = "follow"
+
+[update]
+channel = "stable"
+version_check = true
+
+# ──────────────────────────────────────────────
+# Hotkeys — mapeadas a partir do esquema Zellij
+# ──────────────────────────────────────────────
+[keys]
+prefix = "ctrl+b"
+
+# --- Navegação entre panes (Zellij: Alt+hjkl) ---
+focus_pane_left   = "prefix+h"
+focus_pane_down   = "prefix+j"
+focus_pane_up     = "prefix+k"
+focus_pane_right  = "prefix+l"
+
+# --- Cycle panes (Zellij: pane-mode p) ---
+cycle_pane_next     = "prefix+tab"
+cycle_pane_previous = "prefix+shift+tab"
+last_pane           = "prefix+p"
+
+# --- Splits (Zellij: Alt+b = horizontal / Alt+v = vertical) ---
+split_horizontal = "prefix+b"
+split_vertical   = "prefix+v"
+
+# --- Fechar pane (Zellij: Alt+x / pane-mode x) ---
+close_pane = "prefix+x"
+
+# --- Zoom/Fullscreen (Zellij: pane-mode f) ---
+zoom = "prefix+f"
+
+# --- Renomear pane (Zellij: pane-mode r) ---
+rename_pane = "prefix+r"
+
+# --- Tabs (Zellij: Alt+t → modo tab) ---
+new_tab     = "prefix+c"
+close_tab   = "prefix+shift+x"
+rename_tab  = "prefix+shift+t"
+previous_tab = "prefix+shift+h"
+next_tab     = "prefix+shift+l"
+switch_tab   = "prefix+1..9"
+
+# --- Workspaces (Zellij: Alt+o = session-manager) ---
+workspace_picker = "prefix+w"
+new_workspace    = "prefix+shift+n"
+rename_workspace = "prefix+shift+w"
+close_workspace  = "prefix+shift+d"
+
+# --- Resize mode (Zellij: Alt+m = move mode) ---
+resize_mode = "prefix+m"
+
+# --- Navegação no modo resize (Zellij: move-mode hjkl) ---
+navigate_pane_left  = "h"
+navigate_pane_down  = "j"
+navigate_pane_up    = "k"
+navigate_pane_right = "l"
+
+# --- Edit scrollback (Zellij: scroll-mode e) ---
+edit_scrollback = "prefix+e"
+
+# --- Detach (Zellij: Alt+d) ---
+detach = "prefix+d"
+
+# --- Sidebar (não existe no Zellij; movido para shift+b) ---
+toggle_sidebar = "prefix+shift+b"
+
+# --- Settings ---
+settings = "prefix+s"
+
+# --- Help ---
+help = "prefix+?"
+
+# --- Reload config ---
+reload_config = "prefix+shift+r"
+
+# --- Abrir notification target ---
+open_notification_target = "prefix+o"
+
+# --- Worktrees (Zellij não tem equivalente direto) ---
+new_worktree  = "prefix+shift+g"
+open_worktree = ""
+remove_worktree = ""
+
+# --- Navegação entre workspaces no navigate mode ---
+navigate_workspace_up   = "up"
+navigate_workspace_down = "down"
+
+# --- Remote image paste (sessões remotas) ---
+remote_image_paste = "ctrl+v"
+
+# --- Índices (compatibilidade legada) ---
+[keys.indexed]
+tabs       = ""
+workspaces = ""
+agents     = ""
+
+# ──────────────────────────────────────────────
+# UI
+# ──────────────────────────────────────────────
+[ui]
+sidebar_width           = 26
+sidebar_min_width       = 18
+sidebar_max_width       = 36
+sidebar_start_collapsed = false
+sidebar_collapsed_mode  = "compact"
+mouse_capture           = true
+copy_on_select          = true
+pane_borders            = true
+pane_gaps               = true
+confirm_close           = true
+prompt_new_tab_name     = false
+agent_panel_sort        = "spaces"
+
+[ui.toast]
+delivery = "herdr"
+[ui.toast.herdr]
+position = "bottom-right"
+[ui.toast.clipboard]
+enabled   = true
+position  = "bottom-center"
+
+# ──────────────────────────────────────────────
+# Sessão
+# ──────────────────────────────────────────────
+[session]
+resume_agents_on_restore = true
