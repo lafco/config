@@ -82,7 +82,7 @@ keybinds {
         bind "Alt right" { Resize "Increase right"; }
         bind "Alt /" { ToggleFloatingPanes; SwitchToMode "normal"; }
         bind "Alt b" { NewPane "down"; }
-        bind "Alt d" { Detach; }
+        bind "Ctrl q" { }
         bind "Alt g" { SwitchToMode "locked"; }
         bind "Alt h" { MoveFocus "left"; }
         bind "Alt j" { MoveFocus "down"; }
@@ -95,7 +95,7 @@ keybinds {
             }
             SwitchToMode "normal"
         }
-        bind "Alt q" { Quit; }
+        bind "Alt q" { Detach; }
         bind "Alt v" { NewPane "right"; }
         bind "Alt x" { CloseFocus; }
     }
