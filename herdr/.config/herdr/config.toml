@@ -1,3 +1,4 @@
+onboarding = false
 # herdr configuration — dotfiles (lafco)
 # Hotkeys seguem o esquema do Zellij (Alt+key → prefix+key)
 
@@ -40,12 +41,12 @@ close_pane = "prefix+x"
 zoom = "prefix+f"
 
 # --- Renomear pane (Zellij: pane-mode r) ---
-rename_pane = "prefix+r"
+rename_pane = "prefix+shift+p"
 
 # --- Tabs (Zellij: Alt+t → modo tab) ---
-new_tab     = "prefix+c"
+new_tab     = "prefix+n"
 close_tab   = "prefix+shift+x"
-rename_tab  = "prefix+shift+t"
+rename_tab  = "prefix+r"
 previous_tab = "prefix+shift+h"
 next_tab     = "prefix+shift+l"
 switch_tab   = "prefix+1..9"
@@ -53,7 +54,7 @@ switch_tab   = "prefix+1..9"
 # --- Workspaces (Zellij: Alt+o = session-manager) ---
 workspace_picker = "prefix+w"
 new_workspace    = "prefix+shift+n"
-rename_workspace = "prefix+shift+w"
+rename_workspace = "prefix+shift+r"
 close_workspace  = "prefix+shift+d"
 
 # --- Resize mode (Zellij: Alt+m = move mode) ---
@@ -75,16 +76,16 @@ detach = "prefix+d"
 toggle_sidebar = "prefix+shift+b"
 
 # --- Settings ---
-settings = "prefix+s"
+settings = "prefix+o"
 
 # --- Help ---
 help = "prefix+?"
 
 # --- Reload config ---
-reload_config = "prefix+shift+r"
+reload_config = "prefix+shift+o"
 
 # --- Abrir notification target ---
-open_notification_target = "prefix+o"
+open_notification_target = "prefix+u"
 
 # --- Worktrees (Zellij não tem equivalente direto) ---
 new_worktree  = "prefix+shift+g"
@@ -108,9 +109,9 @@ agents     = ""
 # UI
 # ──────────────────────────────────────────────
 [ui]
-sidebar_width           = 26
-sidebar_min_width       = 18
-sidebar_max_width       = 36
+sidebar_width           = 14
+sidebar_min_width       = 10
+sidebar_max_width       = 18
 sidebar_start_collapsed = false
 sidebar_collapsed_mode  = "compact"
 mouse_capture           = true
@@ -118,9 +119,10 @@ copy_on_select          = true
 pane_borders            = true
 pane_gaps               = true
 confirm_close           = true
-prompt_new_tab_name     = false
-agent_panel_sort        = "spaces"
+prompt_new_tab_name     = true
+agent_panel_sort = "spaces"
 
+show_agent_labels_on_pane_borders = true
 [ui.toast]
 delivery = "herdr"
 [ui.toast.herdr]
@@ -134,3 +136,6 @@ position  = "bottom-center"
 # ──────────────────────────────────────────────
 [session]
 resume_agents_on_restore = true
+
+[ui.sound]
+enabled = false
