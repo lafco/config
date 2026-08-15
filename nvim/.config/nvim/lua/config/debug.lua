@@ -160,12 +160,17 @@ dap.configurations.typescript = dap.configurations.javascript
 
 -- ── List breakpoints via telescope ─────────────────────────────────
 local function list_breakpoints()
+  -- Usa a API real do nvim-dap: require('dap.breakpoints').get()
+  -- Retorna {[bufnr] = {{buf, line, condition, hitCondition, logMessage, state}, ...}}
+  local dap_bp = require('dap.breakpoints')
+  local all_bps = dap_bp.get()
   local items = {}
-  for bufnr, lines in pairs(dap.breakpoints or {}) do
+  for bufnr, bp_list in pairs(all_bps) do
     if vim.api.nvim_buf_is_valid(bufnr) then
       local filename = vim.api.nvim_buf_get_name(bufnr)
       local short = vim.fn.fnamemodify(filename, ':~:.')
-      for line, bp in pairs(lines) do
+      for _, bp in ipairs(bp_list) do
+        local line = bp.line
         local display = short .. ':' .. line
         local suffix = {}
         if bp.condition and bp.condition ~= '' then

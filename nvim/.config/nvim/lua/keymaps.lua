@@ -28,7 +28,9 @@ map('n', '<C-Right>', '<cmd>vertical resize -2<cr>', { desc = 'Decrease Window W
 map('i', '<A-j>', '<esc><cmd>m .+1<cr>==gi', { desc = 'Move Down' })
 map('i', '<A-k>', '<esc><cmd>m .-2<cr>==gi', { desc = 'Move Up' })
 
--- Delete without yanking (black hole register)
+-- Delete/change without yanking (black hole register)
+map({ 'n', 'x' }, 'd', '"_d', { desc = 'Delete without yank' })
+map({ 'n', 'x' }, 'c', '"_c', { desc = 'Change without yank' })
 map({ 'n', 'x' }, 'x', '"_x', { desc = 'Delete without yank' })
 map({ 'n', 'x' }, 'X', '"_X', { desc = 'Delete backwards without yank' })
 
