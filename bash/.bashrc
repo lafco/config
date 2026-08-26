@@ -71,6 +71,11 @@ if command -v tv &>/dev/null; then
     eval "$(tv init bash)"
 fi
 
+# ── direnv (ambientes por projeto: devenv) ────────────────────────────────────
+if command -v direnv &>/dev/null; then
+    eval "$(direnv hook bash)"
+fi
+
 # ── bat ───────────────────────────────────────────────────────────────────────
 if command -v bat &>/dev/null; then
     export BAT_THEME="Catppuccin Mocha"
