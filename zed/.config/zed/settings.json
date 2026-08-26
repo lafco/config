@@ -1,0 +1,50 @@
+{
+  // Zed — espelha o nvim: Catppuccin Mocha, tabs=2, números relativos,
+  // sem format-on-save (formatação explícita com <space>c, como no conform).
+  "theme": "Catppuccin Mocha",
+
+  "vim_mode": true,
+  "vim": {
+    "use_system_clipboard": "always",
+    "use_smartcase_find": true,
+    "use_multiline_find": true,
+    "hlsearch": true
+  },
+
+  "autosave": "off",
+  "format_on_save": "off",
+  "tab_size": 2,
+  "hard_tabs": false,
+  "relative_line_numbers": true,
+  "vertical_scroll_margin": 9,
+  "soft_wrap": "none",
+  "show_whitespaces": "all",
+
+  "ui_font_size": 14,
+  "buffer_font_family": "JetBrainsMono Nerd Font",
+  "buffer_font_size": 14,
+  "terminal": {
+    "font_family": "JetBrainsMono Nerd Font",
+    "font_size": 13
+  },
+
+  "tab_bar": { "show": false },
+
+  "file_scan_exclusions": ["**/node_modules", "**/vendor", "**/.git"],
+
+  "telemetry": { "diagnostics": false, "metrics": false },
+
+  // LSPs/formatters vêm do PATH (nix) — nada de download do Zed
+  "enable_language_server_downloads": false,
+  "lsp": {
+    "lua-language-server": { "binary": { "path_lookup": true } },
+    "intelephense": { "binary": { "path_lookup": true } }
+  },
+  "languages": {
+    "Lua": {
+      "formatter": {
+        "external": { "command": "stylua", "arguments": ["-"] }
+      }
+    }
+  }
+}

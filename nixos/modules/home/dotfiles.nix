@@ -16,6 +16,7 @@ in
 
     # editor
     ".config/nvim".source = link "nvim/.config/nvim";
+    ".config/zed".source = link "zed/.config/zed";
 
     # terminal
     ".config/wezterm".source = link "wezterm/.config/wezterm";

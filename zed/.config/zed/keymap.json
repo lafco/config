@@ -1,0 +1,80 @@
+[
+  {
+    // Binds do nvim (keymaps.lua + LSP Attach) no modo normal do vim do Zed.
+    // Tudo o que o vim do Zed já faz nativamente (j/k, w/b, ciw, *, #, /) fica de fora.
+    "context": "VimControl && !menu",
+    "bindings": {
+      // ── Janelas (nvim: <C-h/j/k/l> = <C-w>h/j/k/l) ─────────────────────────
+      "ctrl-h": "workspace::ActivatePaneLeft",
+      "ctrl-j": "workspace::ActivatePaneDown",
+      "ctrl-k": "workspace::ActivatePaneUp",
+      "ctrl-l": "workspace::ActivatePaneRight",
+      "ctrl-w v": "pane::SplitRight", // <C-w>v → vsplit
+      "ctrl-w b": "pane::SplitDown",  // <C-w>b → belowright split
+
+      // ── Buffers (nvim: <C-x>/<C-q> fecha, [b/]b navega) ──────────────────
+      "ctrl-x": "pane::CloseActiveItem",
+      "ctrl-q": "pane::CloseActiveItem",
+      "[ b": "pane::ActivatePrevItem",
+      "] b": "pane::ActivateNextItem",
+      "space b n": "workspace::NewFile",  // <leader>bn
+      "space b d": "pane::CloseActiveItem", // <leader>bd
+
+      // ── Mover linhas (nvim: <A-j>/<A-k> em insert; aqui no normal) ────────
+      "alt-j": "editor::MoveLineDown",
+      "alt-k": "editor::MoveLineUp",
+
+      // ── Diagnósticos (nvim: ]d/[d, <leader>l) ──────────────────────────────
+      "] d": "editor::GoToNextDiagnostic",
+      "[ d": "editor::GoToPreviousDiagnostic",
+      "space l": "diagnostics::Deploy",
+
+      // ── Git hunks (nvim: gitsigns ]c/[c, <leader>tb blame) ─────────────────
+      "] c": "editor::GoToHunk",
+      "[ c": "editor::GoToPreviousHunk",
+      "space t b": "git::Blame",
+
+      // ── LSP (nvim: LspAttach — gd/gD/gi/gr/gt/gf/gp/gR/ga/K) ───────────────
+      "shift-k": "editor::Hover",
+      "g d": "editor::GoToDefinition",
+      "g i": "editor::GoToImplementation",
+      "g r": "editor::FindAllReferences",
+      "g t": "editor::GoToTypeDefinition",
+      "g R": "editor::Rename",
+      "g a": "editor::ToggleCodeActions",
+      "g o": "editor::OpenExcerpts",         // "go" do nvim (abrir sob cursor)
+      "g f": "outline_panel::ToggleFocus",   // gf/gs → símbolos do documento
+      "g s": "outline_panel::ToggleFocus",
+      "g p": "project_symbols::Toggle",      // gp/gw → símbolos do workspace
+      "g w": "project_symbols::Toggle",
+      "space t h": "editor::ToggleInlayHints", // <leader>th
+
+      // ── Comentários (nvim: gcc via treesitter) ─────────────────────────────
+      "g c c": "editor::ToggleComments",
+      "g c": "editor::ToggleComments",
+
+      // ── Fuzzy finder (nvim: telescope <leader>f*) ──────────────────────────
+      "space space": "file_finder::Toggle",  // bônus: <leader><space>
+      "space f f": "file_finder::Toggle",    // <leader>ff find files
+      "space f g": "pane::DeploySearch",     // <leader>fg live grep
+      "space f w": "pane::DeploySearch",     // <leader>fw (selecione a palavra antes)
+      "space f b": "tab_switcher::Toggle",   // <leader>fb buffers
+      "space /": "buffer_search::Deploy",    // <leader>/ grep em buffers abertos
+
+      // ── Explorador (nvim: <leader>e mini.files) ────────────────────────────
+      "space e": "project_panel::ToggleFocus",
+
+      // ── Formatar (nvim: <leader>c conform) ─────────────────────────────────
+      "space c": "editor::Format",
+
+      // ── Terminal (nvim: <leader>tt toggle) ─────────────────────────────────
+      "space t t": "terminal_panel::Toggle",
+
+      // ── Git status (nvim: <leader>gg neogit) → abra terminal e rode lazygit ─
+      "space g g": "workspace::NewTerminal",
+
+      // ── Tema (trocar rapidamente, como :colorscheme) ───────────────────────
+      "space u t": "theme_selector::Toggle"
+    }
+  }
+]

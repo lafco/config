@@ -26,7 +26,7 @@ nixos/
 │   ├── dotfiles.nix           # symlinks pros dotfiles do repo (~/dotfiles)
 │   ├── shell.nix              # starship, zoxide, atuin, tv, bat, eza, fd, rg, btop, direnv
 │   ├── git.nix                # git, gh, lazygit, jj, gh-dash, diffnav
-│   ├── editor.nix             # neovim + node/python/gcc (LazyVim/mason/treesitter)
+│   ├── editor.nix             # neovim + Zed (vim binds) + LSPs/formatters
 │   ├── terminal.nix           # wezterm, zellij, wl-clipboard, xclip
 │   ├── ai.nix                 # pi (pi-coding-agent) + herdr (via unstable)
 │   └── apps.nix               # Firefox, Proton Pass, Obsidian, mpv, Ankama Launcher
@@ -119,6 +119,23 @@ direnv allow        # carrega o env ao entrar no diretório
 
 Edite o `devenv.nix` do projeto conforme precisar (versões de runtime, pacotes,
 services, scripts). Docs: https://devenv.sh
+
+## Zed (vim binds espelhando o nvim)
+
+Config em `zed/.config/zed/` (settings.json + keymap.json), linkado via
+home-manager. Tema **Catppuccin Mocha** (o mesmo do nvim), tabs=2, números
+relativos, formatação explícita (`<space>c`), LSPs do PATH via nix
+(lua-language-server, intelephense, stylua).
+
+Binds do nvim mapeados: `<C-h/j/k/l>` panes, `<C-w>v`/`<C-w>b` splits, `<C-x>`
+fecha buffer, `[b`/`]b` buffers, `]d`/`[d` diagnósticos, `]c`/`[c` hunks, `gd`/`gi`/`gr`/`gt`/
+`gR`/`ga`/`K` LSP, `gcc` comentar, `<space>ff`/`<space>fg`/`<space>fb`/`<space>/`
+fuzzy finder, `<space>e` explorador, `<space>tt` terminal, `<space>ut` tema.
+
+Não têm equivalente direto no Zed (deixados de fora de propósito): harpoon,
+histórico de yank (registers), quickfix, debugprint e neogit — para git use
+`<space>gg` (abre terminal) + `lazygit`. Debug do Zed usa as teclas padrão
+F5/F10/F11/Shift+F11.
 
 ## niri (atalhos principais)
 

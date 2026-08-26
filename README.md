@@ -45,6 +45,7 @@ Cada pasta é um "pacote". `stow nome/` cria symlinks de `~/dotfiles/nome/` pra 
 ~/dotfiles/
 ├── bash/         → ~/.bashrc, ~/.aliases, ~/.functions, ~/.bash_profile
 ├── nvim/         → ~/.config/nvim/           (LazyVim + plugins)
+├── zed/          → ~/.config/zed/            (editor Zed — vim binds)
 ├── pi/           → ~/.pi/agent/              (settings, extensions, skills)
 ├── wezterm/      → ~/.config/wezterm/        (terminal emulator)
 ├── zellij/       → ~/.config/zellij/         (terminal multiplexer)
