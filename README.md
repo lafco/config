@@ -86,3 +86,15 @@ stow meu-novo-app
 # Commitar
 git add meu-novo-app && git commit -m "add meu-novo-app config"
 ```
+
+---
+
+## NixOS (máquina declarativa)
+
+A pasta [`nixos/`](nixos/README.md) tem a configuração NixOS completa da máquina
+**hmpc** (flakes + home-manager + devenv), que substitui o fluxo mise+Stow nesta
+máquina. Veja [`nixos/README.md`](nixos/README.md) para instalação, dia a dia e
+templates de dev env.
+
+> ⚠️ `nixos/` **não** é um pacote Stow — o `.stow-local-ignore` na raiz impede
+> que `stow */` tente linká-lo.

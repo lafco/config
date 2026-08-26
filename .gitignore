@@ -10,3 +10,6 @@ pi/.pi/agent/bin/
 .DS_Store
 
 # Zellij runtime
+
+# Nix
+result
