@@ -14,7 +14,10 @@ config.color_scheme = 'Catppuccin Mocha'
 
 -- Appearance
 config.cursor_blink_rate = 0
-config.window_decorations = 'RESIZE'
+-- 'NONE' removes the title bar and all window buttons (close/minimize/maximize).
+-- If your WM/compositor still draws decorations, it is adding server-side
+-- decorations; configure the WM (e.g. remove GTK header) instead.
+config.window_decorations = 'NONE'
 config.hide_tab_bar_if_only_one_tab = true
 config.window_padding = {
   left = 5,
