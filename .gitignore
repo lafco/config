@@ -11,5 +11,10 @@ pi/.pi/agent/bin/
 
 # Zellij runtime
 
+# Herdr runtime files
+herdr/.config/herdr/*.log
+herdr/.config/herdr/session.json
+herdr/.config/herdr/.plugins.lock
+
 # Nix
 result

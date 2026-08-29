@@ -17,7 +17,7 @@
 # sync_frequency = "10m"  # set to "0" to sync after every command
 
 ## ── Search ────────────────────────────────────────────────────────────────────
-search_mode = "fuzzy"       # prefix | fulltext | fuzzy | skim
+search_mode = "daemon-fuzzy"
 
 # filter_mode controls the default scope of history shown in the TUI.
 # "global"    – all hosts, all sessions
@@ -104,3 +104,11 @@ scroll_exits = false
 ## ── Sync v2 ───────────────────────────────────────────────────────────────────
 [sync]
 records = true
+
+[ai]
+enabled = true
+model = "balanced"
+
+[daemon]
+enabled = true
+autostart = true
