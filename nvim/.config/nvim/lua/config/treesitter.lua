@@ -5,6 +5,7 @@ require('nvim-treesitter.config').setup({
     'bash', 'c', 'diff', 'html', 'lua', 'luadoc',
     'markdown', 'markdown_inline', 'query', 'vim', 'vimdoc',
     'typescript', 'tsx', 'javascript', 'json', 'css', 'yaml',
+    'rust',
   },
   auto_install = true,
   highlight = {

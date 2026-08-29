@@ -5,6 +5,7 @@ require('conform').setup({
   format_on_save = false, -- Explicit format only (<leader>c), never on save
   formatters_by_ft = {
     lua = { 'stylua' },
+    rust = { 'rustfmt' },
     -- python = { 'isort', 'black' },
     -- javascript = { 'prettierd', 'prettier', stop_after_first = true },
   },

@@ -24,7 +24,7 @@ end
 -- ── Global LSP config (applied to all servers) ────────────────────
 vim.lsp.config('*', {
   capabilities = require('blink.cmp').get_lsp_capabilities(),
-  root_markers = { '.git', 'package.json', 'lua' },
+  root_markers = { '.git', 'package.json', 'lua', 'Cargo.toml' },
 })
 
 -- ── Server-specific overrides ─────────────────────────────────────
@@ -40,6 +40,13 @@ vim.lsp.config('lua_ls', {
   settings = {
     Lua = {
       completion = { callSnippet = 'Replace' },
+    },
+  },
+})
+vim.lsp.config('rust_analyzer', {
+  settings = {
+    ['rust-analyzer'] = {
+      checkOnSave = { command = 'clippy' },
     },
   },
 })
@@ -64,6 +71,7 @@ require('mason-tool-installer').setup({
     'ts_ls',
     'lua_ls',
     'intelephense',
+    'rust_analyzer',
     'stylua',
   },
 })

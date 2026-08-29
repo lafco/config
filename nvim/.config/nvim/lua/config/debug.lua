@@ -34,7 +34,7 @@ local dapui = require('dapui')
 require('mason-nvim-dap').setup({
   automatic_installation = true,
   handlers = {},
-  ensure_installed = { 'php', 'delve', 'js-debug-adapter' },
+  ensure_installed = { 'php', 'delve', 'js-debug-adapter', 'codelldb' },
 })
 
 dapui.setup({
@@ -157,6 +157,32 @@ dap.configurations.javascript = {
   },
 }
 dap.configurations.typescript = dap.configurations.javascript
+
+-- ── Rust (codelldb) ────────────────────────────────────────────────
+-- Adapter is auto-configured by mason-nvim-dap (ensure_installed = { 'codelldb' })
+dap.configurations.rust = {
+  {
+    type = 'codelldb',
+    request = 'launch',
+    name = 'Launch (target/debug)',
+    -- Pede o caminho do binário, com default em target/debug/
+    program = function()
+      return vim.fn.input('Path to executable: ', vim.fn.getcwd() .. '/target/debug/', 'file')
+    end,
+    cwd = '${workspaceFolder}',
+    stopOnEntry = false,
+    -- showDisassembly = 'never' (codelldb-only option, opcional)
+  },
+  {
+    type = 'codelldb',
+    request = 'attach',
+    name = 'Attach to process',
+    pid = function()
+      return tonumber(vim.fn.input('PID: ', '', 'number'))
+    end,
+    cwd = '${workspaceFolder}',
+  },
+}
 
 -- ── List breakpoints via telescope ─────────────────────────────────
 local function list_breakpoints()
