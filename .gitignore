@@ -19,5 +19,3 @@ herdr/.config/herdr/.plugins.lock
 # Nix
 result
 
-# Backups locais de configs (não versionar)
-.backup/

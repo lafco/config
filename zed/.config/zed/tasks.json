@@ -1,8 +1,12 @@
-// tasks.json — baseado em github.com/jellydn/zed-101-setup
+// tasks.json — zed-101-setup + tasks do prdbook (nvim <leader>fp)
 //
-// Os dois tasks abaixo dependem do fff-gpui, que ainda não está instalado
-// nesta máquina. Instale (https://github.com/th0jensen/fff-gpui) e descomente:
+// fff-gpui: ainda não instalado — descomente os dois primeiros tasks
+// depois de instalar (https://github.com/th0jensen/fff-gpui).
 //
+// prdbook (nvim: <leader>fp/<leader>fs abrem ~/prdbook/staging no mini.files):
+// descomente quando ~/prdbook existir nesta máquina e troque o bind de
+// "space f p" no keymap.json para task::Spawn.
+[]
 // [
 // 	{
 // 		"label": "fff-gpui: Files",
@@ -30,5 +34,13 @@
 // 		"show_command": false,
 // 		"save": "none",
 // 	},
+// 	{
+// 		"label": "prdbook: staging",
+// 		"command": "zed ~/prdbook/staging",
+// 		"use_new_terminal": false,
+// 		"allow_concurrent_runs": true,
+// 		"reveal": "never",
+// 		"hide": "always",
+// 		"shell": "system",
+// 	},
 // ]
-[]
