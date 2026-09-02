@@ -1,18 +1,23 @@
-// Zed settings — baseado em github.com/jellydn/zed-101-setup
-// Adaptado para Linux (CachyOS):
-//   - tema/fonte: Maple Dark/Light + Maple Mono NF (instalados em ~/.local/share/fonts)
-//   - terminal usa o shell padrão (bash) — codemux não instalado
-//   - `cmd-b` do macOS virou `ctrl-b` no keymap
-//   - sandbox_permissions aponta para /home/lafco
+// Zed settings
 //
-// Docs: https://zed.dev/docs/configuring-zed
-// Referência completa: https://zed.dev/docs/reference/all-settings
+// For information on how to configure Zed, see the Zed
+// documentation: https://zed.dev/docs/configuring-zed
+//
+// To see all of Zed's default settings without changing your
+// custom settings, run the `open default settings` command
+// from the command palette or from `Zed` application menu.
+//
+// Full reference: https://zed.dev/docs/reference/all-settings
+// Visual customization: https://zed.dev/docs/visual-customization
+// Key bindings: https://zed.dev/docs/key-bindings
+// Themes: https://zed.dev/docs/themes
 
 {
 	// UI font family (for menus, panels, etc.)
 	// https://zed.dev/docs/reference/all-settings#ui-font-family
-	// Obs: "Maple UI" não existe no Linux — usando a NF do Maple Mono.
-	"ui_font_family": "Maple Mono NF",
+	"buffer_font_weight": 400.0,
+ "buffer_line_height": "standard",
+ "ui_font_family": "Ubuntu",
 
 	// Whether to colorize matching brackets (rainbow brackets)
 	// https://zed.dev/docs/reference/all-settings#colorize-brackets
@@ -114,7 +119,7 @@
 	// https://zed.dev/docs/reference/all-settings#status-bar
 	"status_bar": {
 		"show_active_file": false,
-		"experimental.show": false,
+  "experimental.show": false,
 	},
 
 	// Gutter settings
@@ -157,20 +162,19 @@
 	// https://zed.dev/docs/reference/all-settings#git-panel
 	"git_panel": {
 		"collapse_untracked_diff": true,
-		"show_count_badge": true,
-		"diff_stats": true,
-		"file_icons": true,
-		"tree_view": true,
+  "show_count_badge": true,
+  "diff_stats": true,
+  "file_icons": true,
+  "tree_view": true,
 		"dock": "right",
 	},
 
 	// Icon theme settings
 	// https://zed.dev/docs/reference/all-settings#icon-theme
-	// Requer a extensão "Catppuccin Icons" (instalada em ~/.local/share/zed/extensions)
 	"icon_theme": {
 		"mode": "dark",
-		"light": "Catppuccin Mocha",
-		"dark": "Catppuccin Mocha",
+		"light": "Zed (Default)",
+		"dark": "Zed (Default)",
 	},
 
 	// Base keymap: VSCode, Atom, JetBrains, SublimeText, TextMate, None
@@ -179,20 +183,19 @@
 
 	// Theme settings
 	// https://zed.dev/docs/themes
-	// Requer a extensão "Maple Theme" (instalada em ~/.local/share/zed/extensions)
 	"theme": {
 		"mode": "dark",
-		"light": "Maple Light",
-		"dark": "Maple Dark",
+		"light": "One Light",
+		"dark": "One Dark",
 	},
 
 	// UI font size (for menus, panels, etc.)
 	// https://zed.dev/docs/reference/all-settings#ui-font-size
-	"ui_font_size": 17,
+	"ui_font_size": 16.0,
 
 	// Editor buffer font size
 	// https://zed.dev/docs/reference/all-settings#buffer-font-size
-	"buffer_font_size": 18.5,
+	"buffer_font_size": 14.0,
 
 	// Finder model width
 	// https://zed.dev/docs/reference/all-settings#file-finder
@@ -202,7 +205,7 @@
 
 	// Buffer font family (editor font)
 	// https://zed.dev/docs/reference/all-settings#buffer-font-family
-	"buffer_font_family": "Maple Mono NF",
+	"buffer_font_family": "JetBrainsMono Nerd Font",
 
 	// Vim mode settings
 	// https://zed.dev/docs/reference/all-settings#vim
@@ -215,7 +218,7 @@
 	// Which-key (vim keybinding helper) settings
 	// https://zed.dev/docs/visual-customization#vim-mode
 	"which_key": {
-		"delay_ms": 500,
+		"delay_ms": 100,
 		"enabled": true,
 	},
 
@@ -261,8 +264,8 @@
 	// https://zed.dev/docs/reference/all-settings#editor-tabs
 	"tabs": {
 		"file_icons": true,
-		"git_status": true,
-		"show_diagnostics": "errors",
+  "git_status": true,
+  "show_diagnostics": "errors",
 	},
 
 	// Indentation guides (rainbow indentation)
@@ -283,7 +286,7 @@
 	// https://zed.dev/docs/ai/agent-settings
 	"agent": {
 		"sidebar_side": "right",
-		"default_profile": "ask",
+  "default_profile": "ask",
 		"favorite_models": [
 			{
 				"provider": "opencode",
@@ -697,10 +700,8 @@
 	// Terminal settings
 	// https://zed.dev/docs/reference/all-settings#terminal
 	"terminal": {
-		// O zed-101-setup usa codemux como shell do terminal. Não instalado
-		// nesta máquina — usando o shell padrão (bash). Para usar codemux:
-		//   cargo install codemux
-		// e descomente:
+		// O zed-101 usa codemux como shell. Não instalado — usa o shell
+		// padrão (bash). Para ativar depois: cargo install codemux e use:
 		// "shell": {
 		// 	"program": "/home/lafco/.cargo/bin/codemux",
 		// },
@@ -756,10 +757,10 @@
 	// https://zed.dev/docs/reference/all-settings#project-panel
 	"project_panel": {
 		"hide_root": true,
-		"git_status_indicator": true,
-		"diagnostic_badges": true,
-		"show_diagnostics": "errors",
-		"auto_fold_dirs": false,
+  "git_status_indicator": true,
+  "diagnostic_badges": true,
+  "show_diagnostics": "errors",
+  "auto_fold_dirs": false,
 		"button": true,
 		"dock": "right",
 		"git_status": true,
