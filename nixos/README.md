@@ -125,7 +125,7 @@ services, scripts). Docs: https://devenv.sh
 Config em `zed/.config/zed/` (settings.json + keymap.json), linkado via
 home-manager. Tema **Catppuccin Mocha** (o mesmo do nvim), tabs=2, números
 relativos, formatação explícita (`<space>c`), LSPs do PATH via nix
-(lua-language-server, intelephense, stylua).
+(lua-language-server, stylua).
 
 Binds do nvim mapeados: `<C-h/j/k/l>` panes, `<C-w>v`/`<C-w>b` splits, `<C-x>`
 fecha buffer, `[b`/`]b` buffers, `]d`/`[d` diagnósticos, `]c`/`[c` hunks, `gd`/`gi`/`gr`/`gt`/

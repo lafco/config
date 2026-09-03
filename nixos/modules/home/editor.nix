@@ -13,6 +13,5 @@
     # LSPs/formatters usados pelo Zed (vêm do PATH, sem download do Zed)
     lua-language-server # lua
     stylua              # formatter lua
-    nodePackages.intelephense # php
   ];
 }
