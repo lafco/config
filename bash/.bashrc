@@ -44,13 +44,6 @@ if command -v zellij &>/dev/null; then
     eval "$(zellij setup --generate-completion bash 2>/dev/null || true)"
 fi
 
-# ── mise (runtime + tool manager) ────────────────────────────────────────────
-if [[ -f "$HOME/.local/bin/mise" ]]; then
-    eval "$("$HOME/.local/bin/mise" activate bash)"
-elif command -v mise &>/dev/null; then
-    eval "$(mise activate bash)"
-fi
-
 # ── Starship prompt ───────────────────────────────────────────────────────────
 if command -v starship &>/dev/null; then
     eval "$(starship init bash)"
@@ -71,7 +64,7 @@ if command -v tv &>/dev/null; then
     eval "$(tv init bash)"
 fi
 
-# ── direnv (ambientes por projeto: devenv) ────────────────────────────────────
+# ── direnv (ambientes por projeto) ────────────────────────────────────────────
 if command -v direnv &>/dev/null; then
     eval "$(direnv hook bash)"
 fi

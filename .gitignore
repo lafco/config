@@ -16,6 +16,6 @@ herdr/.config/herdr/*.log
 herdr/.config/herdr/session.json
 herdr/.config/herdr/.plugins.lock
 
-# Nix
-result
+# dot CLI runtime (falhas de instalação)
+packages/failed_tools.txt
 
