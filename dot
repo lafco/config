@@ -1,0 +1,823 @@
+#!/usr/bin/env bash
+#
+# dot — CLI de instalação e manutenção dos dotfiles (lafco)
+#
+# Inspirado no `dot` de dmmulroy/.dotfiles, adaptado para Linux:
+#   - Detecta o gerenciador de pacotes (pacman / apt / dnf) via /etc/os-release
+#   - Instala ferramentas pelo repositório nativo; quando não existe, baixa o
+#     binário oficial (GitHub release) para ~/.local/bin
+#   - Instalação resiliente: ferramenta com falha não interrompe o init;
+#     as falhas ficam registradas em packages/failed_tools.txt (dot retry-failed)
+#   - Symlinks via GNU Stow (pacotes: bash nvim pi wezterm zellij television
+#     starship atuin gh-dash herdr)
+#
+# Comandos: init | update | doctor | stow | retry-failed | link | unlink | edit | help
+
+set -euo pipefail
+
+# ─── Metadados ─────────────────────────────────────────────────────────────────
+
+readonly SCRIPT_NAME="dot"
+readonly VERSION="1.0.0"
+DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly DOTFILES_DIR
+
+readonly PACKAGES_DIR="${DOTFILES_DIR}/packages"
+readonly FAILED_TOOLS_FILE="${PACKAGES_DIR}/failed_tools.txt"
+readonly LOCAL_BIN="${HOME}/.local/bin"
+readonly LOCAL_OPT="${HOME}/.local/opt"
+
+# Pacotes Stow (lista explícita — evita stowar diretórios que não são pacotes)
+readonly STOW_PACKAGES="bash nvim pi wezterm zellij television starship atuin gh-dash herdr"
+
+# Cores
+readonly RED='\033[0;31m'
+readonly GREEN='\033[0;32m'
+readonly YELLOW='\033[0;33m'
+readonly BLUE='\033[0;34m'
+readonly CYAN='\033[0;36m'
+readonly RESET='\033[0m'
+readonly BOLD='\033[1m'
+
+CURRENT_STEP=0
+TOTAL_STEPS=0
+
+# ─── Plataforma ────────────────────────────────────────────────────────────────
+
+PM=""          # pacman | apt | dnf
+IS_WSL=false
+
+__detect_platform() {
+    if grep -qi "microsoft\|wsl" /proc/version 2>/dev/null; then
+        IS_WSL=true
+    fi
+
+    if [[ -f /etc/os-release ]]; then
+        # shellcheck disable=SC1091
+        . /etc/os-release
+        # ID_LIKE primeiro — derivadas compartilham o gerenciador da base
+        case "${ID_LIKE:-$ID}" in
+            *arch*)   PM="pacman" ;;
+            *debian*|*ubuntu*) PM="apt" ;;
+            *fedora*|*rhel*)   PM="dnf" ;;
+        esac
+    fi
+
+    if [[ -z "$PM" ]]; then
+        if   command -v pacman &>/dev/null; then PM="pacman"
+        elif command -v apt-get &>/dev/null; then PM="apt"
+        elif command -v dnf &>/dev/null; then PM="dnf"
+        else PM="unknown"
+        fi
+    fi
+}
+
+# ─── Helpers de saída ──────────────────────────────────────────────────────────
+
+__print_header() { printf "\n${BOLD}${CYAN}==> %s${RESET}\n" "$*"; }
+__print_success() { printf "${GREEN}  ✓ %s${RESET}\n" "$*"; }
+__print_error()   { printf "${RED}  ✗ %s${RESET}\n" "$*"; }
+__print_warning() { printf "${YELLOW}  ! %s${RESET}\n" "$*"; }
+__print_info()    { printf "${BLUE}  • %s${RESET}\n" "$*"; }
+__print_step() {
+    (( ++CURRENT_STEP ))
+    printf "\n${BOLD}${BLUE}[%d/%d] %s${RESET}\n" "$CURRENT_STEP" "$TOTAL_STEPS" "$*"
+}
+
+__command_exists() { command -v "$1" &>/dev/null; }
+
+# ─── Tabela de ferramentas ─────────────────────────────────────────────────────
+#
+# colunas: name | check | pacman | apt | dnf | kind
+#   kind:
+#     native                   → instala pelos pacotes acima
+#     native+ghrelease:<repo>  → tenta nativo, senão GitHub release em ~/.local/bin
+#     native+script:<id>       → tenta nativo, senão script oficial (starship|atuin)
+#     native+pkgfile:<repo>    → tenta nativo, senão .deb/.rpm do GitHub release
+#     native+appimage:<repo>   → tenta nativo, senão AppImage do GitHub release
+#     ghrelease:<repo>         → sempre GitHub release
+#     rustup                   → instala rustup nativo + toolchain stable
+
+TOOLS=(
+    # ── utilitários de shell ──
+    "ripgrep    | rg      | ripgrep | ripgrep | ripgrep | native"
+    "fd         | fd      | fd      | fd-find | fd-find | native"
+    "bat        | bat     | bat     | bat     | bat     | native"
+    "eza        | eza     | eza     | eza     | eza     | native"
+    "zoxide     | zoxide  | zoxide  | zoxide  | zoxide  | native"
+    "fzf        | fzf     | fzf     | fzf     | fzf     | native"
+    "jq         | jq      | jq      | jq      | jq      | native"
+    "lsof       | lsof    | lsof    | lsof    | lsof    | native"
+    "btop       | btop    | btop    | btop    | btop    | native"
+    "direnv     | direnv  | direnv  | direnv  | direnv  | native"
+    "starship   | starship | starship | starship | starship | native+script:starship"
+    "atuin      | atuin   | atuin   | -       | atuin   | native+script:atuin"
+    "television | tv      | -       | -       | -       | ghrelease:alexpasmantier/television"
+    # ── git ──
+    "lazygit | lazygit | lazygit | -       | lazygit | native+ghrelease:jesseduffield/lazygit"
+    "jj      | jj      | jj      | -       | jj      | native+ghrelease:jj-vcs/jj"
+    "gh      | gh      | github-cli | -    | gh      | native+pkgfile:cli/cli"
+    "gh-dash | gh-dash | -       | -       | -       | ghrelease:dlvhdr/gh-dash"
+    "diffnav | diffnav | -       | -       | -       | ghrelease:dlvhdr/diffnav"
+    # ── editor / prompt ──
+    "neovim | nvim | - | - | - | ghrelease:neovim/neovim"
+    # ── terminal ──
+    "zellij  | zellij | zellij | - | zellij | native+ghrelease:zellij-org/zellij"
+    "herdr   | herdr  | -      | - | -      | ghrelease:ogulcancelik/herdr"
+    "wezterm | wezterm | wezterm | - | - | native+appimage:wez/wezterm"
+    "nushell | nu | nushell | - | nushell | native+ghrelease:nushell/nushell"
+    # ── runtimes ──
+    "node   | node    | nodejs npm | nodejs npm | nodejs | native"
+    "python | python3 | python     | python3 python3-pip python3-venv | python3 python3-pip | native"
+    "rust   | rustc   | rustup     | rustup     | rustup | rustup"
+)
+
+__parse_tool() {
+    local row="$1"
+    t_name="$(  echo "$row" | awk -F'|' '{print $1}' | xargs)"
+    t_check="$( echo "$row" | awk -F'|' '{print $2}' | xargs)"
+    t_pacman="$(echo "$row" | awk -F'|' '{print $3}' | xargs)"
+    t_apt="$(   echo "$row" | awk -F'|' '{print $4}' | xargs)"
+    t_dnf="$(   echo "$row" | awk -F'|' '{print $5}' | xargs)"
+    t_kind="$(  echo "$row" | awk -F'|' '{print $6}' | xargs)"
+}
+
+__tool_native_pkgs() {
+    case "$PM" in
+        pacman) echo "$t_pacman" ;;
+        apt)    echo "$t_apt"    ;;
+        dnf)    echo "$t_dnf"    ;;
+        *)      echo "-"         ;;
+    esac
+}
+
+# ─── Instaladores genéricos ────────────────────────────────────────────────────
+
+__native_install() {
+    local pkgs="$1"
+    [[ "$pkgs" == "-" || -z "$pkgs" ]] && return 1
+    case "$PM" in
+        pacman) sudo pacman -S --noconfirm --needed $pkgs ;;
+        apt)    sudo apt-get update -qq && sudo apt-get install -y $pkgs ;;
+        dnf)    sudo dnf install -y $pkgs ;;
+        *)      return 1 ;;
+    esac
+}
+
+# Baixa o asset mais novo de um GitHub release que case com <regex> (jq test).
+__gh_latest_asset() {
+    local repo="$1" regex="$2"
+    curl -fsSL "https://api.github.com/repos/${repo}/releases/latest" \
+        | jq -r --arg re "$regex" '.assets[].browser_download_url | select(test($re))' \
+        | grep -viE '\.(sig|sha256|txt|zsync)$' \
+        | head -n1
+}
+
+# Mantém só assets da arquitetura da máquina
+__arch_filter() {
+    case "$(uname -m)" in
+        aarch64|arm64) grep -viE 'x86_64|amd64' ;;
+        *)             grep -viE 'aarch64|arm64' ;;
+    esac
+}
+
+__gh_arch_regex() {
+    case "$(uname -m)" in
+        x86_64|amd64) echo '(x86_64|amd64)' ;;
+        aarch64|arm64) echo '(aarch64|arm64)' ;;
+        *) echo '(x86_64|amd64)' ;;
+    esac
+}
+
+# GitHub release → extrai e linka os executáveis em ~/.local/bin
+# Suporta arquivos (tar.gz/xz/zip) e binários crus sem extensão (herdr, gh-dash).
+__ghrelease_install() {
+    local repo="$1" bin="$2" arch asset_url tmpdir name
+    arch="$(__gh_arch_regex)"
+
+    # 1) arquivo com linux + arquitetura (aceita as duas ordens de nome)
+    asset_url="$(
+        __gh_latest_asset "$repo" "(?i)(linux.*${arch}|${arch}.*linux).*(tar\.gz|tar\.xz|tgz|zip)$" \
+        || true
+    )"
+    # 2) qualquer arquivo linux da arquitetura certa
+    if [[ -z "$asset_url" ]]; then
+        asset_url="$(
+            __gh_latest_asset "$repo" "(?i)linux.*(tar\.gz|tar\.xz|tgz|zip)$" \
+            | __arch_filter || true
+        )"
+    fi
+    # 3) binário cru sem extensão (herdr-linux-x86_64, gh-dash_*_linux-amd64...)
+    if [[ -z "$asset_url" ]]; then
+        asset_url="$(
+            __gh_latest_asset "$repo" "(?i)(linux.*${arch}|${arch}.*linux)" \
+            | grep -viE '\.(tar\.gz|tar\.xz|tgz|zip|deb|rpm|exe)$' \
+            | grep -viE 'windows|darwin|macos|freebsd|android' \
+            | __arch_filter || true
+        )"
+        if [[ -n "$asset_url" ]]; then
+            mkdir -p "${LOCAL_BIN}"
+            __print_info "baixando ${asset_url}"
+            curl -fsSL -o "${LOCAL_BIN}/${bin}" "$asset_url" || return 1
+            chmod +x "${LOCAL_BIN}/${bin}"
+            return 0
+        fi
+    fi
+    [[ -z "$asset_url" ]] && { __print_info "nenhum asset linux encontrado em ${repo}"; return 1; }
+
+    name="$(basename "$repo")"
+    tmpdir="$(mktemp -d)"
+    local archive="${tmpdir}/dl"
+    __print_info "baixando ${asset_url}"
+    curl -fsSL -o "$archive" "$asset_url" || { rm -rf "$tmpdir"; return 1; }
+
+    mkdir -p "${LOCAL_OPT}"
+    rm -rf "${LOCAL_OPT:?}/${name}"
+    mkdir -p "${LOCAL_OPT}/${name}"
+
+    case "$asset_url" in
+        *.zip) unzip -oq "$archive" -d "${LOCAL_OPT}/${name}" ;;
+        *)     tar xf "$archive" -C "${LOCAL_OPT}/${name}" ;;
+    esac
+    rm -rf "$tmpdir"
+
+    # Linka todos os executáveis (binários soltos, */bin/*, plugins do nu...)
+    mkdir -p "${LOCAL_BIN}"
+    local linked=false exe
+    while IFS= read -r exe; do
+        [[ -x "$exe" ]] || continue
+        ln -sf "$exe" "${LOCAL_BIN}/$(basename "$exe")"
+        linked=true
+    done < <(find "${LOCAL_OPT}/${name}" -maxdepth 3 -type f -perm /u+x 2>/dev/null)
+    [[ "$linked" == "true" ]]
+}
+
+# .deb / .rpm oficial do GitHub release, instalado pelo gerenciador do sistema
+__pkgfile_install() {
+    local repo="$1" arch ext url tmpdir file
+    arch="$(__gh_arch_regex)"
+    case "$PM" in
+        apt) ext="deb" ;;
+        dnf) ext="rpm" ;;
+        *)   __print_info "pkgfile não suportado em ${PM}"; return 1 ;;
+    esac
+    url="$(__gh_latest_asset "$repo" "(?i)linux_${arch}\.${ext}$" || true)"
+    [[ -z "$url" ]] && { __print_info "nenhum .${ext} encontrado em ${repo}"; return 1; }
+
+    tmpdir="$(mktemp -d)"
+    file="${tmpdir}/pkg.${ext}"
+    __print_info "baixando ${url}"
+    curl -fsSL -o "$file" "$url" || { rm -rf "$tmpdir"; return 1; }
+    case "$PM" in
+        apt) sudo apt-get install -y "$file" ;;
+        dnf) sudo dnf install -y "$file" ;;
+    esac
+    local rc=$?
+    rm -rf "$tmpdir"
+    return $rc
+}
+
+# AppImage → ~/.local/bin (ex.: wezterm)
+__appimage_install() {
+    local repo="$1" url name
+    url="$(__gh_latest_asset "$repo" "AppImage$" | __arch_filter || true)"
+    [[ -z "$url" ]] && { __print_info "nenhum AppImage encontrado em ${repo}"; return 1; }
+    name="$(basename "$repo")"
+    mkdir -p "${LOCAL_BIN}"
+    __print_info "baixando ${url}"
+    curl -fsSL -o "${LOCAL_BIN}/${name}" "$url" || return 1
+    chmod +x "${LOCAL_BIN}/${name}"
+}
+
+__script_install() {
+    case "$1" in
+        starship) curl -fsSL https://starship.rs/install.sh | sh -s -- -y ;;
+        atuin)     curl --proto '=https' --tlsv1.2 -LsSf https://setup.atuin.sh | sh ;;
+        *)         return 1 ;;
+    esac
+}
+
+__rustup_install() {
+    # rustup nativo + toolchain stable (default profile: rustfmt, clippy...)
+    __native_install rustup || return 1
+    rustup toolchain install stable --profile default || return 1
+    rustup default stable
+}
+
+# ─── Instalador de uma ferramenta (dispatcher) ─────────────────────────────────
+
+__install_tool() {
+    local row="$1"
+    __parse_tool "$row"
+
+    if __command_exists "$t_check"; then
+        __print_success "${t_name} já instalado"
+        return 0
+    fi
+
+    __print_info "instalando ${t_name}..."
+
+    local rc=1
+
+    case "$t_kind" in
+        native)
+            __native_install "$(__tool_native_pkgs)" && rc=0
+            ;;
+        native+ghrelease:*)
+            if __native_install "$(__tool_native_pkgs)"; then rc=0
+            elif __ghrelease_install "${t_kind#native+ghrelease:}" "$t_check"; then rc=0
+            fi
+            ;;
+        native+script:*)
+            if __native_install "$(__tool_native_pkgs)"; then rc=0
+            elif __script_install "${t_kind#native+script:}"; then rc=0
+            fi
+            ;;
+        native+pkgfile:*)
+            if __native_install "$(__tool_native_pkgs)"; then rc=0
+            elif __pkgfile_install "${t_kind#native+pkgfile:}"; then rc=0
+            fi
+            ;;
+        native+appimage:*)
+            if __native_install "$(__tool_native_pkgs)"; then rc=0
+            elif __appimage_install "${t_kind#native+appimage:}"; then rc=0
+            fi
+            ;;
+        ghrelease:*)
+            __ghrelease_install "${t_kind#ghrelease:}" "$t_check" && rc=0
+            ;;
+        rustup)
+            __rustup_install && rc=0
+            ;;
+        *)
+            __print_error "kind desconhecido para ${t_name}: ${t_kind}"
+            rc=1
+            ;;
+    esac
+
+    # shim Debian/Ubuntu: pacote fd-find instala o binário como fdfind
+    if [[ "$t_check" == "fd" ]] && ! __command_exists fd && __command_exists fdfind; then
+        ln -sf "$(command -v fdfind)" "${LOCAL_BIN}/fd"
+    fi
+
+    # PATH da sessão atual (starship/atuin/ghrelease instalam em ~/.local/bin)
+    export PATH="${LOCAL_BIN}:${PATH}"
+
+    if __command_exists "$t_check"; then
+        __print_success "${t_name} ✓ ($(command -v "$t_check"))"
+        return 0
+    fi
+
+    __print_error "falha ao instalar ${t_name}"
+    mkdir -p "$PACKAGES_DIR"
+    grep -qxF "$t_name" "$FAILED_TOOLS_FILE" 2>/dev/null || echo "$t_name" >> "$FAILED_TOOLS_FILE"
+    return $rc
+}
+
+# ─── Etapas do init ────────────────────────────────────────────────────────────
+#
+# name ;; installer ;; required ;; skip_var
+
+INIT_STEPS=(
+    "Pacotes do sistema ;; fn:__step_system ;; true ;; -"
+    "Ferramentas ;; fn:__step_tools ;; false ;; -"
+    "Fontes ;; fn:__step_fonts ;; false ;; SKIP_FONT"
+    "Stow dotfiles ;; fn:__step_stow ;; true ;; -"
+    "Link comando dot ;; fn:__step_link ;; false ;; -"
+)
+
+__parse_step() {
+    local entry="$1"
+    s_name="$(    echo "$entry" | awk -F';;' '{print $1}' | xargs)"
+    s_install="$( echo "$entry" | awk -F';;' '{print $2}' | xargs)"
+    s_required="$(echo "$entry" | awk -F';;' '{print $3}' | xargs)"
+    s_skip="$(    echo "$entry" | awk -F';;' '{print $4}' | xargs)"
+}
+
+__run_init_steps() {
+    TOTAL_STEPS=0
+    for entry in "${INIT_STEPS[@]}"; do
+        __parse_step "$entry"
+        [[ "$s_skip" != "-" ]] && [[ "${!s_skip:-}" == "true" ]] && continue
+        (( ++TOTAL_STEPS ))
+    done
+    CURRENT_STEP=0
+
+    for entry in "${INIT_STEPS[@]}"; do
+        __parse_step "$entry"
+        [[ "$s_skip" != "-" ]] && [[ "${!s_skip:-}" == "true" ]] && continue
+        __print_step "$s_name"
+        local fn="${s_install#fn:}"
+        if "$fn"; then
+            :
+        elif [[ "$s_required" == "true" ]]; then
+            __print_error "etapa '${s_name}' falhou — abortando"
+            return 1
+        else
+            __print_warning "etapa '${s_name}' falhou (continuando)"
+        fi
+    done
+}
+
+# ── Etapa: pacotes do sistema ──────────────────────────────────────────────────
+
+__step_system() {
+    local pkg_clipboard=""
+    if ! $IS_WSL; then
+        if [[ "${XDG_SESSION_TYPE:-}" == "wayland" ]]; then
+            pkg_clipboard="wl-clipboard"
+        else
+            case "$PM" in
+                pacman) pkg_clipboard="xclip" ;;
+                apt)    pkg_clipboard="xclip xsel" ;;
+                dnf)    pkg_clipboard="xclip xsel" ;;
+            esac
+        fi
+    fi
+
+    case "$PM" in
+        pacman)
+            sudo pacman -S --noconfirm --needed \
+                base-devel git curl stow unzip bash-completion fontconfig jq lsof $pkg_clipboard
+            ;;
+        apt)
+            sudo apt-get update -qq
+            sudo apt-get install -y \
+                build-essential git curl stow unzip bash-completion fontconfig jq lsof $pkg_clipboard
+            ;;
+        dnf)
+            sudo dnf install -y \
+                git curl stow unzip bash-completion fontconfig jq lsof $pkg_clipboard
+            sudo dnf group install -y "Development Tools" || true
+            ;;
+        *)
+            __print_error "gerenciador de pacotes não suportado (detectado: ${PM})"
+            __print_info "suportados: pacman (Arch), apt (Debian/Ubuntu), dnf (Fedora/RHEL)"
+            return 1
+            ;;
+    esac
+}
+
+# ── Etapa: ferramentas ─────────────────────────────────────────────────────────
+
+__step_tools() {
+    rm -f "$FAILED_TOOLS_FILE"
+    local failed=0
+
+    if $IS_WSL; then
+        __print_info "WSL detectado — WezTerm roda como app do Windows; pulando instalação Linux"
+    fi
+
+    for row in "${TOOLS[@]}"; do
+        __parse_tool "$row"
+
+        # --only <tool>: instala só a ferramenta pedida
+        [[ -n "${ONLY_TOOL:-}" ]] && [[ "$t_name" != "$ONLY_TOOL" ]] && continue
+
+        if [[ "$t_name" == "wezterm" ]] && $IS_WSL; then
+            __print_info "wezterm: use o app do Windows (alias já configurado no .bashrc)"
+            continue
+        fi
+
+        if ! __install_tool "$row"; then
+            failed=$((failed + 1))
+        fi
+    done
+
+    if [[ "$failed" -gt 0 ]]; then
+        __print_warning "${failed} ferramenta(s) falharam — veja ${FAILED_TOOLS_FILE}"
+        __print_info "depois rode: ${SCRIPT_NAME} retry-failed"
+    fi
+    return 0
+}
+
+# ── Etapa: fontes ──────────────────────────────────────────────────────────────
+
+__step_fonts() {
+    __print_info "JetBrains Mono Nerd Font (ícones do nvim/starship)"
+
+    if [[ "$PM" == "pacman" ]] && sudo pacman -S --noconfirm --needed ttf-jetbrains-mono-nerd 2>/dev/null; then
+        __print_success "fontes instaladas via pacman"
+        return 0
+    fi
+
+    # fallback universal: zip oficial do nerd-fonts → ~/.local/share/fonts
+    local zip="/tmp/JetBrainsMono.zip"
+    __print_info "baixando zip do nerd-fonts..."
+    mkdir -p "${HOME}/.local/share/fonts"
+    curl -fL -o "$zip" "https://github.com/ryanoasis/nerd-fonts/releases/latest/download/JetBrainsMono.zip" \
+        || { __print_error "download das fontes falhou"; return 1; }
+    unzip -oq "$zip" -d "${HOME}/.local/share/fonts"
+    rm -f "$zip"
+    fc-cache -f "${HOME}/.local/share/fonts" 2>/dev/null || true
+    __print_success "fontes instaladas em ~/.local/share/fonts"
+}
+
+# ── Etapa: stow ────────────────────────────────────────────────────────────────
+
+__step_stow() {
+    if ! __command_exists stow; then
+        __print_error "GNU Stow não está instalado — instale com seu gerenciador de pacotes"
+        return 1
+    fi
+    stow -R -v -d "$DOTFILES_DIR" -t "$HOME" $STOW_PACKAGES
+}
+
+# ── Etapa: link do comando dot ─────────────────────────────────────────────────
+
+__link_dot() {
+    mkdir -p "$LOCAL_BIN"
+    ln -sf "$DOTFILES_DIR/dot" "$LOCAL_BIN/dot"
+    [[ -x "$LOCAL_BIN/dot" ]]
+}
+
+__step_link() {
+    if [[ "$(command -v dot || true)" == "$LOCAL_BIN/dot" ]]; then
+        __print_success "dot já linkado em ~/.local/bin"
+        return 0
+    fi
+    __link_dot && __print_success "dot linkado em ${LOCAL_BIN}/dot"
+}
+
+# ─── Comandos ──────────────────────────────────────────────────────────────────
+
+cmd_init() {
+    local SKIP_FONT="${SKIP_FONT:-false}"
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --skip-font) SKIP_FONT=true ;;
+            --only)      ONLY_TOOL="$2"; shift ;;
+            *)
+                __print_error "opção desconhecida: $1"
+                __print_info "uso: ${SCRIPT_NAME} init [--skip-font] [--only <tool>]"
+                return 1
+                ;;
+        esac
+        shift
+    done
+
+    __detect_platform
+    __print_header "Inicializando dotfiles"
+    __print_info "plataforma: $(. /etc/os-release 2>/dev/null && echo "${ID:-linux}") / gerenciador: ${PM} / WSL: ${IS_WSL}"
+
+    __run_init_steps || return 1
+
+    __print_header "Instalação concluída 🎉"
+    cat <<EOF
+
+  Próximos passos (manuais — exigem interação/credenciais):
+    git config --global user.name  "Seu Nome"
+    git config --global user.email "seu@email.com"
+    gh auth login              # GitHub CLI
+    atuin register && atuin sync   # histórico sincronizado (em um terminal interativo)
+    pi                          # autenticar provedores de IA
+
+  Manutenção: ${SCRIPT_NAME} update · ${SCRIPT_NAME} doctor · ${SCRIPT_NAME} help
+EOF
+}
+
+cmd_update() {
+    [[ $# -gt 0 ]] && { __print_error "update não aceita argumentos"; return 1; }
+    __print_header "Atualizando dotfiles"
+
+    __print_info "git pull..."
+    if ! git -C "$DOTFILES_DIR" pull; then
+        __print_error "git pull falhou"
+        return 1
+    fi
+    __print_success "repositório atualizado"
+
+    __print_info "re-stow..."
+    if stow -R -v -d "$DOTFILES_DIR" -t "$HOME" $STOW_PACKAGES; then
+        __print_success "symlinks atualizados"
+    else
+        __print_error "stow falhou"
+        return 1
+    fi
+
+    if [[ -f "$FAILED_TOOLS_FILE" ]] && [[ -s "$FAILED_TOOLS_FILE" ]]; then
+        __print_warning "há ferramentas com falha pendente — rode: ${SCRIPT_NAME} retry-failed"
+    fi
+}
+
+cmd_doctor() {
+    [[ $# -gt 0 ]] && { __print_error "doctor não aceita argumentos"; return 1; }
+    __detect_platform
+    __print_header "Diagnóstico"
+
+    local issues=0
+
+    if [[ "$PM" != "unknown" ]]; then
+        __print_success "gerenciador de pacotes: ${PM} (WSL: ${IS_WSL})"
+    else
+        __print_error "nenhum gerenciador de pacotes suportado encontrado"
+        (( ++issues ))
+    fi
+
+    __command_exists stow && __print_success "stow instalado" \
+        || { __print_error "stow não instalado"; (( ++issues )); }
+
+    __print_info "ferramentas:"
+    for row in "${TOOLS[@]}"; do
+        __parse_tool "$row"
+        if __command_exists "$t_check"; then
+            __print_success "${t_name}"
+        else
+            __print_error "${t_name} (faltando)"
+            (( ++issues ))
+        fi
+    done
+
+    case ":${PATH}:" in
+        *":${LOCAL_BIN}:"*) __print_success "\$PATH contém ~/.local/bin" ;;
+        *) __print_warning "~/.local/bin não está no \$PATH"; (( ++issues )) ;;
+    esac
+
+    if [[ -x "${LOCAL_BIN}/dot" ]]; then
+        __print_success "comando dot linkado"
+    else
+        __print_warning "dot não está linkado — rode: ${SCRIPT_NAME} link"
+    fi
+
+    local broken=0 link target
+    while IFS= read -r link; do
+        target="$(readlink "$link" 2>/dev/null || true)"
+        [[ "$target" == *dotfiles* ]] && (( ++broken ))
+    done < <(find -L "$HOME" -maxdepth 2 -type l 2>/dev/null)
+    if [[ "$broken" -gt 0 ]]; then
+        __print_warning "${broken} symlink(s) quebrado(s) apontando para dotfiles — rode: ${SCRIPT_NAME} stow"
+        (( ++issues ))
+    else
+        __print_success "nenhum symlink quebrado"
+    fi
+
+    if [[ -s "$FAILED_TOOLS_FILE" ]]; then
+        __print_warning "falhas pendentes em ${FAILED_TOOLS_FILE} — rode: ${SCRIPT_NAME} retry-failed"
+        (( ++issues ))
+    fi
+
+    if [[ "$issues" -eq 0 ]]; then
+        __print_header "Tudo certo ✓"
+    else
+        __print_header "${issues} problema(s) encontrado(s)"
+        return 1
+    fi
+}
+
+cmd_stow() {
+    local args=()
+    local pkgs="$STOW_PACKAGES"
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            -n|--no) args+=("-n") ;;
+            *) pkgs="$1" ;;
+        esac
+        shift
+    done
+    __print_header "Stow"
+    stow -R -v -d "$DOTFILES_DIR" -t "$HOME" "${args[@]}" $pkgs
+}
+
+cmd_retry_failed() {
+    [[ $# -gt 0 ]] && { __print_error "retry-failed não aceita argumentos"; return 1; }
+    __detect_platform
+    if [[ ! -s "$FAILED_TOOLS_FILE" ]]; then
+        __print_header "Nenhuma falha pendente"
+        return 0
+    fi
+    __print_header "Tentando novamente ferramentas com falha"
+    local todo still_failed=() name
+    todo="$(cat "$FAILED_TOOLS_FILE")"
+    rm -f "$FAILED_TOOLS_FILE"
+    for name in $todo; do
+        local row
+        row="$(printf '%s\n' "${TOOLS[@]}" | grep -E "^${name} " || true)"
+        if [[ -z "$row" ]]; then
+            __print_warning "ferramenta desconhecida: ${name} (ignorando)"
+            continue
+        fi
+        __print_info "retry: ${name}"
+        if ! __install_tool "$row"; then
+            still_failed+=("$name")
+        fi
+    done
+    for name in "${still_failed[@]}"; do
+        grep -qxF "$name" "$FAILED_TOOLS_FILE" 2>/dev/null || echo "$name" >> "$FAILED_TOOLS_FILE"
+    done
+    if [[ "${#still_failed[@]}" -gt 0 ]]; then
+        __print_warning "ainda falhando: ${still_failed[*]}"
+        return 1
+    fi
+    __print_success "todas as falhas resolvidas"
+}
+
+cmd_link() {
+    [[ $# -gt 0 ]] && { __print_error "link não aceita argumentos"; return 1; }
+    __link_dot && __print_success "dot linkado em ${LOCAL_BIN}/dot"
+}
+
+cmd_unlink() {
+    [[ $# -gt 0 ]] && { __print_error "unlink não aceita argumentos"; return 1; }
+    if [[ -L "${LOCAL_BIN}/dot" ]]; then
+        rm -f "${LOCAL_BIN}/dot"
+        __print_success "link removido"
+    else
+        __print_info "nenhum link em ${LOCAL_BIN}/dot"
+    fi
+}
+
+cmd_edit() {
+    [[ $# -gt 0 ]] && { __print_error "edit não aceita argumentos"; return 1; }
+    local editor="${EDITOR:-nvim}"
+    if __command_exists "$editor"; then
+        exec "$editor" "$DOTFILES_DIR"
+    else
+        __print_error "editor '${editor}' não encontrado"
+        __print_info "defina \$EDITOR ou instale o neovim (${SCRIPT_NAME} init --only neovim)"
+        return 1
+    fi
+}
+
+cmd_help() {
+    local topic="${1:-}"
+    case "$topic" in
+        init) cat <<EOF
+${SCRIPT_NAME} init — instalação completa (novas máquinas)
+
+  ${SCRIPT_NAME} init                    # tudo
+  ${SCRIPT_NAME} init --skip-font        # sem as fontes Nerd Font
+  ${SCRIPT_NAME} init --only nvim        # só uma ferramenta
+
+Ordem: pacotes do sistema → ferramentas → fontes → stow → link.
+Ferramentas com falha não interrompem o init (rodar ${SCRIPT_NAME} retry-failed depois).
+EOF
+            ;;
+        doctor) echo "${SCRIPT_NAME} doctor — diagnóstico do ambiente (ferramentas, PATH, symlinks)" ;;
+        update) echo "${SCRIPT_NAME} update — git pull + re-stow dos pacotes" ;;
+        stow)   echo "${SCRIPT_NAME} stow [pkg|-n] — (re)aplica symlinks; -n = dry-run" ;;
+        retry-failed) echo "${SCRIPT_NAME} retry-failed — reinstala ferramentas registradas em packages/failed_tools.txt" ;;
+        link)   echo "${SCRIPT_NAME} link|unlink — instala/remove o comando em ~/.local/bin" ;;
+        edit)   echo "${SCRIPT_NAME} edit — abre os dotfiles no \$EDITOR" ;;
+        *)
+            cat <<EOF
+${SCRIPT_NAME} ${VERSION} — dotfiles lafco (GNU Stow + CLI de instalação)
+
+Uso: ${SCRIPT_NAME} <comando> [opções]
+
+Comandos:
+  init          instalação completa de uma máquina nova (--skip-font, --only <tool>)
+  update        git pull + re-stow
+  doctor        diagnóstico do ambiente
+  stow [pkg|-n] (re)aplica symlinks; -n = dry-run
+  retry-failed  reinstala ferramentas que falharam no init
+  link|unlink   instala/remove o comando dot em ~/.local/bin
+  edit          abre os dotfiles no \$EDITOR
+  help [cmd]    esta ajuda
+
+Pacotes Stow: ${STOW_PACKAGES}
+Falhas de instalação: ${FAILED_TOOLS_FILE}
+EOF
+            ;;
+    esac
+}
+
+# ─── main ──────────────────────────────────────────────────────────────────────
+
+main() {
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --version) echo "${SCRIPT_NAME} version ${VERSION}"; exit 0 ;;
+            -h|--help) cmd_help; exit 0 ;;
+            --skip-font) export SKIP_FONT=true; shift ;;
+            *) break ;;
+        esac
+    done
+
+    local cmd="${1:-help}"
+    shift || true
+
+    if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+        cmd_help "$cmd"
+        return
+    fi
+
+    case "$cmd" in
+        init)         cmd_init "$@" ;;
+        update)       cmd_update "$@" ;;
+        doctor)       cmd_doctor "$@" ;;
+        stow)         cmd_stow "$@" ;;
+        retry-failed) cmd_retry_failed "$@" ;;
+        link)         cmd_link "$@" ;;
+        unlink)       cmd_unlink "$@" ;;
+        edit)         cmd_edit "$@" ;;
+        help)         cmd_help "$@" ;;
+        *)
+            __print_error "comando desconhecido: ${cmd}"
+            __print_info "rode '${SCRIPT_NAME} help' para ver os comandos"
+            return 1
+            ;;
+    esac
+}
+
+main "$@"

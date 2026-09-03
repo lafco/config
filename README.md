@@ -1,101 +1,113 @@
-## Instalação
-1. **Git**
+# dotfiles
+
+Dotfiles pessoais gerenciados por [GNU Stow](https://www.gnu.org/software/stow/) + um
+CLI de instalação próprio (`dot`), inspirado no [dmmulroy/.dotfiles](https://github.com/dmmulroy/.dotfiles).
+Funciona em qualquer Linux: Arch (pacman), Debian/Ubuntu (apt) e Fedora (dnf), incluindo WSL.
+
+## Instalação (máquina nova)
+
+Requisito: `bash`, `curl` e `git`.
+
 ```bash
-https://git-scm.com/install/linux
-```
-2. **Instale o Pi** (requer bash, curl e git)
-```bash
-curl -fsSL https://pi.dev/install.sh | sh
-```
-3. **Clone o repo e ative a skill**
-```bash
+# One-liner — clona o repo e roda a instalação completa
 curl -fsSL https://raw.githubusercontent.com/lafco/config/main/bootstrap.sh | bash
+
+# Ou manualmente:
+git clone https://github.com/lafco/config.git ~/dotfiles
+~/dotfiles/dot init
 ```
-4. **Abra o Pi e rode o setup interativo**
+
+O `dot init` detecta a distro e instala:
+
+| Etapa | O quê |
+|---|---|
+| Sistema | stow, git, curl, compiladores, bash-completion, fontconfig, jq, clipboard |
+| Ferramentas | rg, fd, bat, eza, zoxide, fzf, tv, starship, atuin, btop, direnv, nushell |
+| Git | lazygit, jj, gh, gh-dash, diffnav |
+| Editor | neovim (release oficial) |
+| Terminal | zellij, herdr, wezterm (AppImage no apt/dnf; app do Windows no WSL) |
+| Runtimes | node, python, rust (rustup) |
+| Fontes | JetBrains Mono Nerd Font |
+| Configs | stow de todos os pacotes + `dot` linkado em `~/.local/bin` |
+
+Cada ferramenta é instalada pelo repositório nativo quando existe; senão, baixa o
+binário oficial (GitHub release) para `~/.local/bin`. Falhas não interrompem a
+instalação — ficam em `packages/failed_tools.txt` e podem ser retentadas depois.
+
+### Pós-instalação manual (credenciais/interação)
+
 ```bash
-pi
-# No prompt do Pi:
-> setup my machine
+git config --global user.name  "Seu Nome"
+git config --global user.email "seu@email.com"
+gh auth login              # GitHub CLI
+atuin register && atuin sync   # histórico sincronizado (precisa de terminal interativo)
+pi                          # autenticar provedores de IA
 ```
----
-## Pós-instalação manual
-Alguns passos precisam ser feitos manualmente (por segurança/credenciais):
+
+## Comandos do CLI
+
 ```bash
-gh auth login           # autenticar no GitHub
-gh copilot auth         # autenticar Copilot
-atuin register          # criar conta no Atuin (sync de histórico)
-atuin sync              # sincronizar histórico
+dot init                  # instalação completa (idempotente — pode rodar de novo)
+dot init --skip-font      # sem as fontes
+dot init --only nvim      # instala só uma ferramenta
+dot update                # git pull + re-stow
+dot doctor                # diagnóstico do ambiente
+dot stow                  # (re)aplica symlinks
+dot stow -n               # dry-run
+dot retry-failed          # reinstala ferramentas que falharam
+dot link | dot unlink     # instala/remove o comando em ~/.local/bin
+dot edit                  # abre os dotfiles no $EDITOR
+dot help                  # ajuda
 ```
-## O que o Pi instala
-| Categoria     | Ferramenta                                             | Como         |
-|--------------|--------------------------------------------------------|--------------|
-| Sistema      | stow, git, curl, build-essential, bash-completion      | apt          |
-| Fontes       | JetBrains Mono Nerd Font                               | curl         |
-| Version mgr  | mise                                                   | curl (mise)  |
-| Shell        | starship, zoxide, television, bat, eza, fd, rg, atuin  | mise         |
-| Editor       | neovim (LazyVim)                                       | mise         |
-| Terminal     | zellij, wezterm (default)                              | mise         |
-| Git          | lazygit, jj, gh, gh-dash                               | mise         |
-| Runtimes     | node (LTS), python (latest)                            | mise         |
-| Configs      | bash, nvim, pi, wezterm, zellij, television, etc       | stow         |
 
 ## Estrutura (GNU Stow)
-Cada pasta é um "pacote". `stow nome/` cria symlinks de `~/dotfiles/nome/` pra `~/`.
+
+Cada pasta é um "pacote". `dot stow` cria symlinks de `~/dotfiles/<pasta>/` para `~/`.
+
 ```
 ~/dotfiles/
-├── bash/         → ~/.bashrc, ~/.aliases, ~/.functions, ~/.bash_profile
-├── nvim/         → ~/.config/nvim/           (LazyVim + plugins)
-├── zed/          → ~/.config/zed/            (editor Zed — vim binds)
-├── pi/           → ~/.pi/agent/              (settings, extensions, skills)
-├── wezterm/      → ~/.config/wezterm/        (terminal emulator)
-├── zellij/       → ~/.config/zellij/         (terminal multiplexer)
-├── television/   → ~/.config/television/     (fuzzy finder)
-├── starship/     → ~/.config/starship.toml   (prompt)
-└── mise/         → ~/.config/mise/config.toml (dev tools)
+├── dot              # CLI de instalação/manutenção
+├── bootstrap.sh     # one-liner: clona + dot init
+├── bash/            # .bashrc, .bash_profile, .aliases, .functions
+├── nvim/            # ~/.config/nvim/ (LazyVim)
+├── pi/              # ~/.pi/agent/ (settings, extensions, skills)
+├── wezterm/         # ~/.config/wezterm/ (terminal)
+├── zellij/          # ~/.config/zellij/ (multiplexer)
+├── herdr/           # ~/.config/herdr/ (AI workspace manager)
+├── television/      # ~/.config/television/ (fuzzy finder)
+├── starship/        # ~/.config/starship.toml (prompt)
+├── atuin/           # ~/.config/atuin/config.toml (histórico)
+├── gh-dash/         # ~/.config/gh-dash/config.yml (dashboard GitHub)
+└── packages/        # failed_tools.txt (runtime, não versionado)
 ```
----
-## Comandos Stow (dia a dia)
+
+## Dia a dia
+
 ```bash
+# Depois de editar configs no repo:
 cd ~/dotfiles
-# Ver o que mudaria (dry-run, recomendado)
-stow -n */
-# Aplicar todos os pacotes
-stow */
-# Aplicar só um pacote
-stow nvim
-# Remover symlinks de um pacote
-stow -D nvim
-# Re-aplicar após editar arquivos no repo
-stow -R nvim
-# Se houver conflito (arquivo já existe), tomar posse:
-stow --adopt nvim    # move o arquivo existente para dentro do repo
-```
-## Atualizar depois de um `git pull`
-```bash
-cd ~/dotfiles
-git pull
-stow -R */     # re-stow tudo (atualiza symlinks, ignora o que não mudou)
-```
-## Adicionar um config novo
-```bash
-cd ~/dotfiles
-# Criar estrutura espelhando $HOME
-mkdir -p meu-novo-app/.config/meu-novo-app
-echo "config..." > meu-novo-app/.config/meu-novo-app/config.yaml
-# Aplicar
-stow meu-novo-app
-# Commitar
-git add meu-novo-app && git commit -m "add meu-novo-app config"
+dot stow -n     # dry-run
+dot stow        # aplica
+
+# Depois de atualizar:
+dot update      # git pull + re-stow
+
+# Adicionar um config novo:
+mkdir -p ~/dotfiles/meu-app/.config/meu-app
+echo "..." > ~/dotfiles/meu-app/.config/meu-app/config.yaml
+# 1. adicione "meu-app" à lista STOW_PACKAGES no script `dot`
+# 2. dot stow meu-app
 ```
 
----
+## Adicionar/remover ferramenta
 
-## NixOS (máquina declarativa)
+A lista de ferramentas fica na tabela `TOOLS` dentro do script `dot`:
 
-A pasta [`nixos/`](nixos/README.md) tem a configuração NixOS completa da máquina
-**hmpc** (flakes + home-manager + devenv), que substitui o fluxo mise+Stow nesta
-máquina. Veja [`nixos/README.md`](nixos/README.md) para instalação, dia a dia e
-templates de dev env.
+```
+"nome | binário | pacote-pacman | pacote-apt | pacote-dnf | kind"
+```
 
-> ⚠️ `nixos/` **não** é um pacote Stow — o `.stow-local-ignore` na raiz impede
-> que `stow */` tente linká-lo.
+`kind` aceita: `native`, `native+ghrelease:<repo>`, `native+script:<id>`,
+`native+pkgfile:<repo>`, `native+appimage:<repo>`, `ghrelease:<repo>`, `rustup`.
+Ferramentas que só existem como binário de GitHub release funcionam em qualquer
+distro sem esforço extra.
