@@ -6,5 +6,6 @@
   "enabledModels": [],
   "hideThinkingBlock": false,
   "packages": [],
-  "theme": "dark"
+  "theme": "dark",
+  "enableSkillCommands": true
 }

@@ -22,6 +22,12 @@ Configuração padrão do pi para uso geral (fora de projetos específicos).
 - `edit` — edições pontuais
 - `bash` — comandos shell
 
+## Refinamento de epics
+
+- Para planejar/quebrar epics em tarefas: use `/refinar-epic [texto|link|caminho]` (skill `epic-refinement`).
+- Artefatos ficam em `.pi/epics/<slug>/` do projeto (`epic.md`, `index.md`, `tasks/`).
+- Para despachar uma tarefa a um agente implementador: `/implementar-tarefa <caminho-da-tarefa>`.
+
 ---
 
 > ⚠️ Este arquivo é carregado em **todas** as sessões do pi.
