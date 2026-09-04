@@ -1,5 +1,6 @@
 # Pi agent — sensitive files
 pi/.pi/agent/auth.json
+pi/.pi/agent/models-store.json
 pi/.pi/agent/sessions/
 pi/.pi/agent/bin/
 

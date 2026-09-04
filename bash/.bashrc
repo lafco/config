@@ -96,4 +96,10 @@ DOTFILES_DIR="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"
 # ── Secrets (tokens, credenciais) — NUNCA versionar ───────────────────────────
 [ -f ~/.secrets ] && source ~/.secrets
 
+# ── NixOS: wrappers suid (sudo) sempre na frente do PATH ─────────────────────
+# O herdr/pi-node reconstrói o PATH pondo /run/current-system/sw/bin antes
+# de /run/wrappers/bin — sem esta linha, `sudo` resolve para o binário sem
+# setuid e quebra com "must be owned by uid 0 and have the setuid bit set".
+export PATH="/run/wrappers/bin:$PATH"
+
 
