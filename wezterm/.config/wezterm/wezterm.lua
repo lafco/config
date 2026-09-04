@@ -7,6 +7,8 @@ config.font_size = 10
 config.line_height = 1.1
 config.font = wezterm.font_with_fallback {
   { family = 'Jetbrains Mono' },
+  { family = 'Jetbrains Mono Regular' },
+  { family = 'Noto Sans Mono Regular' },
 }
 
 -- Colors (Catppuccin Mocha)
