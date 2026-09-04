@@ -26,8 +26,9 @@ config.window_padding = {
   bottom = 5,
 }
 
--- Shell
-config.default_prog = { '/usr/bin/bash', '-l' }
+-- Shell (resolvido pelo PATH: no NixOS o bash vive no store, não em
+-- /usr/bin/bash — caminho absoluto quebrava o wezterm na instalação)
+config.default_prog = { 'bash', '-l' }
 
 -- Kitty keyboard protocol (required by pi for modifier key detection)
 config.enable_kitty_keyboard = true
