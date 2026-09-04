@@ -56,6 +56,27 @@ fi
 
 # ── atuin (shell history sync) ────────────────────────────────────────────────
 if command -v atuin &>/dev/null; then
+    # No Bash, o Atuin precisa de bash-preexec (ou ble.sh) para capturar os
+    # comandos; sem isso o histórico fica vazio e a seta para cima não acha nada.
+    if [[ -z "${bash_preexec_imported:-}" && -z "${__bp_imported:-}" && -z "${BLE_ATTACHED:-}" ]]; then
+        _atuin_preexec=""
+        for _atuin_candidate in \
+            "${BASH_PREEXEC_SH:-}" \
+            "$HOME/.nix-profile/share/bash/bash-preexec.sh" \
+            "/etc/profiles/per-user/$(id -un)/share/bash/bash-preexec.sh" \
+            /usr/share/bash-preexec/bash-preexec.sh; do
+            if [[ -n "$_atuin_candidate" && -f "$_atuin_candidate" ]]; then
+                _atuin_preexec="$_atuin_candidate"
+                break
+            fi
+        done
+        if [[ -n "$_atuin_preexec" ]]; then
+            source "$_atuin_preexec"
+        else
+            printf 'atuin: bash-preexec (ou ble.sh) não encontrado — o histórico não será capturado.\n' >&2
+        fi
+        unset _atuin_candidate _atuin_preexec
+    fi
     eval "$(atuin init bash)"
 fi
 
