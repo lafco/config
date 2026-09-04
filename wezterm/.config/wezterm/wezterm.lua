@@ -6,9 +6,7 @@ local config = wezterm.config_builder()
 config.font_size = 10
 config.line_height = 1.1
 config.font = wezterm.font_with_fallback {
-  { family = 'Jetbrains Mono' },
-  { family = 'Jetbrains Mono Regular' },
-  { family = 'Noto Sans Mono Regular' },
+  { family = 'JetBrains Mono Regular' },
 }
 
 -- Colors (Catppuccin Mocha)
@@ -32,8 +30,10 @@ config.window_padding = {
 -- /usr/bin/bash — caminho absoluto quebrava o wezterm na instalação)
 config.default_prog = { 'bash', '-l' }
 
--- Kitty keyboard protocol (required by pi for modifier key detection)
-config.enable_kitty_keyboard = true
+-- Kitty keyboard protocol desligado: com ele ativo, o Esc no prefix mode
+-- do herdr era despachado como 'lone escape' para o pane (não cancelava).
+-- Reativar se a detecção de modificadores do pi regredir.
+config.enable_kitty_keyboard = false
 
 -- Miscellaneous settings
 config.max_fps = 120
