@@ -3,6 +3,7 @@ pi/.pi/agent/auth.json
 pi/.pi/agent/models-store.json
 pi/.pi/agent/sessions/
 pi/.pi/agent/bin/
+pi/.pi/agent/npm/
 
 # Editor / system
 *~
