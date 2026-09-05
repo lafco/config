@@ -12,6 +12,6 @@
     "npm:@juicesharp/rpiv-todo",
     "npm:pi-lens"
   ],
-  "theme": "catppuccin-mocha",
+  "theme": "dark",
   "enableSkillCommands": true
 }
