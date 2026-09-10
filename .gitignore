@@ -5,6 +5,10 @@ pi/.pi/agent/sessions/
 pi/.pi/agent/bin/
 pi/.pi/agent/npm/
 
+# jira-flow — credenciais locais
+pi/.pi/agent/extensions/jira-flow/.env
+pi/.pi/agent/secrets.json
+
 # Editor / system
 *~
 *.swp
