@@ -1,16 +1,12 @@
 {
   "lastChangelogVersion": "0.84.4",
-  "defaultProvider": "opencode-go",
-  "defaultModel": "deepseek-v4-pro",
+  "defaultProvider": "deepseek",
+  "defaultModel": "deepseek-flash",
   "defaultThinkingLevel": "high",
   "enabledModels": [],
   "hideThinkingBlock": false,
   "packages": [
-    "npm:pi-mcp-adapter",
-    "npm:context-mode",
-    "npm:@juicesharp/rpiv-ask-user-question",
-    "npm:@juicesharp/rpiv-todo",
-    "npm:pi-lens"
+    "npm:pi-mcp-adapter"
   ],
   "theme": "dark",
   "enableSkillCommands": true
