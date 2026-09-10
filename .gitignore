@@ -21,6 +21,7 @@ pi/.pi/agent/secrets.json
 herdr/.config/herdr/*.log
 herdr/.config/herdr/session.json
 herdr/.config/herdr/.plugins.lock
+herdr/.config/herdr/release-notes.json
 
 # dot CLI runtime (falhas de instalação)
 packages/failed_tools.txt
