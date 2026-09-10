@@ -28,6 +28,10 @@ readonly PACKAGES_DIR="${DOTFILES_DIR}/packages"
 readonly FAILED_TOOLS_FILE="${PACKAGES_DIR}/failed_tools.txt"
 readonly LOCAL_BIN="${HOME}/.local/bin"
 readonly LOCAL_OPT="${HOME}/.local/opt"
+readonly DOT_LOG="${XDG_CACHE_HOME:-${HOME}/.cache}/dot/init.log"
+
+# Modo silencioso (dot init -q): suprime progresso e saída dos instaladores
+QUIET=false
 
 # Pacotes Stow (lista explícita — evita stowar diretórios que não são pacotes)
 readonly STOW_PACKAGES="bash nvim pi wezterm zellij television starship atuin gh-dash herdr"
@@ -85,16 +89,27 @@ __os_release_field() {
 # ─── Helpers de saída ──────────────────────────────────────────────────────────
 
 __print_header() { printf "\n${BOLD}${CYAN}==> %s${RESET}\n" "$*"; }
-__print_success() { printf "${GREEN}  ✓ %s${RESET}\n" "$*"; }
+__print_success() { $QUIET || printf "${GREEN}  ✓ %s${RESET}\n" "$*"; }
 __print_error()   { printf "${RED}  ✗ %s${RESET}\n" "$*"; }
 __print_warning() { printf "${YELLOW}  ! %s${RESET}\n" "$*"; }
-__print_info()    { printf "${BLUE}  • %s${RESET}\n" "$*"; }
+__print_info()    { $QUIET || printf "${BLUE}  • %s${RESET}\n" "$*"; }
 __print_step() {
     (( ++CURRENT_STEP ))
-    printf "\n${BOLD}${BLUE}[%d/%d] %s${RESET}\n" "$CURRENT_STEP" "$TOTAL_STEPS" "$*"
+    $QUIET || printf "\n${BOLD}${BLUE}[%d/%d] %s${RESET}\n" "$CURRENT_STEP" "$TOTAL_STEPS" "$*"
 }
 
 __command_exists() { command -v "$1" &>/dev/null; }
+
+# Executa um comando; com QUIET=true a saída vai para o log (erros continuam visíveis)
+__run() {
+    if $QUIET; then
+        mkdir -p "$(dirname "$DOT_LOG")"
+        printf '\n$ %s\n' "$*" >>"$DOT_LOG"
+        "$@" >>"$DOT_LOG" 2>&1
+    else
+        "$@"
+    fi
+}
 
 # ─── Tabela de ferramentas ─────────────────────────────────────────────────────
 #
@@ -167,9 +182,9 @@ __native_install() {
     local pkgs="$1"
     [[ "$pkgs" == "-" || -z "$pkgs" ]] && return 1
     case "$PM" in
-        pacman) sudo pacman -S --noconfirm --needed $pkgs ;;
-        apt)    sudo apt-get update -qq && sudo apt-get install -y $pkgs ;;
-        dnf)    sudo dnf install -y $pkgs ;;
+        pacman) __run sudo pacman -S --noconfirm --needed $pkgs ;;
+        apt)    __run sudo apt-get update -qq && __run sudo apt-get install -y $pkgs ;;
+        dnf)    __run sudo dnf install -y $pkgs ;;
         *)      return 1 ;;
     esac
 }
@@ -228,7 +243,7 @@ __ghrelease_install() {
         if [[ -n "$asset_url" ]]; then
             mkdir -p "${LOCAL_BIN}"
             __print_info "baixando ${asset_url}"
-            curl -fsSL -o "${LOCAL_BIN}/${bin}" "$asset_url" || return 1
+            __run curl -fsSL -o "${LOCAL_BIN}/${bin}" "$asset_url" || return 1
             chmod +x "${LOCAL_BIN}/${bin}"
             return 0
         fi
@@ -239,7 +254,7 @@ __ghrelease_install() {
     tmpdir="$(mktemp -d)"
     local archive="${tmpdir}/dl"
     __print_info "baixando ${asset_url}"
-    curl -fsSL -o "$archive" "$asset_url" || { rm -rf "$tmpdir"; return 1; }
+    __run curl -fsSL -o "$archive" "$asset_url" || { rm -rf "$tmpdir"; return 1; }
 
     mkdir -p "${LOCAL_OPT}"
     rm -rf "${LOCAL_OPT:?}/${name}"
@@ -277,10 +292,10 @@ __pkgfile_install() {
     tmpdir="$(mktemp -d)"
     file="${tmpdir}/pkg.${ext}"
     __print_info "baixando ${url}"
-    curl -fsSL -o "$file" "$url" || { rm -rf "$tmpdir"; return 1; }
+    __run curl -fsSL -o "$file" "$url" || { rm -rf "$tmpdir"; return 1; }
     case "$PM" in
-        apt) sudo apt-get install -y "$file" ;;
-        dnf) sudo dnf install -y "$file" ;;
+        apt) __run sudo apt-get install -y "$file" ;;
+        dnf) __run sudo dnf install -y "$file" ;;
     esac
     local rc=$?
     rm -rf "$tmpdir"
@@ -295,23 +310,23 @@ __appimage_install() {
     name="$(basename "$repo")"
     mkdir -p "${LOCAL_BIN}"
     __print_info "baixando ${url}"
-    curl -fsSL -o "${LOCAL_BIN}/${name}" "$url" || return 1
+    __run curl -fsSL -o "${LOCAL_BIN}/${name}" "$url" || return 1
     chmod +x "${LOCAL_BIN}/${name}"
 }
 
 __script_install() {
     case "$1" in
-        starship) curl -fsSL https://starship.rs/install.sh | sh -s -- -y ;;
-        atuin)     curl --proto '=https' --tlsv1.2 -LsSf https://setup.atuin.sh | sh ;;
-        *)         return 1 ;;
+        starship) __run sh -c 'curl -fsSL https://starship.rs/install.sh | sh -s -- -y' ;;
+        atuin)    __run sh -c "curl --proto '=https' --tlsv1.2 -LsSf https://setup.atuin.sh | sh" ;;
+        *)        return 1 ;;
     esac
 }
 
 __rustup_install() {
     # rustup nativo + toolchain stable (default profile: rustfmt, clippy...)
     __native_install rustup || return 1
-    rustup toolchain install stable --profile default || return 1
-    rustup default stable
+    __run rustup toolchain install stable --profile default || return 1
+    __run rustup default stable
 }
 
 # ─── Instalador de uma ferramenta (dispatcher) ─────────────────────────────────
@@ -447,18 +462,18 @@ __step_system() {
 
     case "$PM" in
         pacman)
-            sudo pacman -S --noconfirm --needed \
+            __run sudo pacman -S --noconfirm --needed \
                 base-devel git curl stow unzip bash-completion fontconfig jq lsof $pkg_clipboard
             ;;
         apt)
-            sudo apt-get update -qq
-            sudo apt-get install -y \
+            __run sudo apt-get update -qq
+            __run sudo apt-get install -y \
                 build-essential git curl stow unzip bash-completion fontconfig jq lsof $pkg_clipboard
             ;;
         dnf)
-            sudo dnf install -y \
+            __run sudo dnf install -y \
                 git curl stow unzip bash-completion fontconfig jq lsof $pkg_clipboard
-            sudo dnf group install -y "Development Tools" || true
+            __run sudo dnf group install -y "Development Tools" || true
             ;;
         nixos)
             __print_error "NixOS detectado — pacotes e configs são gerenciados pelo repo ~/nixos (home-manager)"
@@ -511,7 +526,7 @@ __step_tools() {
 __step_fonts() {
     __print_info "JetBrains Mono Nerd Font (ícones do nvim/starship)"
 
-    if [[ "$PM" == "pacman" ]] && sudo pacman -S --noconfirm --needed ttf-jetbrains-mono-nerd 2>/dev/null; then
+    if [[ "$PM" == "pacman" ]] && __run sudo pacman -S --noconfirm --needed ttf-jetbrains-mono-nerd 2>/dev/null; then
         __print_success "fontes instaladas via pacman"
         return 0
     fi
@@ -520,11 +535,11 @@ __step_fonts() {
     local zip="/tmp/JetBrainsMono.zip"
     __print_info "baixando zip do nerd-fonts..."
     mkdir -p "${HOME}/.local/share/fonts"
-    curl -fL -o "$zip" "https://github.com/ryanoasis/nerd-fonts/releases/latest/download/JetBrainsMono.zip" \
+    __run curl -fL -o "$zip" "https://github.com/ryanoasis/nerd-fonts/releases/latest/download/JetBrainsMono.zip" \
         || { __print_error "download das fontes falhou"; return 1; }
-    unzip -oq "$zip" -d "${HOME}/.local/share/fonts"
+    __run unzip -oq "$zip" -d "${HOME}/.local/share/fonts"
     rm -f "$zip"
-    fc-cache -f "${HOME}/.local/share/fonts" 2>/dev/null || true
+    __run fc-cache -f "${HOME}/.local/share/fonts" 2>/dev/null || true
     __print_success "fontes instaladas em ~/.local/share/fonts"
 }
 
@@ -535,7 +550,11 @@ __step_stow() {
         __print_error "GNU Stow não está instalado — instale com seu gerenciador de pacotes"
         return 1
     fi
-    stow -R -v -d "$DOTFILES_DIR" -t "$HOME" $STOW_PACKAGES
+    if __run stow -R -v -d "$DOTFILES_DIR" -t "$HOME" $STOW_PACKAGES; then
+        return 0
+    fi
+    __print_error "stow falhou — veja os conflitos com: ${SCRIPT_NAME} stow -n"
+    return 1
 }
 
 # ── Etapa: link do comando dot ─────────────────────────────────────────────────
@@ -561,16 +580,22 @@ cmd_init() {
 
     while [[ $# -gt 0 ]]; do
         case "$1" in
+            -q|--quiet)  QUIET=true ;;
             --skip-font) SKIP_FONT=true ;;
             --only)      ONLY_TOOL="$2"; shift ;;
             *)
                 __print_error "opção desconhecida: $1"
-                __print_info "uso: ${SCRIPT_NAME} init [--skip-font] [--only <tool>]"
+                __print_info "uso: ${SCRIPT_NAME} init [-q|--quiet] [--skip-font] [--only <tool>]"
                 return 1
                 ;;
         esac
         shift
     done
+
+    if $QUIET; then
+        mkdir -p "$(dirname "$DOT_LOG")"
+        : >"$DOT_LOG"
+    fi
 
     __detect_platform
     __print_header "Inicializando dotfiles"
@@ -597,14 +622,14 @@ cmd_update() {
     __print_header "Atualizando dotfiles"
 
     __print_info "git pull..."
-    if ! git -C "$DOTFILES_DIR" pull; then
+    if ! __run git -C "$DOTFILES_DIR" pull; then
         __print_error "git pull falhou"
         return 1
     fi
     __print_success "repositório atualizado"
 
     __print_info "re-stow..."
-    if stow -R -v -d "$DOTFILES_DIR" -t "$HOME" $STOW_PACKAGES; then
+    if __run stow -R -v -d "$DOTFILES_DIR" -t "$HOME" $STOW_PACKAGES; then
         __print_success "symlinks atualizados"
     else
         __print_error "stow falhou"
@@ -691,7 +716,7 @@ cmd_stow() {
         shift
     done
     __print_header "Stow"
-    stow -R -v -d "$DOTFILES_DIR" -t "$HOME" "${args[@]}" $pkgs
+    __run stow -R -v -d "$DOTFILES_DIR" -t "$HOME" "${args[@]}" $pkgs
 }
 
 cmd_retry_failed() {
@@ -761,6 +786,7 @@ cmd_help() {
 ${SCRIPT_NAME} init — instalação completa (novas máquinas)
 
   ${SCRIPT_NAME} init                    # tudo
+  ${SCRIPT_NAME} init -q                 # silencioso (detalhes em ~/.cache/dot/init.log)
   ${SCRIPT_NAME} init --skip-font        # sem as fontes Nerd Font
   ${SCRIPT_NAME} init --only nvim        # só uma ferramenta
 
@@ -781,7 +807,7 @@ ${SCRIPT_NAME} ${SCRIPT_VERSION} — dotfiles lafco (GNU Stow + CLI de instalaç
 Uso: ${SCRIPT_NAME} <comando> [opções]
 
 Comandos:
-  init          instalação completa de uma máquina nova (--skip-font, --only <tool>)
+  init          instalação completa de uma máquina nova (-q, --skip-font, --only <tool>)
   update        git pull + re-stow
   doctor        diagnóstico do ambiente
   stow [pkg|-n] (re)aplica symlinks; -n = dry-run
@@ -792,6 +818,7 @@ Comandos:
 
 Pacotes Stow: ${STOW_PACKAGES}
 Falhas de instalação: ${FAILED_TOOLS_FILE}
+Modo silencioso: ${SCRIPT_NAME} init -q (log: ~/.cache/dot/init.log)
 EOF
             ;;
     esac
@@ -804,6 +831,7 @@ main() {
         case "$1" in
             --version) echo "${SCRIPT_NAME} version ${SCRIPT_VERSION}"; exit 0 ;;
             -h|--help) cmd_help; exit 0 ;;
+            -q|--quiet)  QUIET=true; shift ;;
             --skip-font) export SKIP_FONT=true; shift ;;
             *) break ;;
         esac

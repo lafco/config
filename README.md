@@ -48,6 +48,7 @@ pi                          # autenticar provedores de IA
 
 ```bash
 dot init                  # instalação completa (idempotente — pode rodar de novo)
+dot init -q               # silencioso (só erros/avisos; log em ~/.cache/dot/init.log)
 dot init --skip-font      # sem as fontes
 dot init --only nvim      # instala só uma ferramenta
 dot update                # git pull + re-stow
