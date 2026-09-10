@@ -33,6 +33,10 @@ readonly DOT_LOG="${XDG_CACHE_HOME:-${HOME}/.cache}/dot/init.log"
 # Modo silencioso (dot init -q): suprime progresso e saída dos instaladores
 QUIET=false
 
+# Backup de conflitos do stow (--no-backup desativa)
+NO_BACKUP=false
+BACKUP_DIR=""
+
 # Pacotes Stow (lista explícita — evita stowar diretórios que não são pacotes)
 readonly STOW_PACKAGES="bash nvim pi wezterm zellij television starship atuin gh-dash herdr"
 
@@ -543,6 +547,65 @@ __step_fonts() {
     __print_success "fontes instaladas em ~/.local/share/fonts"
 }
 
+# ── Conflitos antes do stow ────────────────────────────────────────────────────
+
+# Alvos que já existem em $HOME e não são links do stow fazem o stow abortar.
+# Move-os para ~/.dotfiles-backup/<timestamp>/ preservando a estrutura.
+# Links do home-manager (/nix/store) não são tocados: retorna 1 para não
+# sobrescrever o gerenciamento.
+__backup_conflicts() {
+    [[ "$NO_BACKUP" == "true" ]] && return 0
+
+    BACKUP_DIR=""
+    local hm_conflicts=() pkg rel target link_dest pkg_dir backup_root
+    backup_root="${HOME}/.dotfiles-backup/$(date +%Y%m%d-%H%M%S)"
+
+    for pkg in $STOW_PACKAGES; do
+        pkg_dir="${DOTFILES_DIR}/${pkg}"
+        [[ -d "$pkg_dir" ]] || continue
+
+        while IFS= read -r rel; do
+            rel="${rel#./}"
+            [[ -n "$rel" ]] || continue
+            target="${HOME}/${rel}"
+
+            # nada existe no destino → ok
+            if [[ ! -e "$target" && ! -L "$target" ]]; then
+                continue
+            fi
+
+            if [[ -L "$target" ]]; then
+                link_dest="$(readlink "$target")"
+                # link do home-manager → não sobrescrever
+                if [[ "$link_dest" == /nix/store/* ]]; then
+                    hm_conflicts+=("$rel")
+                    continue
+                fi
+                # já é um link do próprio repo (stow) → ok
+                case "$(readlink -m "$target")" in
+                    "$DOTFILES_DIR"/*) continue ;;
+                esac
+            fi
+
+            mkdir -p "${backup_root}/$(dirname "$rel")"
+            mv "$target" "${backup_root}/${rel}"
+            __print_warning "conflito: ~/${rel} movido para ${backup_root#"${HOME}"/}"
+        done < <(cd "$pkg_dir" && find . \( -type f -o -type l \) -print)
+    done
+
+    if [[ -d "$backup_root" ]]; then
+        BACKUP_DIR="$backup_root"
+        __print_warning "originais preservados em ${BACKUP_DIR}"
+    fi
+
+    if (( ${#hm_conflicts[@]} > 0 )); then
+        __print_error "alvos gerenciados pelo home-manager (não vou sobrepor):"
+        printf '    ~/%s\n' "${hm_conflicts[@]}"
+        return 1
+    fi
+    return 0
+}
+
 # ── Etapa: stow ────────────────────────────────────────────────────────────────
 
 __step_stow() {
@@ -550,6 +613,7 @@ __step_stow() {
         __print_error "GNU Stow não está instalado — instale com seu gerenciador de pacotes"
         return 1
     fi
+    __backup_conflicts || return 1
     if __run stow -R -v -d "$DOTFILES_DIR" -t "$HOME" $STOW_PACKAGES; then
         return 0
     fi
@@ -581,11 +645,12 @@ cmd_init() {
     while [[ $# -gt 0 ]]; do
         case "$1" in
             -q|--quiet)  QUIET=true ;;
+            --no-backup) NO_BACKUP=true ;;
             --skip-font) SKIP_FONT=true ;;
             --only)      ONLY_TOOL="$2"; shift ;;
             *)
                 __print_error "opção desconhecida: $1"
-                __print_info "uso: ${SCRIPT_NAME} init [-q|--quiet] [--skip-font] [--only <tool>]"
+                __print_info "uso: ${SCRIPT_NAME} init [-q|--quiet] [--skip-font] [--only <tool>] [--no-backup]"
                 return 1
                 ;;
         esac
@@ -707,15 +772,20 @@ cmd_doctor() {
 
 cmd_stow() {
     local args=()
+    local dry_run=false
     local pkgs="$STOW_PACKAGES"
     while [[ $# -gt 0 ]]; do
         case "$1" in
-            -n|--no) args+=("-n") ;;
-            *) pkgs="$1" ;;
+            -n|--no)     args+=("-n"); dry_run=true ;;
+            --no-backup) NO_BACKUP=true ;;
+            *)           pkgs="$1" ;;
         esac
         shift
     done
     __print_header "Stow"
+    if ! $dry_run; then
+        __backup_conflicts || return 1
+    fi
     __run stow -R -v -d "$DOTFILES_DIR" -t "$HOME" "${args[@]}" $pkgs
 }
 
@@ -789,14 +859,17 @@ ${SCRIPT_NAME} init — instalação completa (novas máquinas)
   ${SCRIPT_NAME} init -q                 # silencioso (detalhes em ~/.cache/dot/init.log)
   ${SCRIPT_NAME} init --skip-font        # sem as fontes Nerd Font
   ${SCRIPT_NAME} init --only nvim        # só uma ferramenta
+  ${SCRIPT_NAME} init --no-backup        # não faz backup de conflitos existentes
 
 Ordem: pacotes do sistema → ferramentas → fontes → stow → link.
+Antes do stow, arquivos existentes em ~ que conflitam são movidos para
+~/.dotfiles-backup/<timestamp>/ (links do home-manager nunca são tocados).
 Ferramentas com falha não interrompem o init (rodar ${SCRIPT_NAME} retry-failed depois).
 EOF
             ;;
         doctor) echo "${SCRIPT_NAME} doctor — diagnóstico do ambiente (ferramentas, PATH, symlinks)" ;;
         update) echo "${SCRIPT_NAME} update — git pull + re-stow dos pacotes" ;;
-        stow)   echo "${SCRIPT_NAME} stow [pkg|-n] — (re)aplica symlinks; -n = dry-run" ;;
+        stow)   echo "${SCRIPT_NAME} stow [pkg|-n|--no-backup] — (re)aplica symlinks; -n = dry-run" ;;
         retry-failed) echo "${SCRIPT_NAME} retry-failed — reinstala ferramentas registradas em packages/failed_tools.txt" ;;
         link)   echo "${SCRIPT_NAME} link|unlink — instala/remove o comando em ~/.local/bin" ;;
         edit)   echo "${SCRIPT_NAME} edit — abre os dotfiles no \$EDITOR" ;;
@@ -810,7 +883,7 @@ Comandos:
   init          instalação completa de uma máquina nova (-q, --skip-font, --only <tool>)
   update        git pull + re-stow
   doctor        diagnóstico do ambiente
-  stow [pkg|-n] (re)aplica symlinks; -n = dry-run
+  stow [pkg|-n] (re)aplica symlinks; -n = dry-run (conflitos vão para ~/.dotfiles-backup)
   retry-failed  reinstala ferramentas que falharam no init
   link|unlink   instala/remove o comando dot em ~/.local/bin
   edit          abre os dotfiles no \$EDITOR
@@ -832,6 +905,7 @@ main() {
             --version) echo "${SCRIPT_NAME} version ${SCRIPT_VERSION}"; exit 0 ;;
             -h|--help) cmd_help; exit 0 ;;
             -q|--quiet)  QUIET=true; shift ;;
+            --no-backup) NO_BACKUP=true; shift ;;
             --skip-font) export SKIP_FONT=true; shift ;;
             *) break ;;
         esac

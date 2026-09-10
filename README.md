@@ -90,6 +90,10 @@ cd ~/dotfiles
 dot stow -n     # dry-run
 dot stow        # aplica
 
+# Conflitos (arquivos que já existem em ~ e não são do stow) são movidos para
+# ~/.dotfiles-backup/<timestamp>/ antes de linkar; --no-backup desativa.
+# Links do home-manager (/nix/store) nunca são tocados — o stow é abortado.
+
 # Depois de atualizar:
 dot update      # git pull + re-stow
 
