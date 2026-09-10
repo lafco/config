@@ -5,9 +5,7 @@
   "defaultThinkingLevel": "high",
   "enabledModels": [],
   "hideThinkingBlock": false,
-  "packages": [
-    "npm:pi-mcp-adapter"
-  ],
+  "packages": [],
   "theme": "dark",
   "enableSkillCommands": true
 }
