@@ -4,6 +4,8 @@
 #
 # Inspirado no `dot` de dmmulroy/.dotfiles, adaptado para Linux:
 #   - Detecta o gerenciador de pacotes (pacman / apt / dnf) via /etc/os-release
+#     (campos lidos com sed — o arquivo NÃO é sourceado, pois sobrescreveria
+#     variáveis do script, ex. VERSION)
 #   - Instala ferramentas pelo repositório nativo; quando não existe, baixa o
 #     binário oficial (GitHub release) para ~/.local/bin
 #   - Instalação resiliente: ferramenta com falha não interrompe o init;
@@ -18,7 +20,7 @@ set -euo pipefail
 # ─── Metadados ─────────────────────────────────────────────────────────────────
 
 readonly SCRIPT_NAME="dot"
-readonly VERSION="1.0.0"
+readonly SCRIPT_VERSION="1.0.0"
 DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly DOTFILES_DIR
 
@@ -52,16 +54,18 @@ __detect_platform() {
         IS_WSL=true
     fi
 
-    if [[ -f /etc/os-release ]]; then
-        # shellcheck disable=SC1091
-        . /etc/os-release
-        # ID_LIKE primeiro — derivadas compartilham o gerenciador da base
-        case "${ID_LIKE:-$ID}" in
-            *arch*)   PM="pacman" ;;
-            *debian*|*ubuntu*) PM="apt" ;;
-            *fedora*|*rhel*)   PM="dnf" ;;
-        esac
-    fi
+    # Lê um campo do /etc/os-release sem sourcear o arquivo
+    local os_id os_id_like
+    os_id="$(__os_release_field ID)"
+    os_id_like="$(__os_release_field ID_LIKE)"
+
+    # ID_LIKE primeiro — derivadas compartilham o gerenciador da base
+    case "${os_id_like:-$os_id}" in
+        *arch*)            PM="pacman" ;;
+        *debian*|*ubuntu*) PM="apt"    ;;
+        *fedora*|*rhel*)   PM="dnf"    ;;
+        *nixos*)           PM="nixos"  ;;
+    esac
 
     if [[ -z "$PM" ]]; then
         if   command -v pacman &>/dev/null; then PM="pacman"
@@ -70,6 +74,12 @@ __detect_platform() {
         else PM="unknown"
         fi
     fi
+}
+
+__os_release_field() {
+    local key="$1"
+    [[ -r /etc/os-release ]] || return 0
+    sed -n "s/^${key}=//p" /etc/os-release | head -n1 | tr -d '"'
 }
 
 # ─── Helpers de saída ──────────────────────────────────────────────────────────
@@ -450,6 +460,11 @@ __step_system() {
                 git curl stow unzip bash-completion fontconfig jq lsof $pkg_clipboard
             sudo dnf group install -y "Development Tools" || true
             ;;
+        nixos)
+            __print_error "NixOS detectado — pacotes e configs são gerenciados pelo repo ~/nixos (home-manager)"
+            __print_info "use: sudo nixos-rebuild switch --flake ~/nixos#<host>"
+            return 1
+            ;;
         *)
             __print_error "gerenciador de pacotes não suportado (detectado: ${PM})"
             __print_info "suportados: pacman (Arch), apt (Debian/Ubuntu), dnf (Fedora/RHEL)"
@@ -559,7 +574,7 @@ cmd_init() {
 
     __detect_platform
     __print_header "Inicializando dotfiles"
-    __print_info "plataforma: $(. /etc/os-release 2>/dev/null && echo "${ID:-linux}") / gerenciador: ${PM} / WSL: ${IS_WSL}"
+    __print_info "plataforma: $(__os_release_field ID || echo linux) / gerenciador: ${PM} / WSL: ${IS_WSL}"
 
     __run_init_steps || return 1
 
@@ -761,7 +776,7 @@ EOF
         edit)   echo "${SCRIPT_NAME} edit — abre os dotfiles no \$EDITOR" ;;
         *)
             cat <<EOF
-${SCRIPT_NAME} ${VERSION} — dotfiles lafco (GNU Stow + CLI de instalação)
+${SCRIPT_NAME} ${SCRIPT_VERSION} — dotfiles lafco (GNU Stow + CLI de instalação)
 
 Uso: ${SCRIPT_NAME} <comando> [opções]
 
@@ -787,7 +802,7 @@ EOF
 main() {
     while [[ $# -gt 0 ]]; do
         case "$1" in
-            --version) echo "${SCRIPT_NAME} version ${VERSION}"; exit 0 ;;
+            --version) echo "${SCRIPT_NAME} version ${SCRIPT_VERSION}"; exit 0 ;;
             -h|--help) cmd_help; exit 0 ;;
             --skip-font) export SKIP_FONT=true; shift ;;
             *) break ;;
