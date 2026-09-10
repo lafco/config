@@ -26,7 +26,7 @@ Configuração padrão do pi para uso geral (fora de projetos específicos).
 
 - Para refinar um epic vindo do Jira: `/refinar-issue <KEY>` (ex.: `/refinar-issue PROJ-123`).
   O pull do Jira, o filtro e a gravação dos arquivos são feitos pela extension `jira-flow`; a LLM só analisa e quebra.
-- Artefatos ficam em `.pi/epics/<KEY>/` (ou no diretório configurado em `EPICS_DIR`):
+- Artefatos ficam em `~/epics/<KEY>/` (ou no diretório configurado em `epicsDir`/`EPICS_DIR`):
   `jira-source.md`, `epic.md`, `index.md` e `tasks/TASK-NN-<slug>.md`.
 - Credenciais: rode `/refinar-issue --setup` (grava `~/.pi/agent/secrets.json`, 0600) — ver `.pi/agent/extensions/jira-flow/README.md`.
 - Para despachar uma tarefa a um agente implementador: `/implementar-tarefa <caminho-da-tarefa>`.

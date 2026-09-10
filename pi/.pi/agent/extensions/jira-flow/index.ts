@@ -15,6 +15,7 @@
  */
 
 import * as fs from "node:fs";
+import * as os from "node:os";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
@@ -107,12 +108,21 @@ function projectKeyOf(issueKey: string): string {
 // Diretório de epics
 // ---------------------------------------------------------------------------
 
+/**
+ * Diretório padrão dos artefatos: `~/epics`, para centralizar tudo num lugar só
+ * (independente do repo em que o pi estiver rodando).
+ * Sobrescrevível por `epicsDir` no secrets.json ou pela env EPICS_DIR.
+ */
+function defaultEpicsDir(): string {
+	return path.join(os.homedir(), "epics");
+}
+
 async function resolveEpicsDir(
 	configured: string | undefined,
 	cwd: string,
 	ctx: ExtensionContext,
 ): Promise<{ dir: string; warning?: string }> {
-	const fallback = path.join(cwd, CONFIG_DIR_NAME, "epics");
+	const fallback = defaultEpicsDir();
 
 	if (!configured || !configured.trim()) {
 		return { dir: fallback };
@@ -316,7 +326,7 @@ export default function (pi: ExtensionAPI) {
 			try {
 				const loaded = loadSecrets();
 				const base = loaded.secrets?.epicsDir;
-				const dir = base && base.trim() ? base : path.join(process.cwd(), CONFIG_DIR_NAME, "epics");
+				const dir = base && base.trim() ? base : defaultEpicsDir();
 				if (!fs.existsSync(dir)) return null;
 				const items = fs
 					.readdirSync(dir, { withFileTypes: true })

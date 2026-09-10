@@ -30,7 +30,7 @@ O **harness** (esta extension) faz o I/O; a **LLM** só faz análise e quebra.
     └── TASK-01-<slug>.md
 ```
 
-`<epicsDir>` é `EPICS_DIR` (secrets/env) quando configurado e acessível; senão `<repo do projeto>/.pi/epics`.
+`<epicsDir>` é `epicsDir` (secrets) / `EPICS_DIR` (env) quando configurado e acessível; senão **`~/epics`** — centralizado, independente do repo onde o pi roda.
 
 ## Credenciais
 
