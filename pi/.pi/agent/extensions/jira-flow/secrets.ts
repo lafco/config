@@ -15,7 +15,11 @@
  *     "personalToken": "...",           // DC: PAT (Bearer)
  *     "acceptanceField": "customfield_10001" // opcional
  *   },
- *   "epicsDir": "/caminho/para/epics"   // opcional
+ *   "epicsDir": "/caminho/para/epics",  // opcional
+ *   "products": {                       // opcional (catálogo de produtos)
+ *     "url": "https://catalogo.interno/api",
+ *     "token": "..."
+ *   }
  * }
  */
 
@@ -25,6 +29,11 @@ import { getAgentDir } from "@earendil-works/pi-coding-agent";
 
 export type Deployment = "cloud" | "dc";
 
+export interface ProductsSecrets {
+	url: string;
+	token?: string;
+}
+
 export interface JiraSecrets {
 	url: string;
 	deployment: Deployment;
@@ -33,6 +42,7 @@ export interface JiraSecrets {
 	personalToken?: string;
 	acceptanceField?: string;
 	epicsDir?: string;
+	products?: ProductsSecrets;
 }
 
 export interface LoadResult {
@@ -60,6 +70,10 @@ interface FilesShape {
 		acceptanceField?: string;
 	};
 	epicsDir?: string;
+	products?: {
+		url?: string;
+		token?: string;
+	};
 }
 
 function readFile(): { data: FilesShape; source: string; errors: string[] } {
@@ -100,6 +114,14 @@ export function loadSecrets(): LoadResult {
 	const epicsDir = data.epicsDir ?? env("EPICS_DIR");
 	const deployment = inferDeployment(url, jira.deployment ?? env("JIRA_DEPLOYMENT"));
 
+	// Catálogo de produtos é opcional: quando ausente, o fluxo cai no fallback
+	// de repositório. Config pela env PRODUCTS_URL / PRODUCTS_TOKEN.
+	const productsUrl = data.products?.url ?? env("PRODUCTS_URL");
+	const productsToken = data.products?.token ?? env("PRODUCTS_TOKEN");
+	const products: ProductsSecrets | undefined = productsUrl
+		? { url: normalizeBaseUrl(productsUrl), token: productsToken }
+		: undefined;
+
 	if (!url) errors.push("Jira sem URL. Defina `jira.url` no secrets.json ou a env JIRA_URL.");
 	if (!personalToken && !apiToken) {
 		errors.push(
@@ -115,7 +137,7 @@ export function loadSecrets(): LoadResult {
 	}
 
 	return {
-		secrets: { url, deployment, email, apiToken, personalToken, acceptanceField, epicsDir },
+		secrets: { url, deployment, email, apiToken, personalToken, acceptanceField, epicsDir, products },
 		source,
 		errors: [],
 	};

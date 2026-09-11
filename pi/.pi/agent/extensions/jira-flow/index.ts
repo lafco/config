@@ -1,14 +1,17 @@
 /**
- * jira-flow — fluxo de refinamento de epic do Jira.
+ * jira-flow — fluxo de refinamento de épico do Jira.
  *
  * Fluxo:
- *   /refinar-issue <KEY>
+ *   /refinar-issue <KEY> [--force] [--repo <path>]
  *     -> harness lê secrets, busca a issue no Jira (REST) e seus filhos
  *     -> filtra o payload (ADF/texto -> markdown, descarta ruído)
  *     -> cria a pasta de trabalho e grava jira-source.md
+ *     -> Fase 0: resolve produto/repos/especialistas no catálogo de produtos
  *     -> mostra resumo e pede confirmação
- *     -> dispara o turno do LLM com o conteúdo filtrado + instruções internas
- *     -> o LLM entrega o resultado via tool `emit_epic_artifacts`
+ *     -> dispara o turno da LLM com o conteúdo filtrado + contexto + instruções
+ *     -> a LLM pergunta (`ask_user`), revisa o entendimento (`submit_analysis`),
+ *        consulta o especialista (`consult_specialist`) e entrega via
+ *        `emit_epic_artifacts`
  *     -> o harness grava epic.md, index.md e tasks/*.md
  *
  * O push de volta ao Jira (criar issues) fica para uma etapa futura.
@@ -25,22 +28,16 @@ import {
 	type ExtensionContext,
 	getAgentDir,
 } from "@earendil-works/pi-coding-agent";
-import { Type, type Static } from "typebox";
-import { materializeArtifacts } from "./artifacts.ts";
 import { filterIssue, filteredToMarkdown } from "./filter.ts";
 import { JiraClient, JiraError } from "./jira.ts";
+import { ProductsClient, ProductsError, type ProductContext } from "./products.ts";
 import { inferDeployment, loadSecrets, normalizeBaseUrl, saveSecrets, type JiraSecrets } from "./secrets.ts";
+import { startRefinement, stopRefinement } from "./state.ts";
+import { registerFlowTools } from "./tools.ts";
 
 const STATUS_KEY = "jira-flow";
 const KEY_PATTERN = /^[A-Z][A-Z0-9_]*-\d+$/;
-
-interface PendingRefinement {
-	key: string;
-	dir: string;
-}
-
-let pending: PendingRefinement | null = null;
-let emitToolRegistered = false;
+const REPO_FLAG_PATTERN = /--repo(?:=|\s+)(?:"([^"]+)"|'([^']+)'|(\S+))/;
 
 // ---------------------------------------------------------------------------
 // Resolução de caminhos
@@ -82,13 +79,22 @@ function resolveExtensionDir(): string {
 
 const EXT_DIR = resolveExtensionDir();
 const TEMPLATES_DIR = path.join(EXT_DIR, "templates");
-const INSTRUCTIONS_FILE = path.join(EXT_DIR, "instructions", "epic-refinement.md");
+const INSTRUCTIONS_DIR = path.join(EXT_DIR, "instructions");
+const INSTRUCTION_FILES = ["epic-refinement.md", "tools.md", "quebra-padroes.md"];
 
 function readInstructions(): string {
-	if (!fs.existsSync(INSTRUCTIONS_FILE)) {
-		throw new Error(`Instruções internas não encontradas em ${INSTRUCTIONS_FILE}`);
+	const parts: string[] = [];
+	for (const name of INSTRUCTION_FILES) {
+		const file = path.join(INSTRUCTIONS_DIR, name);
+		if (!fs.existsSync(file)) {
+			if (name === "epic-refinement.md") {
+				throw new Error(`Instruções internas não encontradas em ${file}`);
+			}
+			continue;
+		}
+		parts.push(fs.readFileSync(file, "utf8").trim());
 	}
-	return fs.readFileSync(INSTRUCTIONS_FILE, "utf8");
+	return parts.join("\n\n---\n\n");
 }
 
 function clearStatus(ctx: ExtensionContext): void {
@@ -144,108 +150,112 @@ async function resolveEpicsDir(
 }
 
 // ---------------------------------------------------------------------------
-// Tool de entrega dos artefatos
+// Fase 0 — contexto de produto/repositório
 // ---------------------------------------------------------------------------
 
-const EmitTaskSchema = Type.Object({
-	id: Type.String({ description: "ID local estável, ex.: TASK-01" }),
-	title: Type.String(),
-	wave: Type.Integer({ minimum: 1, description: "Onda de execução (1, 2, 3...)" }),
-	dependsOn: Type.Optional(Type.Array(Type.String(), { description: "IDs das tarefas predecessoras" })),
-	estimate: Type.Optional(Type.String({ description: "S | M | L ou horas" })),
-	objective: Type.Optional(Type.String()),
-	context: Type.Optional(Type.String()),
-	acceptanceCriteria: Type.Optional(
-		Type.Array(Type.String(), { description: "Cada item no formato Dado/Quando/Então" }),
-	),
-	technicalNotes: Type.Optional(Type.String()),
-	affectedAreas: Type.Optional(Type.String()),
-	tests: Type.Optional(Type.String()),
-	outOfScope: Type.Optional(Type.String()),
-	risks: Type.Optional(Type.String()),
-	labels: Type.Optional(Type.Array(Type.String())),
-	type: Type.Optional(Type.String({ description: "Task | Story | Bug" })),
-	storyPoints: Type.Optional(Type.Number()),
-});
-
-const EmitSchema = Type.Object({
-	epic: Type.Object({
-		key: Type.String(),
-		summary: Type.String(),
-		objective: Type.Optional(Type.String()),
-		context: Type.Optional(Type.String()),
-		successCriteria: Type.Optional(Type.String()),
-		analysis: Type.Optional(Type.String()),
-		outOfScope: Type.Optional(Type.String()),
-		openQuestions: Type.Optional(Type.String()),
-		labels: Type.Optional(Type.Array(Type.String())),
-	}),
-	tasks: Type.Array(EmitTaskSchema, { description: "Tarefas da quebra, em qualquer ordem" }),
-});
-
-type EmitParams = Static<typeof EmitSchema>;
-
-function ensureEmitTool(pi: ExtensionAPI): void {
-	if (emitToolRegistered) return;
-	emitToolRegistered = true;
-
-	pi.registerTool({
-		name: "emit_epic_artifacts",
-		label: "Gravar artefatos do epic",
-		description:
-			"Ferramenta interna do fluxo /refinar-issue. Entrega a análise do epic e a lista de tarefas para o harness gravar epic.md, index.md e tasks/*.md. Só chame quando o fluxo /refinar-issue estiver ativo e você já tiver validado a quebra com o usuário.",
-		parameters: EmitSchema,
-		async execute(_toolCallId, params: EmitParams) {
-			if (!pending) {
-				return {
-					content: [
-						{
-							type: "text" as const,
-							text: "Nenhum refinamento ativo. Inicie com /refinar-issue <KEY>.",
-						},
-					],
-					isError: true,
-				};
-			}
-
-			const target = pending;
-			try {
-				const result = await materializeArtifacts({
-					dir: target.dir,
-					templatesDir: TEMPLATES_DIR,
-					epic: params.epic,
-					tasks: params.tasks,
-					meta: {
-						jiraKey: target.key,
-						project: projectKeyOf(target.key),
-						jiraUrl: jiraBase,
-						syncedAt: new Date().toISOString(),
-					},
-				});
-				pending = null;
-				const list = result.files.map((file) => `- ${file}`).join("\n");
-				return {
-					content: [
-						{
-							type: "text" as const,
-							text: `Artefatos gravados em ${result.dir}\n${list}`,
-						},
-					],
-					details: result,
-				};
-			} catch (error) {
-				const message = error instanceof Error ? error.message : String(error);
-				return {
-					content: [{ type: "text" as const, text: `Falha ao gravar artefatos: ${message}` }],
-					isError: true,
-				};
-			}
-		},
-	});
+interface ProductPhaseResult {
+	productContext: ProductContext | null;
+	products: ProductsClient | null;
+	fallbackRepo: string | null;
+	note: string | null;
+	aborted: boolean;
 }
 
-// A URL base do Jira é conhecida no momento do pull; guardamos para o emit.
-let jiraBase = "";
+function looksLikeRepo(dir: string): boolean {
+	return fs.existsSync(path.join(dir, ".git")) || fs.existsSync(path.join(dir, ".hg"));
+}
+
+/**
+ * Fonte primária é o catálogo de produtos. Quando ele não resolve (fora do ar,
+ * não configurado ou lista vazia), cai para `--repo` -> `cwd` -> pergunta.
+ */
+async function runProductPhase(
+	secrets: JiraSecrets,
+	key: string,
+	repoFlag: string | undefined,
+	cwd: string,
+	ctx: ExtensionContext,
+): Promise<ProductPhaseResult> {
+	let products: ProductsClient | null = null;
+	let productContext: ProductContext | null = null;
+	let note: string | null = null;
+
+	if (secrets.products?.url) {
+		products = new ProductsClient(secrets.products);
+		ctx.ui.setStatus(STATUS_KEY, "Consultando catálogo de produtos...");
+		try {
+			productContext = await products.resolve(key, ctx.signal);
+		} catch (error) {
+			const message = error instanceof ProductsError ? error.message : String(error);
+			note = `catálogo de produtos indisponível (${message})`;
+			ctx.ui.notify(`Aviso: ${note}. Usando fallback de repositório.`, "warning");
+		} finally {
+			clearStatus(ctx);
+		}
+	} else {
+		note = "catálogo de produtos não configurado (products.url ausente)";
+	}
+
+	let fallbackRepo: string | null = null;
+	const repos = productContext?.repos ?? [];
+
+	if (repos.length === 0) {
+		if (repoFlag?.trim()) {
+			fallbackRepo = path.resolve(cwd, repoFlag.trim());
+		} else if (looksLikeRepo(cwd)) {
+			fallbackRepo = cwd;
+		} else {
+			const answer = await ctx.ui.input("Repositório do código (deixe vazio para seguir sem repo)", cwd);
+			if (answer === undefined) {
+				return { productContext, products, fallbackRepo: null, note, aborted: true };
+			}
+			const trimmed = answer.trim();
+			if (trimmed) {
+				fallbackRepo = path.resolve(cwd, trimmed);
+			} else {
+				note = `${note ? `${note}; ` : ""}nenhum repositório informado`;
+			}
+		}
+	}
+
+	return { productContext, products, fallbackRepo, note, aborted: false };
+}
+
+function productContextMarkdown(phase: ProductPhaseResult): string {
+	const lines = ["## Contexto do produto (Fase 0 — resolvido pelo harness)", ""];
+	lines.push(
+		phase.productContext
+			? `- Produto: ${phase.productContext.product}`
+			: "- Produto: não resolvido pelo catálogo",
+	);
+
+	const repos = phase.productContext?.repos ?? [];
+	if (repos.length > 0) {
+		lines.push("- Repositórios do produto:");
+		for (const repo of repos) {
+			const location = repo.path ?? repo.url ?? "";
+			lines.push(`  - ${repo.name}${location ? ` — ${location}` : ""}`);
+		}
+		lines.push("  - Estratégia: investigue o repositório primário; os demais só quando necessário.");
+	} else if (phase.fallbackRepo) {
+		lines.push(`- Repositório (fallback): ${phase.fallbackRepo}`);
+	} else {
+		lines.push(
+			"- Nenhum repositório disponível; investigue o que for possível e registre a lacuna em `duvidas`.",
+		);
+	}
+
+	const specialists = phase.productContext?.specialists ?? [];
+	if (specialists.length > 0) {
+		const rendered = specialists
+			.map((specialist) => (specialist.name ? `${specialist.name} (${specialist.id})` : specialist.id))
+			.join(", ");
+		lines.push(`- Especialistas: ${rendered}`);
+	}
+
+	if (phase.note) lines.push(`- Aviso: ${phase.note}`);
+	return lines.join("\n");
+}
 
 // ---------------------------------------------------------------------------
 // Setup assistido (/refinar-issue --setup)
@@ -318,10 +328,11 @@ async function runSetup(ctx: ExtensionCommandContext): Promise<void> {
 // ---------------------------------------------------------------------------
 
 export default function (pi: ExtensionAPI) {
-	ensureEmitTool(pi);
+	registerFlowTools(pi, { templatesDir: TEMPLATES_DIR });
 
 	pi.registerCommand("refinar-issue", {
-		description: "Puxa um epic do Jira, filtra o conteúdo e inicia o refinamento local (ex.: /refinar-issue PROJ-123)",
+		description:
+			"Puxa um épico do Jira, resolve produto/repos, filtra o conteúdo e inicia o refinamento local (ex.: /refinar-issue PROJ-123)",
 		getArgumentCompletions: (prefix: string) => {
 			try {
 				const loaded = loadSecrets();
@@ -346,12 +357,18 @@ export default function (pi: ExtensionAPI) {
 				return;
 			}
 
-			const force = /(^|\s)--force(\s|$)/.test(rawArgs);
-			const key = rawArgs.replace(/--force/g, "").trim().toUpperCase();
+			// Qualquer nova execução descarta o estado de um refinamento anterior.
+			stopRefinement();
+
+			const repoMatch = rawArgs.match(REPO_FLAG_PATTERN);
+			const repoFlag = repoMatch ? repoMatch[1] ?? repoMatch[2] ?? repoMatch[3] : undefined;
+			const cleaned = rawArgs.replace(REPO_FLAG_PATTERN, " ");
+			const force = /(^|\s)--force(\s|$)/.test(cleaned);
+			const key = cleaned.replace(/--force/g, "").trim().toUpperCase();
 
 			if (!key) {
 				ctx.ui.notify(
-					"Uso: /refinar-issue <KEY> [--force]  ·  /refinar-issue --setup  (ex.: /refinar-issue PROJ-123)",
+					"Uso: /refinar-issue <KEY> [--force] [--repo <path>]  ·  /refinar-issue --setup  (ex.: /refinar-issue PROJ-123)",
 					"error",
 				);
 				return;
@@ -394,9 +411,9 @@ export default function (pi: ExtensionAPI) {
 			} catch (error) {
 				const message = error instanceof Error ? error.message : String(error);
 				ctx.ui.notify(
-				`Aviso: não consegui buscar filhos de ${key} (${message}). Seguindo sem eles.`,
-				"warning",
-			);
+					`Aviso: não consegui buscar filhos de ${key} (${message}). Seguindo sem eles.`,
+					"warning",
+				);
 			}
 
 			ctx.ui.setStatus(STATUS_KEY, "Filtrando conteúdo...");
@@ -416,6 +433,14 @@ export default function (pi: ExtensionAPI) {
 					`Pasta já existe: ${targetDir}\nUse /refinar-issue ${key} --force para refazer o refinamento.`,
 					"warning",
 				);
+				return;
+			}
+
+			// Fase 0 — produto/repos/especialistas (fonte primária + fallback).
+			const phase = await runProductPhase(secrets, key, repoFlag, ctx.cwd, ctx);
+			if (phase.aborted) {
+				clearStatus(ctx);
+				ctx.ui.notify(`Refinamento de ${key} cancelado.`, "info");
 				return;
 			}
 
@@ -441,27 +466,44 @@ export default function (pi: ExtensionAPI) {
 			}
 			clearStatus(ctx);
 
+			const repos = phase.productContext?.repos ?? [];
+			const repoLine = repos.length
+				? `Repos:    ${repos.map((repo) => repo.name).join(", ")}`
+				: phase.fallbackRepo
+					? `Repo:     ${phase.fallbackRepo} (fallback)`
+					: "Repo:     — (nenhum)";
+
 			const summaryLines = [
 				`Issue:    ${filtered.key} — ${filtered.summary}`,
 				`Tipo:     ${filtered.type || "—"} · Status: ${filtered.status || "—"}`,
 				`Filhos:   ${filtered.children.length} já existentes`,
 				`Comentários: ${filtered.comments.length}`,
+				phase.productContext ? `Produto:  ${phase.productContext.product}` : "",
+				repoLine,
+				phase.note ? `Aviso:    ${phase.note}` : "",
 				`Pasta:    ${targetDir}`,
 				targetExists && force ? "Modo:     --force (sobrescreve epic.md/index.md/tasks)" : "",
 			].filter(Boolean);
 
 			const ok = await ctx.ui.confirm(
 				`Refinar ${filtered.key}?`,
-				`${summaryLines.join("\n")}\n\njira-source.md foi gravado. Iniciar o refinamento?`,
+				`${summaryLines.join("\n")}\n\njira-source.md será gravado. Iniciar o refinamento?`,
 			);
 			if (!ok) {
-				ctx.ui.notify(`Refinamento de ${key} abortado. jira-source.md mantido em ${targetDir}.`, "info");
+				ctx.ui.notify(`Refinamento de ${key} abortado.`, "info");
 				return;
 			}
 
-			ensureEmitTool(pi);
-			pending = { key, dir: targetDir };
-			jiraBase = secrets.url;
+			startRefinement({
+				key,
+				project: projectKeyOf(key),
+				dir: targetDir,
+				jiraUrl: secrets.url,
+				productContext: phase.productContext,
+				products: phase.products,
+				fallbackRepo: phase.fallbackRepo,
+				catalogNote: phase.note,
+			});
 
 			const instructions = readInstructions();
 			const message = [
@@ -475,11 +517,15 @@ export default function (pi: ExtensionAPI) {
 				"",
 				"---",
 				"",
+				productContextMarkdown(phase),
+				"",
+				"---",
+				"",
 				"## Pasta de trabalho",
 				"",
 				targetDir,
 				"",
-				"`jira-source.md` contém a fonte filtrada (não precisa reler). Finalize chamando `emit_epic_artifacts` exatamente uma vez.",
+				"`jira-source.md` contém a fonte filtrada (não precisa reler). Siga as fases acima e finalize chamando `emit_epic_artifacts` exatamente uma vez.",
 			].join("\n");
 
 			const options = ctx.isIdle() ? undefined : ({ deliverAs: "followUp" } as const);
@@ -489,6 +535,6 @@ export default function (pi: ExtensionAPI) {
 
 	// O pull usa env/arquivo; ao descarregar, zera o estado em memória.
 	pi.on("session_shutdown", async () => {
-		pending = null;
+		stopRefinement();
 	});
 }
