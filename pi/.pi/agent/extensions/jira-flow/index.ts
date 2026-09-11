@@ -28,8 +28,16 @@ import {
 	type ExtensionContext,
 	getAgentDir,
 } from "@earendil-works/pi-coding-agent";
-import { filterIssue, filteredToMarkdown } from "./filter.ts";
+import { filterIssue, filteredToMarkdown, type FilteredIssue } from "./filter.ts";
 import { JiraClient, JiraError } from "./jira.ts";
+import {
+	findMcpbBin,
+	loadProductsMap,
+	McpbClient,
+	McpbError,
+	resolveProductFromMap,
+	type McpbProductContext,
+} from "./mcpb.ts";
 import { ProductsClient, ProductsError, type ProductContext } from "./products.ts";
 import { inferDeployment, loadSecrets, normalizeBaseUrl, saveSecrets, type JiraSecrets } from "./secrets.ts";
 import { startRefinement, stopRefinement } from "./state.ts";
@@ -159,6 +167,8 @@ interface ProductPhaseResult {
 	fallbackRepo: string | null;
 	note: string | null;
 	aborted: boolean;
+	mcpbContext: McpbProductContext | null;
+	mcpbBin: string | null;
 }
 
 function looksLikeRepo(dir: string): boolean {
@@ -166,34 +176,80 @@ function looksLikeRepo(dir: string): boolean {
 }
 
 /**
- * Fonte primária é o catálogo de produtos. Quando ele não resolve (fora do ar,
- * não configurado ou lista vazia), cai para `--repo` -> `cwd` -> pergunta.
+ * Fase 0 — contexto do produto, em ordem de precedência:
+ *   1. `products-map.json` (project/components/labels) + `mcpb context`
+ *      (produto, repos com paths locais, overview curado e frescura);
+ *   2. catálogo HTTP de produtos (quando configurado e o mcpb não resolveu);
+ *   3. `--repo` -> `cwd` -> pergunta.
  */
 async function runProductPhase(
 	secrets: JiraSecrets,
 	key: string,
+	issue: Pick<FilteredIssue, "components" | "labels">,
 	repoFlag: string | undefined,
 	cwd: string,
 	ctx: ExtensionContext,
 ): Promise<ProductPhaseResult> {
 	let products: ProductsClient | null = null;
 	let productContext: ProductContext | null = null;
-	let note: string | null = null;
+	let mcpbContext: McpbProductContext | null = null;
+	let mcpbBin: string | null = null;
+	const notes: string[] = [];
+	const appendNote = (message: string): void => {
+		if (message && !notes.includes(message)) notes.push(message);
+	};
 
-	if (secrets.products?.url) {
-		products = new ProductsClient(secrets.products);
-		ctx.ui.setStatus(STATUS_KEY, "Consultando catálogo de produtos...");
+	mcpbBin = findMcpbBin();
+	const map = loadProductsMap(EXT_DIR);
+	const mapped = resolveProductFromMap(map, {
+		project: projectKeyOf(key),
+		components: issue.components,
+		labels: issue.labels,
+	});
+
+	if (mapped && mcpbBin) {
+		ctx.ui.setStatus(STATUS_KEY, `Consultando índice local (mcpb): ${mapped}...`);
 		try {
-			productContext = await products.resolve(key, ctx.signal);
+			mcpbContext = await new McpbClient(mcpbBin).context(mapped, ctx.signal);
+			productContext = {
+				product: mcpbContext.product,
+				repos: mcpbContext.repos.flatMap((repo) =>
+					repo.path ? [{ name: repo.name, path: repo.path }] : [],
+				),
+				specialists: [],
+			};
 		} catch (error) {
-			const message = error instanceof ProductsError ? error.message : String(error);
-			note = `catálogo de produtos indisponível (${message})`;
-			ctx.ui.notify(`Aviso: ${note}. Usando fallback de repositório.`, "warning");
+			const message = error instanceof McpbError ? error.message : String(error);
+			appendNote(`mcpb indisponível para "${mapped}" (${message})`);
+			ctx.ui.notify(`Aviso: ${message}. Usando fallback.`, "warning");
 		} finally {
 			clearStatus(ctx);
 		}
+	} else if (!mcpbBin) {
+		appendNote("CLI mcpb não encontrado (defina MCPB_BIN/MCPB_PATH)");
 	} else {
-		note = "catálogo de produtos não configurado (products.url ausente)";
+		appendNote("produto não mapeado em products-map.json");
+	}
+
+	// O catálogo HTTP é sempre instanciado quando configurado (para o
+	// consult_specialist); o resolve só roda como fallback se o mcpb não
+	// resolveu o produto.
+	if (secrets.products?.url) {
+		products = new ProductsClient(secrets.products);
+		if (!productContext) {
+			ctx.ui.setStatus(STATUS_KEY, "Consultando catálogo de produtos...");
+			try {
+				productContext = await products.resolve(key, ctx.signal);
+			} catch (error) {
+				const message = error instanceof ProductsError ? error.message : String(error);
+				appendNote(`catálogo de produtos indisponível (${message})`);
+				ctx.ui.notify(`Aviso: ${message}. Usando fallback de repositório.`, "warning");
+			} finally {
+				clearStatus(ctx);
+			}
+		}
+	} else if (!productContext) {
+		appendNote("catálogo de produtos não configurado (products.url ausente)");
 	}
 
 	let fallbackRepo: string | null = null;
@@ -207,18 +263,34 @@ async function runProductPhase(
 		} else {
 			const answer = await ctx.ui.input("Repositório do código (deixe vazio para seguir sem repo)", cwd);
 			if (answer === undefined) {
-				return { productContext, products, fallbackRepo: null, note, aborted: true };
+				return {
+					productContext,
+					products,
+					fallbackRepo: null,
+					note: notes.join("; ") || null,
+					aborted: true,
+					mcpbContext,
+					mcpbBin,
+				};
 			}
 			const trimmed = answer.trim();
 			if (trimmed) {
 				fallbackRepo = path.resolve(cwd, trimmed);
 			} else {
-				note = `${note ? `${note}; ` : ""}nenhum repositório informado`;
+				appendNote("nenhum repositório informado");
 			}
 		}
 	}
 
-	return { productContext, products, fallbackRepo, note, aborted: false };
+	return {
+		productContext,
+		products,
+		fallbackRepo,
+		note: notes.join("; ") || null,
+		aborted: false,
+		mcpbContext,
+		mcpbBin,
+	};
 }
 
 function productContextMarkdown(phase: ProductPhaseResult): string {
@@ -253,8 +325,34 @@ function productContextMarkdown(phase: ProductPhaseResult): string {
 		lines.push(`- Especialistas: ${rendered}`);
 	}
 
+	if (phase.mcpbContext) {
+		const f = phase.mcpbContext.freshness;
+		lines.push(
+			`- Índice local (mcpb): docs em ${f.docIndexedAt ?? "—"} · código em ${f.codeIndexedAt ?? "—"} (${f.docChunks} docs / ${f.codeChunks} chunks)`,
+		);
+		const overview = phase.mcpbContext.overview?.trim();
+		if (overview) {
+			const truncated =
+				overview.length > 8000
+					? `${overview.slice(0, 8000)}\n… (truncado; fonte: ${phase.mcpbContext.memoryPath})`
+					: overview;
+			lines.push("", "### Memória curada do produto (via mcpb)", "", truncated);
+		}
+	}
+
 	if (phase.note) lines.push(`- Aviso: ${phase.note}`);
 	return lines.join("\n");
+}
+
+/** Idade legível de um timestamp ISO; "sem índice" quando ausente/inválido. */
+function formatAge(iso: string | null): string {
+	if (!iso) return "sem índice";
+	const timestamp = Date.parse(iso);
+	if (Number.isNaN(timestamp)) return "sem índice";
+	const hours = (Date.now() - timestamp) / 3_600_000;
+	if (hours < 1) return "há <1h";
+	if (hours < 48) return `há ${Math.round(hours)}h`;
+	return `há ${Math.round(hours / 24)} dias`;
 }
 
 // ---------------------------------------------------------------------------
@@ -436,8 +534,8 @@ export default function (pi: ExtensionAPI) {
 				return;
 			}
 
-			// Fase 0 — produto/repos/especialistas (fonte primária + fallback).
-			const phase = await runProductPhase(secrets, key, repoFlag, ctx.cwd, ctx);
+			// Fase 0 — produto/repos/especialistas (mcpb → catálogo HTTP + fallback).
+			const phase = await runProductPhase(secrets, key, filtered, repoFlag, ctx.cwd, ctx);
 			if (phase.aborted) {
 				clearStatus(ctx);
 				ctx.ui.notify(`Refinamento de ${key} cancelado.`, "info");
@@ -472,6 +570,9 @@ export default function (pi: ExtensionAPI) {
 				: phase.fallbackRepo
 					? `Repo:     ${phase.fallbackRepo} (fallback)`
 					: "Repo:     — (nenhum)";
+			const freshnessLine = phase.mcpbContext
+				? `Índice:   mcpb ${formatAge(phase.mcpbContext.freshness.docIndexedAt)} (docs) · ${formatAge(phase.mcpbContext.freshness.codeIndexedAt)} (código)`
+				: "";
 
 			const summaryLines = [
 				`Issue:    ${filtered.key} — ${filtered.summary}`,
@@ -480,6 +581,7 @@ export default function (pi: ExtensionAPI) {
 				`Comentários: ${filtered.comments.length}`,
 				phase.productContext ? `Produto:  ${phase.productContext.product}` : "",
 				repoLine,
+				freshnessLine,
 				phase.note ? `Aviso:    ${phase.note}` : "",
 				`Pasta:    ${targetDir}`,
 				targetExists && force ? "Modo:     --force (sobrescreve epic.md/index.md/tasks)" : "",
@@ -503,6 +605,8 @@ export default function (pi: ExtensionAPI) {
 				products: phase.products,
 				fallbackRepo: phase.fallbackRepo,
 				catalogNote: phase.note,
+				mcpbContext: phase.mcpbContext,
+				mcpbBin: phase.mcpbBin,
 			});
 
 			const instructions = readInstructions();

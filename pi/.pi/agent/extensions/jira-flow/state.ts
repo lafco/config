@@ -7,6 +7,7 @@
  * `/refinar-issue` recomeça o estado, e `session_shutdown` zera tudo.
  */
 
+import type { McpbProductContext } from "./mcpb.ts";
 import type { ProductsClient, ProductContext } from "./products.ts";
 
 export interface RefinementState {
@@ -26,6 +27,10 @@ export interface RefinementState {
 	fallbackRepo: string | null;
 	/** Aviso da Fase 0 (catálogo fora, sem repo etc.), para o resumo/mensagem. */
 	catalogNote: string | null;
+	/** Contexto local do índice mcpb (Fase 0), quando disponível. */
+	mcpbContext: McpbProductContext | null;
+	/** Caminho do CLI bin/mcpb (fallback do consult_specialist). */
+	mcpbBin: string | null;
 	/** Gate: só emite artefatos depois da análise aprovada via `submit_analysis`. */
 	analysisApproved: boolean;
 	analysisApprovedAt: string | null;
@@ -42,6 +47,8 @@ export interface StartRefinementInput {
 	products: ProductsClient | null;
 	fallbackRepo: string | null;
 	catalogNote: string | null;
+	mcpbContext: McpbProductContext | null;
+	mcpbBin: string | null;
 }
 
 export function startRefinement(input: StartRefinementInput): RefinementState {

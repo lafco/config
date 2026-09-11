@@ -2,6 +2,8 @@
 
 O harness (`jira-flow`) registra quatro ferramentas. O conteúdo final **só** existe via `emit_epic_artifacts`; as demais servem para conduzir a conversa e validar o entendimento.
 
+> Se a extensão `mcpb` estiver carregada, as tools `mcpb_*` (busca/leitura no índice local) também estão disponíveis — prefira-as na investigação do código.
+
 ## `ask_user` — pergunta estruturada
 
 Use para **toda** pergunta ao usuário durante o refinamento. Uma pergunta por vez.
@@ -48,22 +50,26 @@ Comportamento:
 - Após aprovar, prossiga para a decomposição. Se algo material mudar depois, submeta de novo.
 - `areasDoCodigo` vem da investigação do repositório — use caminhos concretos, não "backend".
 
-## `consult_specialist` — catálogo de produtos
+## `consult_specialist` — catálogo de produtos / índice local
 
-Consulta os agentes especialistas do produto do épico.
+Consulta o produto do épico em duas fontes, nesta ordem:
+
+1. **Catálogo HTTP** (agentes especialistas, quando configurado em `products.url`): o campo `especialista` é repassado.
+2. **Índice local `mcpb ask`** (fallback quando o catálogo não está configurado ou falha): resposta com **citações** de código/docs do índice. Nesse caminho `especialista` é ignorado (o `mcpb` não tem especialistas).
 
 ```jsonc
 {
   "pergunta": "dúvida técnica/produto",
   "produto": "opcional; padrão = o resolvido na Fase 0",
-  "especialista": "opcional; use quando souber qual"
+  "especialista": "opcional; só se aplica ao catálogo HTTP"
 }
 ```
 
 - Use na **Fase 1** (entendimento) e na **Fase 3** (especificação).
 - Uma dúvida por chamada, formulada de forma específica.
-- Se o catálogo estiver indisponível, a tool retorna erro: caia para a **investigação do repositório** e registre a lacuna em `riscos`/`duvidas`.
-- Não invente a resposta do especialista: o que não veio do catálogo, da issue ou do código é incerteza.
+- Quando a resposta vier do `mcpb`, confira as citações antes de usá-las; o índice pode estar velho (ver Fase 0).
+- Se nenhuma fonte responder, a tool retorna erro: caia para a **investigação do repositório** e registre a lacuna em `riscos`/`duvidas`.
+- Não invente a resposta do especialista: o que não veio do catálogo, do índice, da issue ou do código é incerteza.
 
 ## `emit_epic_artifacts` — entrega
 

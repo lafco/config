@@ -15,13 +15,13 @@ O **harness** (esta extension) faz o I/O; a **LLM** só faz análise e quebra.
 2. Busca a issue no Jira via REST (Cloud = API v3/ADF, DC = API v2/texto) e também os filhos do épico.
 3. Filtra o payload: ADF/texto → markdown, descartando ids internos, `self` URLs, avatares, changelog, watchers, contadores e campos vazios.
 4. Cria a pasta de trabalho e grava `jira-source.md` (auditoria + fonte do refinamento).
-5. **Fase 0** — resolve `produto` + `repos` + `especialistas` no catálogo de produtos (HTTP). Fallback: `--repo` → `cwd` → pergunta.
+5. **Fase 0** — resolve `produto` + `repos` + `overview`/frescura no mapa local + índice `mcpb`. Fallback: catálogo de produtos (HTTP) → `--repo` → `cwd` → pergunta.
 6. Mostra um resumo (issue, produto, repos) e pede confirmação.
 7. Dispara o turno do LLM com o conteúdo filtrado + contexto do produto + instruções internas.
 8. O LLM conduz as fases 1–4 usando as tools:
    - `ask_user` — perguntas estruturadas (opções + recomendação + "digitar outra");
    - `submit_analysis` — revisão/aprovação do "modelo do épico" (**gate**);
-   - `consult_specialist` — consulta aos agentes especialistas do produto;
+   - `consult_specialist` — catálogo HTTP de produtos ou, no fallback, `mcpb ask` (respostas com citações);
    - `emit_epic_artifacts` — entrega final (só após a análise aprovada).
 9. O harness grava `epic.md`, `index.md` e `tasks/*.md`.
 
@@ -69,7 +69,46 @@ Jira Data Center:
 
 Jira Cloud usa `"deployment": "cloud"`, `"email"` e `"apiToken"` no lugar de `personalToken`. O `deployment` é inferido pela URL (`*.atlassian.net` → cloud) quando omitido.
 
-### Catálogo de produtos (opcional, mas é a fonte primária)
+### Índice local (mcpb) — fonte primária da Fase 0
+
+O `mcpb` expõe um CLI JSON (`bin/mcpb`) com o índice local de produtos. O
+jira-flow resolve o produto pelo `products-map.json` e consulta o índice para
+obter produto, repositórios (com paths locais), overview curado e frescura.
+
+`products-map.json` (no diretório da extension; sobrescrevível por
+`JIRA_FLOW_PRODUCTS_MAP`):
+
+```json
+{
+  "projects": { "PROJ": "produto" },
+  "components": { "PontoWeb": "pontoweb", "Férias": "vacations" },
+  "labels": { "vacations": "vacations" }
+}
+```
+
+Precedência do matching: primeiro `component` com match exato
+(case/acento-insensível) → `projects[PROJ]` → primeiro `label` → sem produto.
+O componente vence o projeto: um épico do projeto X pode tratar de outro
+produto (ex.: componente PontoWeb num épico de Férias).
+
+Resolução do `bin/mcpb`, na ordem: `MCPB_BIN` → `MCPB_PATH/bin/mcpb` → launcher
+`~/.local/bin/mcpb-mcp` (realpath → checkout) → `~/ahg/mcpb/bin/mcpb` →
+`<cwd>/bin/mcpb` (só com `<cwd>/catalog.yaml`).
+
+CLI (stdout = 1 documento JSON; logs em stderr; erro = `{"error":{...}}` com
+exit ≠ 0):
+
+```
+mcpb products
+mcpb context --product <nome>
+mcpb search-code --product <nome> --query <busca> [--language <l>] [--kind <k>] [--limit 1..30]
+mcpb ask --product <nome> --question <pergunta>
+```
+
+Envs: `MCPB_BIN` (caminho do CLI), `MCPB_PATH` (checkout), `JIRA_FLOW_PRODUCTS_MAP`
+(mapa alternativo).
+
+### Catálogo de produtos (opcional, fallback da Fase 0)
 
 Contrato esperado:
 
@@ -80,7 +119,7 @@ POST {url}/ask   { "product", "question", "specialist?" }
      -> { "answer": "..." }
 ```
 
-Auth `Authorization: Bearer {token}`. Se ausente/fora do ar, o fluxo cai no fallback de repositório. Config também pela env: `PRODUCTS_URL`, `PRODUCTS_TOKEN`.
+Auth `Authorization: Bearer {token}`. É o fallback da Fase 0 (quando o mcpb não resolve o produto) e a fonte do `consult_specialist`; se ausente/fora do ar, o `consult_specialist` cai para o `mcpb ask`. Config também pela env: `PRODUCTS_URL`, `PRODUCTS_TOKEN`.
 
 ### Fallback por variáveis de ambiente
 
@@ -100,6 +139,8 @@ Se um campo não estiver no arquivo, ele é lido do ambiente: `JIRA_URL`, `JIRA_
 | `instructions/quebra-padroes.md` | Anexo com os 9 padrões de quebra |
 | `filter.ts` → `filterIssue()` | Único ponto de troca do filtro do Jira |
 | `products.ts` → `ProductsClient` | Cliente do catálogo de produtos |
+| `mcpb.ts` → `findMcpbBin`/`McpbClient` | Resolução do `bin/mcpb` e contrato do CLI JSON |
+| `products-map.json` | Mapa project/component/label → produto |
 
 Templates e instruções são lidos **a cada execução**: editar o `.md` já vale no próximo `/refinar-issue`.
 
@@ -110,6 +151,8 @@ Templates e instruções são lidos **a cada execução**: editar o `.md` já va
 | `index.ts` | Command, pull do Jira, Fase 0 e montagem da mensagem |
 | `tools.ts` | Tools `emit_epic_artifacts`, `ask_user`, `submit_analysis`, `consult_specialist` |
 | `products.ts` | Cliente HTTP do catálogo de produtos (produto/repos/especialistas) |
+| `mcpb.ts` | Ponte com o CLI JSON do `mcpb` (mapa, context, ask) |
+| `products-map.json` | Mapa project/component/label → produto do índice local |
 | `state.ts` | Estado em memória do refinamento (gate, contexto, cliente) |
 | `jira.ts` | Cliente REST do Jira (Cloud/DC) |
 | `filter.ts` | Filtro do payload do Jira |

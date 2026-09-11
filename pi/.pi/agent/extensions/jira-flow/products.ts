@@ -1,7 +1,8 @@
 /**
  * Cliente HTTP do catálogo de produtos da empresa.
  *
- * É a fonte primária de contexto do refinamento: dado um épico do Jira, o
+ * É a fonte de fallback da Fase 0 (quando o mapa + índice local `mcpb` não
+ * resolvem) e a fonte do `consult_specialist`: dado um épico do Jira, o
  * catálogo responde qual produto ele afeta, quais repositórios pertencem a
  * esse produto e quais especialistas existem para consulta.
  *

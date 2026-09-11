@@ -21,6 +21,7 @@ import {
 } from "@earendil-works/pi-tui";
 import { Type, type Static } from "typebox";
 import { materializeArtifacts } from "./artifacts.ts";
+import { McpbClient, McpbError } from "./mcpb.ts";
 import { ProductsError } from "./products.ts";
 import { approveAnalysis, getRefinement, stopRefinement } from "./state.ts";
 
@@ -532,7 +533,7 @@ function registerConsultTool(pi: ExtensionAPI): void {
 		name: "consult_specialist",
 		label: "Consultar especialista de produto",
 		description:
-			"Consulta o catálogo de produtos (agentes especialistas) sobre um produto do épico. Use na Fase 1 (entendimento) e na Fase 3 (especificação) quando precisar de contexto que o código não responde. Se o catálogo estiver indisponível, o erro indica usar o fallback (investigação do repositório) e registrar a dúvida.",
+			"Consulta o catálogo de produtos (HTTP) e, se indisponível, cai para o índice local `mcpb ask` (respostas com citações). Use na Fase 1 (entendimento) e na Fase 3 (especificação) quando precisar de contexto que o código não responde. Se nenhuma fonte responder, o erro indica investigar o repositório (scout/leitura direta) e registrar a dúvida.",
 		parameters: ConsultSchema,
 		executionMode: "sequential",
 		async execute(_toolCallId, params: ConsultParams, signal) {
@@ -540,28 +541,49 @@ function registerConsultTool(pi: ExtensionAPI): void {
 			if (!state) {
 				return fail("Nenhum refinamento ativo. Inicie com /refinar-issue <KEY>.", {});
 			}
-			const client = state.products;
-			if (!client) {
-				return fail(
-					"Catálogo de produtos indisponível. Investigue o repositório (scout/leitura direta) e registre a dúvida em `duvidas`/`riscos`.",
-					{},
-				);
-			}
 			const product = params.produto?.trim() || state.productContext?.product;
 			if (!product) {
-				return fail("Produto desconhecido: informe `produto` explicitamente ou configure o catálogo.", {});
+				return fail("Produto desconhecido: informe `produto` explicitamente ou configure o mapa/mcpb.", {});
+			}
+			const errors: string[] = [];
+
+			if (state.products) {
+				try {
+					const resposta = await state.products.ask(
+						{ product, question: params.pergunta, specialist: params.especialista?.trim() || undefined },
+						signal ?? undefined,
+					);
+					return ok(resposta, { product, specialist: params.especialista ?? null, source: "catalogo" });
+				} catch (error) {
+					errors.push(error instanceof ProductsError ? error.message : String(error));
+				}
 			}
 
-			try {
-				const resposta = await client.ask(
-					{ product, question: params.pergunta, specialist: params.especialista?.trim() || undefined },
-					signal ?? undefined,
-				);
-				return ok(resposta, { product, specialist: params.especialista ?? null });
-			} catch (error) {
-				const message = error instanceof ProductsError ? error.message : String(error);
-				return fail(`Consulta ao especialista falhou: ${message}`, {});
+			if (state.mcpbBin) {
+				try {
+					const result = await new McpbClient(state.mcpbBin).ask(
+						{ product, question: params.pergunta },
+						signal ?? undefined,
+					);
+					const cites = result.citations.length
+						? `\n\nCitações:\n${result.citations.map((citation) => `- ${citation}`).join("\n")}`
+						: "";
+					return ok(`${result.answer}${cites}`, {
+						product,
+						specialist: null,
+						source: "mcpb",
+						citations: result.citations,
+					});
+				} catch (error) {
+					errors.push(error instanceof McpbError ? `mcpb: ${error.message}` : String(error));
+				}
 			}
+
+			return fail(
+				`Consulta ao especialista falhou (${errors.join(" · ") || "nenhuma fonte disponível"}). ` +
+					"Investigue o repositório (scout/leitura direta) e registre a dúvida em `duvidas`/`riscos`.",
+				{},
+			);
 		},
 		renderCall(args, theme) {
 			return new Text(
