@@ -380,11 +380,6 @@ async function runSingleAgent(
 					}
 					emitUpdate();
 				}
-
-				if (event.type === "tool_result_end" && event.message) {
-					currentResult.messages.push(event.message as Message);
-					emitUpdate();
-				}
 			};
 
 			proc.stdout.on("data", (data) => {
@@ -412,7 +407,10 @@ async function runSingleAgent(
 					wasAborted = true;
 					proc.kill("SIGTERM");
 					setTimeout(() => {
-						if (!proc.killed) proc.kill("SIGKILL");
+						// `proc.killed` only reports that the signal was sent, not that the process
+						// actually exited, so gating on it made this SIGKILL unreachable. exitCode and
+						// signalCode both stay null for as long as the process is still alive.
+						if (proc.exitCode === null && proc.signalCode === null) proc.kill("SIGKILL");
 					}, 5000);
 				};
 				if (signal.aborted) killProc();

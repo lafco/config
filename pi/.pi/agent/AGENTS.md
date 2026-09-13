@@ -29,7 +29,9 @@ Configuração padrão do pi para uso geral (fora de projetos específicos).
 - Artefatos ficam em `~/epics/<KEY>/` (ou no diretório configurado em `epicsDir`/`EPICS_DIR`):
   `jira-source.md`, `epic.md`, `index.md` e `tasks/TASK-NN-<slug>.md`.
 - Credenciais: rode `/refinar-issue --setup` (grava `~/.pi/agent/secrets.json`, 0600) — ver `.pi/agent/extensions/jira-flow/README.md`.
-- Para despachar uma tarefa a um agente implementador: `/implementar-tarefa <caminho-da-tarefa>`.
+- Para despachar uma tarefa a um agente implementador: `/implement <tarefa>` (encadeia `scout` → `planner` → `worker`).
+  Para implementar, revisar e aplicar o feedback: `/implement-and-review <tarefa>`.
+  Para só planejar, sem implementar: `/scout-and-plan <tarefa>`.
 
 ---
 
