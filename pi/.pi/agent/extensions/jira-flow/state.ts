@@ -7,18 +7,28 @@
  * `/refinar-issue` recomeça o estado, e `session_shutdown` zera tudo.
  */
 
+import type { JiraClient } from "./jira.ts";
+import type { IssueFlow } from "./issue-type.ts";
 import type { McpbProductContext } from "./mcpb.ts";
+import type { OpenSearchClient } from "./opensearch.ts";
 import type { ProductsClient, ProductContext } from "./products.ts";
 
 export interface RefinementState {
-	/** Key do épico (ex.: PROJ-123). */
+	/** Key da issue (ex.: PROJ-123). */
 	key: string;
+	/** Tipo original retornado pelo Jira e fluxo selecionado. */
+	issueType: string;
+	flow: IssueFlow;
 	/** Projeto do Jira (ex.: PROJ). */
 	project: string;
 	/** Pasta de trabalho dos artefatos. */
 	dir: string;
 	/** URL base do Jira, para montar os links. */
 	jiraUrl: string;
+	/** Cliente autenticado, usado apenas por operações explicitamente confirmadas. */
+	jira: JiraClient;
+	/** Cliente opcional para investigação de logs em manutenção/apoio. */
+	opensearch: OpenSearchClient | null;
 	/** Produto/repos/especialistas resolvidos na Fase 0 (quando houver). */
 	productContext: ProductContext | null;
 	/** Cliente do catálogo, para a tool `consult_specialist`. */
@@ -40,6 +50,10 @@ let current: RefinementState | null = null;
 
 export interface StartRefinementInput {
 	key: string;
+	issueType: string;
+	flow: IssueFlow;
+	jira: JiraClient;
+	opensearch: OpenSearchClient | null;
 	project: string;
 	dir: string;
 	jiraUrl: string;

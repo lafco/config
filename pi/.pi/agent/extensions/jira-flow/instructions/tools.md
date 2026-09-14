@@ -1,6 +1,6 @@
 # Ferramentas do refinamento — quando e como usar
 
-O harness (`jira-flow`) registra quatro ferramentas. O conteúdo final **só** existe via `emit_epic_artifacts`; as demais servem para conduzir a conversa e validar o entendimento.
+O harness (`jira-flow`) registra as ferramentas do refinamento. O conteúdo final **só** existe via `emit_epic_artifacts`; as demais servem para conduzir a conversa, investigar evidências e validar o entendimento.
 
 > Se a extensão `mcpb` estiver carregada, as tools `mcpb_*` (busca/leitura no índice local) também estão disponíveis — prefira-as na investigação do código.
 
@@ -25,9 +25,9 @@ Use para **toda** pergunta ao usuário durante o refinamento. Uma pergunta por v
 - Não use `ask_user` para despejar várias perguntas: quebre em chamadas separadas.
 - Em modo não interativo (`-p`, `json`, `rpc`) a tool retorna erro; nesse caso faça a pergunta em **texto** na conversa.
 
-## `submit_analysis` — modelo do épico (gate)
+## `submit_analysis` — modelo da issue (gate)
 
-Antes de decompor, submeta o entendimento para revisão. **Sem aprovação, `emit_epic_artifacts` é bloqueado.**
+Antes de decompor ou concluir a investigação, submeta o entendimento para revisão. **Sem aprovação, `emit_epic_artifacts` é bloqueado.**
 
 ```jsonc
 {
@@ -52,7 +52,7 @@ Comportamento:
 
 ## `consult_specialist` — catálogo de produtos / índice local
 
-Consulta o produto do épico em duas fontes, nesta ordem:
+Consulta o produto da issue em duas fontes, nesta ordem:
 
 1. **Catálogo HTTP** (agentes especialistas, quando configurado em `products.url`): o campo `especialista` é repassado.
 2. **Índice local `mcpb ask`** (fallback quando o catálogo não está configurado ou falha): resposta com **citações** de código/docs do índice. Nesse caminho `especialista` é ignorado (o `mcpb` não tem especialistas).
@@ -70,6 +70,14 @@ Consulta o produto do épico em duas fontes, nesta ordem:
 - Quando a resposta vier do `mcpb`, confira as citações antes de usá-las; o índice pode estar velho (ver Fase 0).
 - Se nenhuma fonte responder, a tool retorna erro: caia para a **investigação do repositório** e registre a lacuna em `riscos`/`duvidas`.
 - Não invente a resposta do especialista: o que não veio do catálogo, do índice, da issue ou do código é incerteza.
+
+## `search_opensearch` — evidências de logs
+
+Disponível somente nos fluxos de Manutenção e Apoio ao cliente. Faz uma busca somente leitura usando uma API key mantida no harness. Informe texto, índice (opcional), intervalo `since`/`until` e paginação pequena. Nunca peça a API key nem a inclua nos artefatos. Se não estiver configurado, registre a limitação.
+
+## `change_issue_to_maintenance` — encaminhamento
+
+Disponível somente no fluxo de Apoio ao cliente. Use apenas quando a investigação indicar que é necessário desenvolvimento e depois de confirmação explícita do usuário. A tool pede uma confirmação adicional no TUI e executa um PUT no Jira; em modo não interativo não altera a issue.
 
 ## `emit_epic_artifacts` — entrega
 

@@ -1,11 +1,12 @@
 /**
- * Materialização dos artefatos do epic.
+ * Materialização dos artefatos da issue refinada.
  *
  * O harness (esta extension) é quem cria pastas e arquivos. A LLM apenas
  * entrega o conteúdo estruturado via tool `emit_epic_artifacts`.
  *
  * Os templates ficam em `templates/*.md` e podem ser editados sem mexer no
- * TypeScript (são lidos a cada execução).
+ * TypeScript (são lidos a cada execução). Os nomes dos arquivos permanecem
+ * compatíveis com o fluxo antigo, mesmo quando a issue não é um Epic.
  */
 
 import * as fs from "node:fs";
@@ -44,6 +45,7 @@ export interface TaskArtifact {
 
 export interface MaterializeMeta {
 	jiraKey: string;
+	issueType: string;
 	project: string;
 	jiraUrl: string;
 	syncedAt: string;
@@ -157,7 +159,8 @@ export async function materializeArtifacts(input: MaterializeInput): Promise<Mat
 	const epicVars = {
 		jiraKey: meta.jiraKey,
 		project: meta.project,
-		type: "Epic",
+		issueType: yamlString(meta.issueType),
+		type: yamlString(meta.issueType),
 		summary: yamlString(epic.summary),
 		labelsYaml: yamlList(epic.labels),
 		jiraUrl: `${meta.jiraUrl}/browse/${meta.jiraKey}`,
@@ -195,6 +198,7 @@ export async function materializeArtifacts(input: MaterializeInput): Promise<Mat
 
 	const indexVars = {
 		jiraKey: meta.jiraKey,
+		issueType: meta.issueType,
 		summary: epic.summary,
 		jiraUrl: `${meta.jiraUrl}/browse/${meta.jiraKey}`,
 		syncedAt: meta.syncedAt,

@@ -4,7 +4,8 @@
  * - Cloud  -> REST API v3 (descrições em ADF)
  * - DC     -> REST API v2 (descrições em texto/wiki)
  *
- * Toda chamada é feita pelo harness (extension), nunca pela LLM.
+ * Toda chamada é feita pelo harness (extension), nunca pela LLM. A alteração
+ * de tipo só é usada por uma tool de apoio ao cliente após confirmação.
  */
 
 import type { Deployment, JiraSecrets } from "./secrets.ts";
@@ -84,7 +85,7 @@ export class JiraClient {
 		};
 	}
 
-	private async request(pathname: string, signal?: AbortSignal): Promise<any> {
+	private async request(pathname: string, signal?: AbortSignal, init: RequestInit = {}): Promise<any> {
 		const url = `${this.apiBase}${pathname}`;
 		const controller = new AbortController();
 		const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
@@ -96,12 +97,15 @@ export class JiraClient {
 		let response: Response;
 		try {
 			response = await fetch(url, {
-				method: "GET",
+				...init,
+				method: init.method ?? "GET",
 				headers: {
 					Authorization: this.authHeader,
 					Accept: "application/json",
 					"User-Agent": BROWSER_UA,
 					"Accept-Language": "pt-BR,pt;q=0.9,en;q=0.8",
+					...(init.body ? { "Content-Type": "application/json" } : {}),
+					...(init.headers ?? {}),
 				},
 				signal: controller.signal,
 			});
@@ -124,6 +128,7 @@ export class JiraClient {
 			);
 		}
 
+		if (!text.trim()) return null;
 		try {
 			return JSON.parse(text);
 		} catch {
@@ -135,6 +140,44 @@ export class JiraClient {
 		const fields = [...ISSUE_FIELDS, ...extraFields].filter(Boolean);
 		const query = new URLSearchParams({ fields: fields.join(",") });
 		return (await this.request(`/issue/${encodeURIComponent(key)}?${query}`, signal)) as JiraIssueRaw;
+	}
+
+	/** Lista tipos disponíveis para localizar o tipo de manutenção configurado no Jira. */
+	async getIssueTypes(signal?: AbortSignal): Promise<{ id: string; name: string }[]> {
+		const data = await this.request("/issuetype", signal);
+		return Array.isArray(data)
+			? data
+					.map((item: any) => ({ id: String(item?.id ?? ""), name: String(item?.name ?? "") }))
+					.filter((item: { id: string; name: string }) => item.id && item.name)
+			: [];
+	}
+
+	/** Altera o tipo de uma issue após confirmação explícita do usuário. */
+	async updateIssueType(
+		key: string,
+		targetName: string,
+		targetId?: string,
+		signal?: AbortSignal,
+	): Promise<{ key: string; typeId: string; typeName: string }> {
+		let typeId = targetId?.trim();
+		let typeName = targetName.trim();
+		if (!typeId) {
+			const normalized = typeName.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+			const aliases = new Set([normalized]);
+			if (normalized === "manutencao") aliases.add("maintenance");
+			if (normalized === "maintenance") aliases.add("manutencao");
+			const type = (await this.getIssueTypes(signal)).find((item) =>
+				aliases.has(item.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()),
+			);
+			if (!type) throw new JiraError(`Tipo de issue não encontrado no Jira: ${targetName}`);
+			typeId = type.id;
+			typeName = type.name;
+		}
+		await this.request(`/issue/${encodeURIComponent(key)}`, signal, {
+			method: "PUT",
+			body: JSON.stringify({ fields: { issuetype: { id: typeId } } }),
+		});
+		return { key, typeId, typeName };
 	}
 
 	private async search(jql: string, fields: string[], signal?: AbortSignal): Promise<JiraIssueRaw[]> {

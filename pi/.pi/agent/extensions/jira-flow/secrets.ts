@@ -34,6 +34,12 @@ export interface ProductsSecrets {
 	token?: string;
 }
 
+export interface OpenSearchSecrets {
+	url: string;
+	apiKey: string;
+	index?: string;
+}
+
 export interface JiraSecrets {
 	url: string;
 	deployment: Deployment;
@@ -43,6 +49,7 @@ export interface JiraSecrets {
 	acceptanceField?: string;
 	epicsDir?: string;
 	products?: ProductsSecrets;
+	opensearch?: OpenSearchSecrets;
 }
 
 export interface LoadResult {
@@ -73,6 +80,11 @@ interface FilesShape {
 	products?: {
 		url?: string;
 		token?: string;
+	};
+	opensearch?: {
+		url?: string;
+		apiKey?: string;
+		index?: string;
 	};
 }
 
@@ -121,6 +133,15 @@ export function loadSecrets(): LoadResult {
 	const products: ProductsSecrets | undefined = productsUrl
 		? { url: normalizeBaseUrl(productsUrl), token: productsToken }
 		: undefined;
+	const opensearchUrl = data.opensearch?.url ?? env("OPENSEARCH_URL");
+	const opensearchApiKey = data.opensearch?.apiKey ?? env("OPENSEARCH_API_KEY");
+	const opensearch: OpenSearchSecrets | undefined = opensearchUrl && opensearchApiKey
+		? {
+				url: normalizeBaseUrl(opensearchUrl),
+				apiKey: opensearchApiKey,
+				index: data.opensearch?.index ?? env("OPENSEARCH_INDEX"),
+			}
+		: undefined;
 
 	if (!url) errors.push("Jira sem URL. Defina `jira.url` no secrets.json ou a env JIRA_URL.");
 	if (!personalToken && !apiToken) {
@@ -137,7 +158,7 @@ export function loadSecrets(): LoadResult {
 	}
 
 	return {
-		secrets: { url, deployment, email, apiToken, personalToken, acceptanceField, epicsDir, products },
+		secrets: { url, deployment, email, apiToken, personalToken, acceptanceField, epicsDir, products, opensearch },
 		source,
 		errors: [],
 	};

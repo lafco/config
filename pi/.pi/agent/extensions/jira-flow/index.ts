@@ -30,6 +30,8 @@ import {
 } from "@earendil-works/pi-coding-agent";
 import { filterIssue, filteredToMarkdown, type FilteredIssue } from "./filter.ts";
 import { JiraClient, JiraError } from "./jira.ts";
+import { classifyIssueType, flowDescription, type IssueFlow } from "./issue-type.ts";
+import { OpenSearchClient } from "./opensearch.ts";
 import {
 	findMcpbBin,
 	loadProductsMap,
@@ -90,7 +92,7 @@ const TEMPLATES_DIR = path.join(EXT_DIR, "templates");
 const INSTRUCTIONS_DIR = path.join(EXT_DIR, "instructions");
 const INSTRUCTION_FILES = ["epic-refinement.md", "tools.md", "quebra-padroes.md"];
 
-function readInstructions(): string {
+function readInstructions(flow: IssueFlow): string {
 	const parts: string[] = [];
 	for (const name of INSTRUCTION_FILES) {
 		const file = path.join(INSTRUCTIONS_DIR, name);
@@ -102,6 +104,8 @@ function readInstructions(): string {
 		}
 		parts.push(fs.readFileSync(file, "utf8").trim());
 	}
+	const flowFile = path.join(INSTRUCTIONS_DIR, "flows", `${flow}.md`);
+	if (fs.existsSync(flowFile)) parts.push(fs.readFileSync(flowFile, "utf8").trim());
 	return parts.join("\n\n---\n\n");
 }
 
@@ -502,16 +506,19 @@ export default function (pi: ExtensionAPI) {
 				return;
 			}
 
-			ctx.ui.setStatus(STATUS_KEY, `Buscando filhos de ${key}...`);
+			const classification = classifyIssueType(rawIssue.fields?.issuetype?.name);
 			let children: Awaited<ReturnType<JiraClient["getChildren"]>> = [];
-			try {
-				children = await client.getChildren(key, ctx.signal);
-			} catch (error) {
-				const message = error instanceof Error ? error.message : String(error);
-				ctx.ui.notify(
-					`Aviso: não consegui buscar filhos de ${key} (${message}). Seguindo sem eles.`,
-					"warning",
-				);
+			if (classification.flow === "epic") {
+				ctx.ui.setStatus(STATUS_KEY, `Buscando filhos de ${key}...`);
+				try {
+					children = await client.getChildren(key, ctx.signal);
+				} catch (error) {
+					const message = error instanceof Error ? error.message : String(error);
+					ctx.ui.notify(
+						`Aviso: não consegui buscar filhos de ${key} (${message}). Seguindo sem eles.`,
+						"warning",
+					);
+				}
 			}
 
 			ctx.ui.setStatus(STATUS_KEY, "Filtrando conteúdo...");
@@ -547,6 +554,8 @@ export default function (pi: ExtensionAPI) {
 				"---",
 				`jira_key: ${key}`,
 				`jira_url: ${client.issueUrl(key)}`,
+				`issue_type: ${filtered.type || classification.label}`,
+				`flow: ${classification.flow}`,
 				`fetched_at: ${fetchedAt}`,
 				"---",
 				"",
@@ -576,7 +585,8 @@ export default function (pi: ExtensionAPI) {
 
 			const summaryLines = [
 				`Issue:    ${filtered.key} — ${filtered.summary}`,
-				`Tipo:     ${filtered.type || "—"} · Status: ${filtered.status || "—"}`,
+				`Tipo:     ${filtered.type || "—"} · Fluxo: ${classification.label} (${flowDescription(classification.flow)})`,
+				`Status:   ${filtered.status || "—"}`,
 				`Filhos:   ${filtered.children.length} já existentes`,
 				`Comentários: ${filtered.comments.length}`,
 				phase.productContext ? `Produto:  ${phase.productContext.product}` : "",
@@ -598,6 +608,10 @@ export default function (pi: ExtensionAPI) {
 
 			startRefinement({
 				key,
+				issueType: filtered.type || classification.label,
+				flow: classification.flow,
+				jira: client,
+				opensearch: secrets.opensearch ? new OpenSearchClient(secrets.opensearch) : null,
 				project: projectKeyOf(key),
 				dir: targetDir,
 				jiraUrl: secrets.url,
@@ -609,13 +623,15 @@ export default function (pi: ExtensionAPI) {
 				mcpbBin: phase.mcpbBin,
 			});
 
-			const instructions = readInstructions();
+			const instructions = readInstructions(classification.flow);
 			const message = [
 				instructions,
 				"",
 				"---",
 				"",
 				`## Issue do Jira (${filtered.key}) — conteúdo filtrado`,
+				`Fluxo selecionado pelo tipo ${classification.flow}: ${flowDescription(classification.flow)}.`,
+				"O tipo original da issue é fato do Jira; não o altere por inferência.",
 				"",
 				filteredToMarkdown(filtered, secrets.url),
 				"",

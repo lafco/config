@@ -1,29 +1,56 @@
 # jira-flow
 
-Extension do pi que automatiza o refinamento de um épico do Jira:
+Extension do pi que automatiza o refinamento de issues do Jira, escolhendo um fluxo conforme o tipo da issue:
 
 ```
 /refinar-issue <KEY> [--force] [--repo <path>]
 /refinar-issue --setup
 ```
 
-O **harness** (esta extension) faz o I/O; a **LLM** só faz análise e quebra.
+O **harness** (esta extension) faz o I/O; a **LLM** conduz análise, investigação e quebra quando o fluxo permitir.
 
 ## O que o fluxo faz
 
 1. Lê as credenciais do Jira (`~/.pi/agent/secrets.json`, com fallback em env vars).
-2. Busca a issue no Jira via REST (Cloud = API v3/ADF, DC = API v2/texto) e também os filhos do épico.
+2. Busca a issue no Jira via REST (Cloud = API v3/ADF, DC = API v2/texto) e busca filhos somente quando o tipo é Epic.
 3. Filtra o payload: ADF/texto → markdown, descartando ids internos, `self` URLs, avatares, changelog, watchers, contadores e campos vazios.
 4. Cria a pasta de trabalho e grava `jira-source.md` (auditoria + fonte do refinamento).
 5. **Fase 0** — resolve `produto` + `repos` + `overview`/frescura no mapa local + índice `mcpb`. Fallback: catálogo de produtos (HTTP) → `--repo` → `cwd` → pergunta.
-6. Mostra um resumo (issue, produto, repos) e pede confirmação.
-7. Dispara o turno do LLM com o conteúdo filtrado + contexto do produto + instruções internas.
-8. O LLM conduz as fases 1–4 usando as tools:
+6. Classifica a issue em Epic, Story, Manutenção, Apoio ao cliente, Documentação ou genérico.
+7. Mostra um resumo (issue, fluxo, produto, repos) e pede confirmação.
+8. Dispara o turno do LLM com o conteúdo filtrado + contexto do produto + instruções específicas do fluxo.
+9. O LLM conduz as fases 1–4 usando as tools:
    - `ask_user` — perguntas estruturadas (opções + recomendação + "digitar outra");
-   - `submit_analysis` — revisão/aprovação do "modelo do épico" (**gate**);
+   - `submit_analysis` — revisão/aprovação do modelo da issue (**gate**);
    - `consult_specialist` — catálogo HTTP de produtos ou, no fallback, `mcpb ask` (respostas com citações);
+   - `search_opensearch` — busca somente leitura de logs nos fluxos de Manutenção/Apoio;
+   - `change_issue_to_maintenance` — alteração confirmada de tipo, somente no Apoio ao cliente;
    - `emit_epic_artifacts` — entrega final (só após a análise aprovada).
-9. O harness grava `epic.md`, `index.md` e `tasks/*.md`.
+10. O harness grava `epic.md`, `index.md` e `tasks/*.md`.
+
+## Fluxos por tipo
+
+- **Epic:** decompõe escopo em histórias/tarefas e usa os filhos existentes como contexto.
+- **Story:** refina a história e gera apenas o trabalho técnico diretamente necessário.
+- **Manutenção:** investiga causa, evidências, impacto, correção e validação. Pode usar `search_opensearch` quando configurado.
+- **Apoio ao cliente:** diagnostica, testa e explica o ocorrido sem implementar código. Pode usar `search_opensearch` e, com confirmação explícita, `change_issue_to_maintenance`.
+- **Documentação:** por enquanto segue o fluxo genérico; o fluxo dedicado ficará para uma evolução posterior.
+
+### OpenSearch opcional
+
+A credencial nunca é enviada à LLM. O harness usa somente leitura e limita cada consulta a 50 resultados. Configure quando a URL e a API key estiverem disponíveis:
+
+```json
+{
+  "opensearch": {
+    "url": "https://opensearch.exemplo",
+    "apiKey": "...",
+    "index": "logs-*"
+  }
+}
+```
+
+Também aceita `OPENSEARCH_URL`, `OPENSEARCH_API_KEY` e `OPENSEARCH_INDEX`. Sem configuração, o fluxo de Manutenção/Apoio continua e registra a limitação.
 
 Fora do TUI (`pi -p`, `--mode json/rpc`), `ask_user`/`submit_analysis` avisam que não há interface e a LLM degrada para perguntas/revisão em texto.
 
@@ -32,7 +59,7 @@ Fora do TUI (`pi -p`, `--mode json/rpc`), `ask_user`/`submit_analysis` avisam qu
 ```
 <epicsDir>/<KEY>/
 ├── jira-source.md      # fonte filtrada (imutável; só o harness escreve)
-├── epic.md             # análise refinada do épico
+├── epic.md             # análise refinada da issue
 ├── index.md            # painel: tabela de tarefas, ondas, status
 └── tasks/
     └── TASK-01-<slug>.md
@@ -63,7 +90,12 @@ Jira Data Center:
     "url": "https://catalogo.interno/api",
     "token": "TOKEN_DO_CATALOGO"
   },
-  "epicsDir": "/home/voce/epics"
+  "epicsDir": "/home/voce/epics",
+  "opensearch": {
+    "url": "https://opensearch.exemplo",
+    "apiKey": "...",
+    "index": "logs-*"
+  }
 }
 ```
 
@@ -123,7 +155,7 @@ Auth `Authorization: Bearer {token}`. É o fallback da Fase 0 (quando o mcpb nã
 
 ### Fallback por variáveis de ambiente
 
-Se um campo não estiver no arquivo, ele é lido do ambiente: `JIRA_URL`, `JIRA_API_TOKEN` (PAT no DC), `JIRA_PERSONAL_TOKEN` (alias), `JIRA_EMAIL`, `JIRA_USERNAME`, `JIRA_DEPLOYMENT`, `JIRA_ACCEPTANCE_FIELD`, `EPICS_DIR`, `PRODUCTS_URL`, `PRODUCTS_TOKEN`. O arquivo tem precedência campo a campo.
+Se um campo não estiver no arquivo, ele é lido do ambiente: `JIRA_URL`, `JIRA_API_TOKEN` (PAT no DC), `JIRA_PERSONAL_TOKEN` (alias), `JIRA_EMAIL`, `JIRA_USERNAME`, `JIRA_DEPLOYMENT`, `JIRA_ACCEPTANCE_FIELD`, `EPICS_DIR`, `PRODUCTS_URL`, `PRODUCTS_TOKEN`, `OPENSEARCH_URL`, `OPENSEARCH_API_KEY`, `OPENSEARCH_INDEX`. O arquivo tem precedência campo a campo.
 
 > O pi **não** carrega `.env` sozinho — as variáveis precisam estar no ambiente do processo.
 
@@ -149,13 +181,15 @@ Templates e instruções são lidos **a cada execução**: editar o `.md` já va
 | Arquivo | Papel |
 |---|---|
 | `index.ts` | Command, pull do Jira, Fase 0 e montagem da mensagem |
-| `tools.ts` | Tools `emit_epic_artifacts`, `ask_user`, `submit_analysis`, `consult_specialist` |
+| `tools.ts` | Tools do refinamento, busca no OpenSearch e alteração confirmada para Manutenção |
 | `products.ts` | Cliente HTTP do catálogo de produtos (produto/repos/especialistas) |
 | `mcpb.ts` | Ponte com o CLI JSON do `mcpb` (mapa, context, ask) |
 | `products-map.json` | Mapa project/component/label → produto do índice local |
 | `state.ts` | Estado em memória do refinamento (gate, contexto, cliente) |
-| `jira.ts` | Cliente REST do Jira (Cloud/DC) |
+| `jira.ts` | Cliente REST do Jira (Cloud/DC), incluindo alteração confirmada de tipo |
 | `filter.ts` | Filtro do payload do Jira |
+| `issue-type.ts` | Classificação do tipo Jira em fluxo |
+| `opensearch.ts` | Cliente somente leitura para busca opcional de logs |
 | `secrets.ts` | Leitura/gravação de `secrets.json` + env |
 | `artifacts.ts` | Materialização dos templates em arquivos |
 

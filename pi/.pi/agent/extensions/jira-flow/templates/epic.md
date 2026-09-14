@@ -2,6 +2,7 @@
 jira_key: {{jiraKey}}
 project: {{project}}
 type: {{type}}
+issue_type: {{issueType}}
 summary: {{summary}}
 labels: {{labelsYaml}}
 jira_url: {{jiraUrl}}

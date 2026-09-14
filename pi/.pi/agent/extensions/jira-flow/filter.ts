@@ -24,6 +24,7 @@ export interface FilteredIssue {
 	key: string;
 	summary: string;
 	type: string;
+	typeId?: string;
 	status: string;
 	priority?: string;
 	labels: string[];
@@ -538,6 +539,7 @@ export function filterIssue(raw: JiraIssueRaw, options: FilterOptions): Filtered
 		key: raw.key,
 		summary: String(fields.summary ?? ""),
 		type: String(fields.issuetype?.name ?? ""),
+		typeId: fields.issuetype?.id ? String(fields.issuetype.id) : undefined,
 		status: String(fields.status?.name ?? ""),
 		priority: fields.priority?.name ? String(fields.priority.name) : undefined,
 		labels: Array.isArray(fields.labels)

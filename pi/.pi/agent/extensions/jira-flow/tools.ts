@@ -22,6 +22,7 @@ import {
 import { Type, type Static } from "typebox";
 import { materializeArtifacts } from "./artifacts.ts";
 import { McpbClient, McpbError } from "./mcpb.ts";
+import { OpenSearchError } from "./opensearch.ts";
 import { ProductsError } from "./products.ts";
 import { approveAnalysis, getRefinement, stopRefinement } from "./state.ts";
 
@@ -35,6 +36,8 @@ export function registerFlowTools(pi: ExtensionAPI, options: FlowToolsOptions): 
 	if (registered) return;
 	registered = true;
 	registerEmitTool(pi, options);
+	registerOpenSearchTool(pi);
+	registerChangeIssueTypeTool(pi);
 	registerAskTool(pi);
 	registerAnalysisTool(pi);
 	registerConsultTool(pi);
@@ -99,9 +102,9 @@ type EmitParams = Static<typeof EmitSchema>;
 function registerEmitTool(pi: ExtensionAPI, options: FlowToolsOptions): void {
 	pi.registerTool({
 		name: "emit_epic_artifacts",
-		label: "Gravar artefatos do épico",
+		label: "Gravar artefatos da issue",
 		description:
-			"Ferramenta interna do fluxo /refinar-issue. Entrega a análise do épico e a lista de tarefas para o harness gravar epic.md, index.md e tasks/*.md. Só chame quando o fluxo /refinar-issue estiver ativo, a análise tiver sido aprovada via `submit_analysis` e a quebra tiver sido validada com o usuário.",
+			"Ferramenta interna do fluxo /refinar-issue. Entrega a análise da issue e a lista de tarefas/atividades para o harness gravar epic.md, index.md e tasks/*.md. Só chame quando o fluxo /refinar-issue estiver ativo, a análise tiver sido aprovada via `submit_analysis` e a entrega tiver sido validada com o usuário.",
 		parameters: EmitSchema,
 		async execute(_toolCallId, params: EmitParams) {
 			const state = getRefinement();
@@ -123,6 +126,7 @@ function registerEmitTool(pi: ExtensionAPI, options: FlowToolsOptions): void {
 					tasks: params.tasks,
 					meta: {
 						jiraKey: state.key,
+						issueType: state.issueType,
 						project: state.project,
 						jiraUrl: state.jiraUrl,
 						syncedAt: new Date().toISOString(),
@@ -134,6 +138,120 @@ function registerEmitTool(pi: ExtensionAPI, options: FlowToolsOptions): void {
 			} catch (error) {
 				const message = error instanceof Error ? error.message : String(error);
 				return fail(`Falha ao gravar artefatos: ${message}`, {});
+			}
+		},
+	});
+}
+
+// ---------------------------------------------------------------------------
+// search_opensearch
+// ---------------------------------------------------------------------------
+
+const OpenSearchSchema = Type.Object({
+	text: Type.Optional(Type.String({ description: "Texto ou expressão query_string para buscar nos logs" })),
+	index: Type.Optional(Type.String({ description: "Índice ou padrão de índices; usa o configurado quando omitido" })),
+	since: Type.Optional(Type.String({ description: "Início do intervalo, aceito pelo OpenSearch (ex.: now-2h ou ISO-8601)" })),
+	until: Type.Optional(Type.String({ description: "Fim do intervalo, aceito pelo OpenSearch" })),
+	from: Type.Optional(Type.Integer({ minimum: 0, maximum: 10000 })),
+	size: Type.Optional(Type.Integer({ minimum: 1, maximum: 50 })),
+});
+
+type OpenSearchParams = Static<typeof OpenSearchSchema>;
+
+function registerOpenSearchTool(pi: ExtensionAPI): void {
+	pi.registerTool({
+		name: "search_opensearch",
+		label: "Buscar logs no OpenSearch",
+		description:
+			"Busca logs no OpenSearch usando uma API key mantida somente pelo harness. Disponível apenas nos fluxos de Manutenção e Apoio ao cliente. Use o menor intervalo, índice e quantidade de resultados necessários; nunca peça ou exponha a credencial.",
+		parameters: OpenSearchSchema,
+		executionMode: "sequential",
+		async execute(_toolCallId, params: OpenSearchParams, signal) {
+			const state = getRefinement();
+			if (!state) return fail("Nenhum refinamento ativo.", {});
+			if (state.flow !== "maintenance" && state.flow !== "customer-support") {
+				return fail("A busca no OpenSearch só está disponível nos fluxos de Manutenção e Apoio ao cliente.", {});
+			}
+			if (!state.opensearch) {
+				return fail(
+					"OpenSearch não configurado. Continue com os dados disponíveis e registre essa limitação na análise.",
+					{},
+				);
+			}
+			try {
+				const result = await state.opensearch.search(params, signal ?? undefined);
+				const hits = result.hits.map((hit) => {
+					const source = JSON.stringify(hit.source);
+					return {
+						id: hit.id,
+						index: hit.index,
+						score: hit.score,
+						_source: source.length > 8000 ? `${source.slice(0, 8000)}…` : source,
+					};
+				});
+				return ok(JSON.stringify({ total: result.total, query: result.query, hits }, null, 2), {
+					total: result.total,
+					count: hits.length,
+					query: result.query,
+				});
+			} catch (error) {
+				const message = error instanceof OpenSearchError ? error.message : String(error);
+				return fail(`Falha ao consultar o OpenSearch: ${message}`, {});
+			}
+		},
+	});
+}
+
+// ---------------------------------------------------------------------------
+// change_issue_to_maintenance
+// ---------------------------------------------------------------------------
+
+const ChangeIssueTypeSchema = Type.Object({
+	confirm: Type.Boolean({ description: "Deve ser true somente após confirmação explícita do usuário" }),
+	targetName: Type.Optional(Type.String({ description: "Nome do tipo de manutenção no Jira" })),
+	targetId: Type.Optional(Type.String({ description: "ID do tipo, se já conhecido; evita consulta adicional" })),
+	reason: Type.String({ description: "Motivo baseado nas evidências da investigação" }),
+});
+
+type ChangeIssueTypeParams = Static<typeof ChangeIssueTypeSchema>;
+
+function registerChangeIssueTypeTool(pi: ExtensionAPI): void {
+	pi.registerTool({
+		name: "change_issue_to_maintenance",
+		label: "Alterar issue para manutenção",
+		description:
+			"Altera o tipo da issue atual para Manutenção. Disponível apenas no fluxo de Apoio ao cliente e somente após confirmação explícita; em TUI o harness ainda pede confirmação antes do PUT no Jira.",
+		parameters: ChangeIssueTypeSchema,
+		executionMode: "sequential",
+		async execute(_toolCallId, params: ChangeIssueTypeParams, signal, _onUpdate, ctx: ExtensionContext) {
+			const state = getRefinement();
+			if (!state) return fail("Nenhum refinamento ativo.", {});
+			if (state.flow !== "customer-support") {
+				return fail("A alteração para Manutenção só está disponível no fluxo de Apoio ao cliente.", {});
+			}
+			if (!params.confirm) {
+				return fail("Alteração não executada: falta confirmação explícita do usuário.", {});
+			}
+			if (ctx.mode === "tui") {
+				const approved = await ctx.ui.confirm(
+					"Alterar tipo da issue?",
+					`${state.key} será alterada de '${state.issueType}' para '${params.targetName?.trim() || "Manutenção"}'.\n\nMotivo: ${params.reason}`,
+				);
+				if (!approved) return fail("O usuário cancelou a alteração da issue.", {});
+			} else {
+				return fail("Modo não interativo: confirme a alteração na interface antes de executar esta operação.", {});
+			}
+			try {
+				const updated = await state.jira.updateIssueType(
+					state.key,
+					params.targetName?.trim() || "Manutenção",
+					params.targetId,
+					signal ?? undefined,
+				);
+				state.issueType = updated.typeName;
+				return ok(`Issue ${updated.key} alterada para ${updated.typeName}.`, { ...updated, reason: params.reason });
+			} catch (error) {
+				return fail(`Não foi possível alterar o tipo da issue: ${error instanceof Error ? error.message : String(error)}`, {});
 			}
 		},
 	});
@@ -457,9 +575,9 @@ async function reviewAnalysis(ctx: ExtensionContext, body: string): Promise<Anal
 function registerAnalysisTool(pi: ExtensionAPI): void {
 	pi.registerTool({
 		name: "submit_analysis",
-		label: "Submeter análise do épico",
+		label: "Submeter análise da issue",
 		description:
-			"Ferramenta interna do fluxo /refinar-issue. Submete o 'modelo do épico' (entendimento) para o usuário revisar e aprovar. O refinamento não pode ser decomposto nem emitido antes da aprovação. Em caso de rejeição, o retorno traz o comentário do usuário para você ajustar e submeter de novo.",
+			"Ferramenta interna do fluxo /refinar-issue. Submete o modelo de entendimento da issue para o usuário revisar e aprovar. A entrega não pode ser emitida antes da análise aprovada. Em caso de rejeição, o retorno traz o comentário do usuário para você ajustar e submeter de novo.",
 		parameters: AnalysisSchema,
 		executionMode: "sequential",
 		async execute(_toolCallId, params: AnalysisParams, _signal, _onUpdate, ctx: ExtensionContext) {
@@ -494,7 +612,7 @@ function registerAnalysisTool(pi: ExtensionAPI): void {
 			);
 		},
 		renderCall(_args, theme) {
-			return new Text(theme.fg("toolTitle", theme.bold("submit_analysis ")) + theme.fg("muted", "modelo do épico"), 0, 0);
+			return new Text(theme.fg("toolTitle", theme.bold("submit_analysis ")) + theme.fg("muted", "modelo da issue"), 0, 0);
 		},
 		renderResult(result, _options, theme) {
 			const details = result.details as AnalysisDetails | undefined;

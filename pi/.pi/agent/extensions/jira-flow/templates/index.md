@@ -1,6 +1,7 @@
 # {{jiraKey}} — {{summary}}
 
-- **Épico:** {{summary}}
+- **Issue:** {{summary}}
+- **Tipo:** {{issueType}}
 - **Fonte:** {{jiraUrl}}
 - **Refinado em:** {{syncedAt}}
 
