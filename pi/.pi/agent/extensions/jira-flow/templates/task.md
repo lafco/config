@@ -24,6 +24,10 @@ depends_on: {{dependsOnYaml}}
 
 {{objective}}
 
+## Valor observável
+
+{{valorObservavel}}
+
 ## Contexto
 
 {{context}}

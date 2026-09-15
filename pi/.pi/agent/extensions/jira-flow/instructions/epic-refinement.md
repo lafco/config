@@ -58,16 +58,20 @@ Não é preciso confirmar o contexto à parte: ele entra na revisão da Fase 1.
 
 ## Fase 2/4 — Decomposição ou plano de investigação em fatias verticais
 
+- **Negocie o corte antes de listar tarefas.** A primeira ação da Fase 2 é um `ask_user` com a fatia mínima completa recomendada (1 tarefa) e as alternativas consideradas — incluindo por que não dividir mais e uma linha de auditoria de onde foram parar os passos sugeridos na descrição. Só depois do aval do usuário detalhe as tarefas.
 - Regra de ouro: cada tarefa/atividade entrega valor observável de ponta a ponta — nunca uma etapa interna isolada. A divisão aceita é a do time (`Codificação [BACKEND]`/`[FRONTEND]`, `Defeito`, `Associado [CLIENTE]`, `Spike`), conforme `quebra-padroes.md`. No Apoio ao cliente, as atividades devem ser de diagnóstico, teste ou explicação, nunca de implementação de código.
-- Aplique as **regras da casa** antes dos 9 padrões: corrigir antes de validar, escopo fechado, juntar antes de dividir.
+- Aplique as **regras da casa** antes dos 9 padrões: corrigir antes de validar, escopo fechado, juntar antes de dividir, a descrição é pista (não plano) e a fatia mínima completa é a hipótese inicial.
 - Aplique os 9 padrões de quebra em ordem (arquivo `quebra-padroes.md`).
 - No fluxo de Manutenção a entrega é pequena por definição: **uma correção** (ou **uma investigação**, se a causa não estiver comprovada) mais **um `Associado [CLIENTE]` por relato afetado**, quando a mesma correção atende mais de um relato.
 - Critérios de parada: tarefa independente, testável, estimável e no tamanho alvo (**S ~4h · M ~8h · L ~16h**). Se exceder, quebre de novo.
+- Registre no `analysis` do épico o corte escolhido e por que não dividiu mais.
 - Apresente a árvore de tarefas proposta (título + 1 linha de valor cada) e negocie ajustes antes de detalhar.
 
 ## Fase 3/4 — Especificação de cada tarefa
 
-- Critérios de aceite em **Dado/Quando/Então**, verificáveis por teste (3–8 por tarefa).
+- Critérios de aceite em **Dado/Quando/Então**, verificáveis por teste (3–8 por tarefa); para `Codificação [BACKEND]`/`[FRONTEND]`/`Defeito`, pelo menos 1 é obrigatório (o harness rejeita a gravação sem isso).
+- Todo item traz `valorObservavel`: o que fica demonstrável com a tarefa e para quem (tela, endpoint, teste) — específico, sem repetir o título.
+- Os passos sugeridos na descrição não podem reaparecer como tarefas: o que não pertence à fatia vai para `outOfScope`/`riscos`.
 - Escreva pensando no agente implementador: autocontido, sem ambiguidade, caminhos de arquivo concretos quando conhecidos, "Fora de escopo" explícito.
 - Use `consult_specialist` de novo quando surgir dúvida técnica na especificação.
 - Título curto, orientado a resultado e no vocabulário do time (`Codificação [BACKEND] — rejeitar períodos sobrepostos no pedido unificado`), não a atividade genérica.

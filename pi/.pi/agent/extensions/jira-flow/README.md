@@ -25,13 +25,13 @@ O **harness** (esta extension) faz o I/O; a **LLM** conduz análise, investigaç
    - `consult_specialist` — catálogo HTTP de produtos ou, no fallback, `mcpb ask` (respostas com citações);
    - `search_opensearch` — busca somente leitura de logs nos fluxos de Manutenção/Apoio;
    - `change_issue_to_maintenance` — alteração confirmada de tipo, somente no Apoio ao cliente;
-   - `emit_epic_artifacts` — entrega final (só após a análise aprovada).
+   - `emit_epic_artifacts` — entrega final (só após a análise aprovada; rejeita tarefa de código sem critério de aceite).
 10. O harness grava `epic.md`, `index.md` e `tasks/*.md`.
 
 ## Fluxos por tipo
 
 - **Epic:** decompõe escopo em histórias/tarefas e usa os filhos existentes como contexto.
-- **Story:** refina a história e gera apenas o trabalho técnico diretamente necessário.
+- **Story:** refina a história e gera apenas o trabalho técnico diretamente necessário. A quebra parte da **fatia mínima completa** (default: 1 tarefa) e cada tarefa carrega `valorObservavel` + critérios Dado/Quando/Então verificáveis.
 - **Manutenção:** investiga causa, evidências, impacto e correção; entrega **uma correção** (ou uma investigação, se a causa não estiver comprovada) + um `Associado [CLIENTE]` por relato afetado. Pode usar `search_opensearch` quando configurado.
 - **Apoio ao cliente:** diagnostica, testa e explica o ocorrido sem implementar código. Pode usar `search_opensearch` e, com confirmação explícita, `change_issue_to_maintenance`.
 - **Documentação:** por enquanto segue o fluxo genérico; o fluxo dedicado ficará para uma evolução posterior.
@@ -62,7 +62,7 @@ Fora do TUI (`pi -p`, `--mode json/rpc`), `ask_user`/`submit_analysis` avisam qu
 ├── epic.md             # análise refinada da issue
 ├── index.md            # painel: tabela de tarefas, ondas, status
 └── tasks/
-    └── TASK-01-<slug>.md
+    └── TASK-01-<slug>.md   # valor observável + critérios Dado/Quando/Então
 ```
 
 `<epicsDir>` é `epicsDir` (secrets) / `EPICS_DIR` (env) quando configurado e acessível; senão **`~/epics`** — centralizado, independente do repo onde o pi roda.
@@ -168,7 +168,8 @@ Se um campo não estiver no arquivo, ele é lido do ambiente: `JIRA_URL`, `JIRA_
 | `templates/task.md` | Formato final de cada arquivo de tarefa |
 | `instructions/epic-refinement.md` | Protocolo/fases/regras que a LLM recebe |
 | `instructions/tools.md` | Contratos das tools e quando usar cada uma |
-| `instructions/quebra-padroes.md` | 9 padrões de quebra + regras da casa (corrigir antes/validar depois, escopo fechado, categorias do time) |
+| `instructions/quebra-padroes.md` | 9 padrões de quebra + regras da casa (corrigir antes/validar depois, escopo fechado, descrição é pista, fatia mínima, categorias do time) |
+| `instructions/exemplos-quebra.md` | Casos de calibração da quebra (ruim → bom) |
 | `filter.ts` → `filterIssue()` | Único ponto de troca do filtro do Jira |
 | `products.ts` → `ProductsClient` | Cliente do catálogo de produtos |
 | `mcpb.ts` → `findMcpbBin`/`McpbClient` | Resolução do `bin/mcpb` e contrato do CLI JSON |

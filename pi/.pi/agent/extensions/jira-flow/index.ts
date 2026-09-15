@@ -90,7 +90,7 @@ function resolveExtensionDir(): string {
 const EXT_DIR = resolveExtensionDir();
 const TEMPLATES_DIR = path.join(EXT_DIR, "templates");
 const INSTRUCTIONS_DIR = path.join(EXT_DIR, "instructions");
-const INSTRUCTION_FILES = ["epic-refinement.md", "tools.md", "quebra-padroes.md"];
+const INSTRUCTION_FILES = ["epic-refinement.md", "tools.md", "quebra-padroes.md", "exemplos-quebra.md"];
 
 function readInstructions(flow: IssueFlow): string {
 	const parts: string[] = [];

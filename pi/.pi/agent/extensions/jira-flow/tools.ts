@@ -68,9 +68,16 @@ const EmitTaskSchema = Type.Object({
 	dependsOn: Type.Optional(Type.Array(Type.String(), { description: "IDs das tarefas predecessoras" })),
 	estimate: Type.Optional(Type.String({ description: "S | M | L ou horas" })),
 	objective: Type.Optional(Type.String()),
+	valorObservavel: Type.String({
+		description:
+			"O que fica demonstrável com esta tarefa e para quem (tela, endpoint, teste). Obrigatório e específico; não repetir o título.",
+	}),
 	context: Type.Optional(Type.String()),
 	acceptanceCriteria: Type.Optional(
-		Type.Array(Type.String(), { description: "Cada item no formato Dado/Quando/Então" }),
+		Type.Array(Type.String(), {
+			description:
+				"Cada item no formato Dado/Quando/Então. Obrigatório (pelo menos 1) quando type é Codificação [BACKEND], Codificação [FRONTEND] ou Defeito.",
+		}),
 	),
 	technicalNotes: Type.Optional(Type.String()),
 	affectedAreas: Type.Optional(Type.String()),

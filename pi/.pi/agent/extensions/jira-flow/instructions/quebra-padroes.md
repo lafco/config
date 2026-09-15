@@ -10,11 +10,15 @@ Aplique os padrões **em ordem** (do 1 ao 9): use o primeiro que funcionar. Depo
 
 **Junte antes de dividir.** O que um agente entrega em uma sessão é **uma** tarefa. Não crie tarefa por etapa interna (validar, tratar erro, ajustar mensagem) quando tudo cabe no mesmo commit. Uma Manutenção com causa comprovada é **uma** correção — não uma árvore técnica.
 
+**A descrição é pista, não plano.** Passos sugeridos na issue (view, controller, método, modal) são insumo técnico: o que pertence à fatia escolhida vira nota técnica dela; o resto vai para `foraDeEscopo`. Nunca vire uma tarefa por passo.
+
+**A fatia mínima completa é a hipótese inicial.** Proponha **1 tarefa**; cada tarefa adicional exige justificativa explícita de tamanho (> 16h), dependência real ou entrega independente. Divisão por camada da mesma funcionalidade é sempre inválida.
+
 **Vocabulário do time.** Nomeie as tarefas com as categorias usadas no Jira do time:
 
 | Categoria | Uso |
 |---|---|
-| `Codificação [BACKEND]` / `Codificação [FRONTEND]` | Mudança de código; é a quebra natural de Story/Epic — cada lado com critério de aceite verificável e o contrato entre eles já definido |
+| `Codificação [BACKEND]` / `Codificação [FRONTEND]` | Mudança de código; só separa backend/frontend quando são **entregáveis independentes, com contrato já definido** (API pronta ou outro app) — nunca para dividir a mesma funcionalidade entre camadas |
 | `Defeito` | Bug encontrado sob uma Story/Epic |
 | `Execução de TU` / `Merge` | Etapas de entrega, quando a issue exigir |
 | `Associado [CLIENTE]` | **Manutenção**: um por cliente/relato afetado pela mesma correção (rastreamento e comunicação, não código) |
@@ -42,6 +46,8 @@ Aplique os padrões **em ordem** (do 1 ao 9): use o primeiro que funcionar. Depo
 ## Anti-padrões (não quebrar assim)
 
 - Tarefa que não entrega nada observável sozinha ("criar o helper", "ajustar o controller").
+- Transformar os passos sugeridos na descrição da issue em tarefas (a descrição é pista, não plano).
+- Dividir a mesma funcionalidade por camada (view/controller/model, backend/frontend).
 - Quebra arbitrária por tamanho, sem preservar valor.
 - Árvore técnica onde uma correção única bastava (Manutenção virando 4 tarefas).
 - Abrir investigação quando a causa já está comprovada no código.
