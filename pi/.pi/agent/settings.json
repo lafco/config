@@ -1,11 +1,13 @@
 {
-  "lastChangelogVersion": "0.84.4",
-  "defaultProvider": "deepseek",
-  "defaultModel": "deepseek-flash",
+  "lastChangelogVersion": "0.85.1",
+  "defaultProvider": "opencode-go",
+  "defaultModel": "deepseek-v4.1-flash",
   "defaultThinkingLevel": "high",
   "enabledModels": [],
   "hideThinkingBlock": false,
-  "packages": [],
+  "packages": [
+    "../../mcpb"
+  ],
   "theme": "dark",
   "enableSkillCommands": true
 }
