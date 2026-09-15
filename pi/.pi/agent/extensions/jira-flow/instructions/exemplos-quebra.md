@@ -1,8 +1,7 @@
 # Exemplos de quebra (calibração)
 
-Dois casos para calibrar a régua antes de propor a árvore. O primeiro mostra a
-transformação "passos da descrição → fatia vertical"; o segundo fixa a única
-fronteira legítima de `Codificação [FRONTEND]` separado.
+Um caso para calibrar a régua antes de propor a árvore: a transformação
+"passos da descrição → fatia vertical".
 
 ## Caso 1 — DRHJNES-1015: widget de mensagem aos colaboradores (Spike → fluxo genérico)
 
@@ -29,7 +28,7 @@ pista — virou o plano. É exatamente isso que a quebra deve recusar.
 
 ### Quebra boa (1 tarefa, L)
 
-**`Codificação [BACKEND]` — Widget externo: empresa parametriza a mensagem e o
+**`Codificação` — Widget externo: empresa parametriza a mensagem e o
 colaborador a vê no MyAhgora**
 
 - **Valor observável:** admin salva a mensagem na aba Widgets e o colaborador
@@ -46,18 +45,3 @@ colaborador a vê no MyAhgora**
 **Regra extraída:** se todos os passos da descrição morrem no mesmo commit, a
 quebra é **uma** tarefa. Se a issue pede dois comportamentos observáveis
 distintos, cada um vira uma tarefa — nunca cada camada.
-
-## Caso 2 — Fronteira legítima de `Codificação [FRONTEND]`
-
-**Contexto:** a API do relatório já foi entregue em outra frente; a tarefa é a
-tela que consome o contrato documentado.
-
-- `Codificação [FRONTEND]` — Tela de relatório de batidas do dia (S).
-  - **Valor observável:** o usuário abre a tela e vê os dados de
-    `GET /reports/punches`, já disponível.
-  - Legítimo porque é **entregável independente, com contrato pronto** — não
-    uma etapa do backend.
-
-**Contraexemplo:** "criar o endpoint e depois a tela da mesma funcionalidade"
-continua sendo quebra por camada, mesmo com dois `type` diferentes; é **uma**
-fatia só, com o endpoint como nota técnica.

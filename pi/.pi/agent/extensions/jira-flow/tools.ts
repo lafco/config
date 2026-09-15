@@ -76,7 +76,7 @@ const EmitTaskSchema = Type.Object({
 	acceptanceCriteria: Type.Optional(
 		Type.Array(Type.String(), {
 			description:
-				"Cada item no formato Dado/Quando/Então. Obrigatório (pelo menos 1) quando type é Codificação [BACKEND], Codificação [FRONTEND] ou Defeito.",
+				"Cada item no formato Dado/Quando/Então. Obrigatório (pelo menos 1) quando type é Codificação ou Defeito.",
 		}),
 	),
 	technicalNotes: Type.Optional(Type.String()),
@@ -88,7 +88,7 @@ const EmitTaskSchema = Type.Object({
 	type: Type.Optional(
 		Type.String({
 			description:
-				"Categoria da tarefa: Codificação [BACKEND] | Codificação [FRONTEND] | Defeito | Execução de TU | Merge | Associado [CLIENTE] | Spike | Task | Story | Bug",
+				"Categoria da tarefa: Codificação | Defeito | Execução de TU | Merge | Associado [CLIENTE] | Spike | Task | Story | Bug",
 		}),
 	),
 	storyPoints: Type.Optional(Type.Number()),

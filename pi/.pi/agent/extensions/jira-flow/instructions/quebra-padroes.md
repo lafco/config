@@ -18,7 +18,7 @@ Aplique os padrões **em ordem** (do 1 ao 9): use o primeiro que funcionar. Depo
 
 | Categoria | Uso |
 |---|---|
-| `Codificação [BACKEND]` / `Codificação [FRONTEND]` | Mudança de código; só separa backend/frontend quando são **entregáveis independentes, com contrato já definido** (API pronta ou outro app) — nunca para dividir a mesma funcionalidade entre camadas |
+| `Codificação` | Mudança de código; uma tarefa vertical por funcionalidade, sem divisão por camada |
 | `Defeito` | Bug encontrado sob uma Story/Epic |
 | `Execução de TU` / `Merge` | Etapas de entrega, quando a issue exigir |
 | `Associado [CLIENTE]` | **Manutenção**: um por cliente/relato afetado pela mesma correção (rastreamento e comunicação, não código) |
@@ -47,7 +47,7 @@ Aplique os padrões **em ordem** (do 1 ao 9): use o primeiro que funcionar. Depo
 
 - Tarefa que não entrega nada observável sozinha ("criar o helper", "ajustar o controller").
 - Transformar os passos sugeridos na descrição da issue em tarefas (a descrição é pista, não plano).
-- Dividir a mesma funcionalidade por camada (view/controller/model, backend/frontend).
+- Dividir a mesma funcionalidade por camada (view/controller/model).
 - Quebra arbitrária por tamanho, sem preservar valor.
 - Árvore técnica onde uma correção única bastava (Manutenção virando 4 tarefas).
 - Abrir investigação quando a causa já está comprovada no código.

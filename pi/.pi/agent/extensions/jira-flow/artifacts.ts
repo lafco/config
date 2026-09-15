@@ -13,7 +13,10 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 
 /** Tarefas de código exigem pelo menos um critério de aceite verificável. */
-const CODE_TASK_TYPES = new Set(["Codificação [BACKEND]", "Codificação [FRONTEND]", "Defeito"]);
+function isCodeTask(type: string | undefined): boolean {
+	const value = (type ?? "").trim();
+	return value === "Defeito" || value.startsWith("Codificação");
+}
 
 export interface EpicArtifact {
 	key: string;
@@ -135,7 +138,7 @@ export function validateArtifacts(input: Pick<MaterializeInput, "epic" | "tasks"
 		if (!Number.isInteger(task.wave) || task.wave < 1) {
 			errors.push(`${task.id} precisa de \`wave\` inteiro >= 1.`);
 		}
-		if (CODE_TASK_TYPES.has((task.type ?? "").trim()) && !(task.acceptanceCriteria?.length)) {
+		if (isCodeTask(task.type) && !(task.acceptanceCriteria?.length)) {
 			errors.push(`${task.id} (${task.type}) precisa de ao menos um critério de aceite.`);
 		}
 	}
