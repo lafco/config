@@ -16,6 +16,13 @@ pi/.pi/agent/extensions/pw2
 pi/.pi/agent/extensions/pw2-request.md
 pi/.pi/agent/skills/pw2-request
 
+# opensearch_request — extensão, doc e skill ficam só nesta máquina
+# (instância interna de logs + index patterns internos)
+# Sem barra final: os caminhos reais são symlinks para ~/repos/opensearch-request
+pi/.pi/agent/extensions/opensearch
+pi/.pi/agent/extensions/opensearch-request.md
+pi/.pi/agent/skills/opensearch-request
+
 # Editor / system
 *~
 *.swp
