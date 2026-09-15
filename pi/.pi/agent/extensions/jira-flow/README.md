@@ -32,7 +32,7 @@ O **harness** (esta extension) faz o I/O; a **LLM** conduz análise, investigaç
 
 - **Epic:** decompõe escopo em histórias/tarefas e usa os filhos existentes como contexto.
 - **Story:** refina a história e gera apenas o trabalho técnico diretamente necessário.
-- **Manutenção:** investiga causa, evidências, impacto, correção e validação. Pode usar `search_opensearch` quando configurado.
+- **Manutenção:** investiga causa, evidências, impacto e correção; entrega **uma correção** (ou uma investigação, se a causa não estiver comprovada) + um `Associado [CLIENTE]` por relato afetado. Pode usar `search_opensearch` quando configurado.
 - **Apoio ao cliente:** diagnostica, testa e explica o ocorrido sem implementar código. Pode usar `search_opensearch` e, com confirmação explícita, `change_issue_to_maintenance`.
 - **Documentação:** por enquanto segue o fluxo genérico; o fluxo dedicado ficará para uma evolução posterior.
 
@@ -168,7 +168,7 @@ Se um campo não estiver no arquivo, ele é lido do ambiente: `JIRA_URL`, `JIRA_
 | `templates/task.md` | Formato final de cada arquivo de tarefa |
 | `instructions/epic-refinement.md` | Protocolo/fases/regras que a LLM recebe |
 | `instructions/tools.md` | Contratos das tools e quando usar cada uma |
-| `instructions/quebra-padroes.md` | Anexo com os 9 padrões de quebra |
+| `instructions/quebra-padroes.md` | 9 padrões de quebra + regras da casa (corrigir antes/validar depois, escopo fechado, categorias do time) |
 | `filter.ts` → `filterIssue()` | Único ponto de troca do filtro do Jira |
 | `products.ts` → `ProductsClient` | Cliente do catálogo de produtos |
 | `mcpb.ts` → `findMcpbBin`/`McpbClient` | Resolução do `bin/mcpb` e contrato do CLI JSON |

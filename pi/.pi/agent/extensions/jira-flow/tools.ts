@@ -78,7 +78,12 @@ const EmitTaskSchema = Type.Object({
 	outOfScope: Type.Optional(Type.String()),
 	risks: Type.Optional(Type.String()),
 	labels: Type.Optional(Type.Array(Type.String())),
-	type: Type.Optional(Type.String({ description: "Task | Story | Bug" })),
+	type: Type.Optional(
+		Type.String({
+			description:
+				"Categoria da tarefa: Codificação [BACKEND] | Codificação [FRONTEND] | Defeito | Execução de TU | Merge | Associado [CLIENTE] | Spike | Task | Story | Bug",
+		}),
+	),
 	storyPoints: Type.Optional(Type.Number()),
 });
 

@@ -58,9 +58,11 @@ Não é preciso confirmar o contexto à parte: ele entra na revisão da Fase 1.
 
 ## Fase 2/4 — Decomposição ou plano de investigação em fatias verticais
 
-- Regra de ouro: cada tarefa/atividade entrega valor observável de ponta a ponta. Nunca "a parte do backend" / "a parte do front" separadas. No Apoio ao cliente, as atividades devem ser de diagnóstico, teste ou explicação, nunca de implementação de código.
+- Regra de ouro: cada tarefa/atividade entrega valor observável de ponta a ponta — nunca uma etapa interna isolada. A divisão aceita é a do time (`Codificação [BACKEND]`/`[FRONTEND]`, `Defeito`, `Associado [CLIENTE]`, `Spike`), conforme `quebra-padroes.md`. No Apoio ao cliente, as atividades devem ser de diagnóstico, teste ou explicação, nunca de implementação de código.
+- Aplique as **regras da casa** antes dos 9 padrões: corrigir antes de validar, escopo fechado, juntar antes de dividir.
 - Aplique os 9 padrões de quebra em ordem (arquivo `quebra-padroes.md`).
-- Critérios de parada: tarefa independente, testável, estimável e ≤ tamanho alvo (1 agente, ≤ 1 sessão, ~≤ 4h). Se exceder, quebre de novo.
+- No fluxo de Manutenção a entrega é pequena por definição: **uma correção** (ou **uma investigação**, se a causa não estiver comprovada) mais **um `Associado [CLIENTE]` por relato afetado**, quando a mesma correção atende mais de um relato.
+- Critérios de parada: tarefa independente, testável, estimável e no tamanho alvo (**S ~4h · M ~8h · L ~16h**). Se exceder, quebre de novo.
 - Apresente a árvore de tarefas proposta (título + 1 linha de valor cada) e negocie ajustes antes de detalhar.
 
 ## Fase 3/4 — Especificação de cada tarefa
@@ -68,14 +70,16 @@ Não é preciso confirmar o contexto à parte: ele entra na revisão da Fase 1.
 - Critérios de aceite em **Dado/Quando/Então**, verificáveis por teste (3–8 por tarefa).
 - Escreva pensando no agente implementador: autocontido, sem ambiguidade, caminhos de arquivo concretos quando conhecidos, "Fora de escopo" explícito.
 - Use `consult_specialist` de novo quando surgir dúvida técnica na especificação.
+- Título curto, orientado a resultado e no vocabulário do time (`Codificação [BACKEND] — rejeitar períodos sobrepostos no pedido unificado`), não a atividade genérica.
 - IDs: `TASK-01`, `TASK-02`, ... estáveis e únicos.
-- Preencha `type` (`Task` ou `Story`), `labels` (usar as labels do épico quando fizer sentido), `storyPoints` (opcional), `estimate` (`S`/`M`/`L` ou horas).
+- Preencha `type` com a categoria do time (`Codificação [BACKEND]`, `Codificação [FRONTEND]`, `Defeito`, `Execução de TU`, `Merge`, `Associado [CLIENTE]`, `Spike`, ou `Task`/`Story`/`Bug` quando nenhuma servir), `labels` (usar as labels do épico quando fizer sentido), `storyPoints` (opcional), `estimate` (`S`/`M`/`L` ou horas).
 
 ## Fase 4/4 — Sequenciamento em ondas
 
 - Monte o grafo de dependências (`dependsOn`) e agrupe em ondas (waves).
 - Tarefas independentes entre si ficam na mesma onda (rodam em paralelo em agentes distintos).
 - Regra anti-conflito: nunca duas tarefas da mesma onda tocando os mesmos arquivos/áreas críticas.
+- Tarefas `Associado` não alteram código: ficam na mesma onda da correção e são concluídas junto com a entrega.
 - Apresente a ordem proposta e negocie.
 
 ## Entrega

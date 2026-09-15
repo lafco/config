@@ -2,6 +2,24 @@
 
 Aplique os padrões **em ordem** (do 1 ao 9): use o primeiro que funcionar. Depois de quebrar, reaplique às partes que ainda forem grandes.
 
+## Regras da casa (valem antes dos 9 padrões)
+
+**Corrigir antes, validar depois.** Diagnóstico não é tarefa de abertura. Com a causa comprovada no código, o primeiro entregável é a correção; a validação com a **evidência real do relato** (base/empresa/matrícula) fecha o trabalho — como critério de aceite da correção, ou como tarefa final quando exigir apuração em dados de produção.
+
+**Escopo fechado.** Problema adjacente não vira tarefa: detecção por job/cron, limpeza retroativa, robustez de casos extremos, refatoração e melhorias ao redor vão para `foraDeEscopo`/`riscos` como recomendação — salvo se a issue pedir explicitamente.
+
+**Junte antes de dividir.** O que um agente entrega em uma sessão é **uma** tarefa. Não crie tarefa por etapa interna (validar, tratar erro, ajustar mensagem) quando tudo cabe no mesmo commit. Uma Manutenção com causa comprovada é **uma** correção — não uma árvore técnica.
+
+**Vocabulário do time.** Nomeie as tarefas com as categorias usadas no Jira do time:
+
+| Categoria | Uso |
+|---|---|
+| `Codificação [BACKEND]` / `Codificação [FRONTEND]` | Mudança de código; é a quebra natural de Story/Epic — cada lado com critério de aceite verificável e o contrato entre eles já definido |
+| `Defeito` | Bug encontrado sob uma Story/Epic |
+| `Execução de TU` / `Merge` | Etapas de entrega, quando a issue exigir |
+| `Associado [CLIENTE]` | **Manutenção**: um por cliente/relato afetado pela mesma correção (rastreamento e comunicação, não código) |
+| `Spike` | Investigação com timebox e perguntas a responder (padrão 9) |
+
 ## Meta-padrão (vale para todos)
 
 1. Identifique a complexidade central do item.
@@ -19,16 +37,17 @@ Aplique os padrões **em ordem** (do 1 ao 9): use o primeiro que funcionar. Depo
 6. **Esforço maior** — "implemente um + adicione os demais" (ex.: 1 formato de exportação primeiro, demais depois).
 7. **Simples/complexo** — versão mais simples do caso completo primeiro; otimizações e casos raros depois.
 8. **Performance depois** — "faça funcionar" antes de "faça rápido". Otimização vira tarefa posterior com meta mensurável.
-9. **Quebrar um spike** — quando a incerteza bloqueia a quebra, crie uma tarefa de investigação com timebox e perguntas a responder.
+9. **Quebrar um spike** — só quando a **incerteza impede** a própria quebra ou a causa **não** é comprovável: crie a investigação com timebox e perguntas a responder. Causa já comprovada por leitura de código não pede spike.
 
 ## Anti-padrões (não quebrar assim)
 
-- **Fatias horizontais**: "tarefa de backend" + "tarefa de frontend" para a mesma funcionalidade.
-- Tarefas só de componente técnico sem valor de usuário observável.
+- Tarefa que não entrega nada observável sozinha ("criar o helper", "ajustar o controller").
 - Quebra arbitrária por tamanho, sem preservar valor.
+- Árvore técnica onde uma correção única bastava (Manutenção virando 4 tarefas).
+- Abrir investigação quando a causa já está comprovada no código.
 
-## Heurísticas de tamanho (alvo: 1 sessão de agente)
+## Heurísticas de tamanho (em horas, como o time estima)
 
-- ≤ 4h de trabalho estimado; ideal 1–4h.
+- **S ~4h · M ~8h · L ~16h**; acima de 16h, quebre de novo.
 - 3–8 critérios de aceite no máximo.
 - Sem ambiguidade que exija decisão de produto no meio da implementação.
