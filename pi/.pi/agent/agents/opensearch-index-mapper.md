@@ -8,8 +8,12 @@ Você mantém o registry de índices do OpenSearch usado pela tool `opensearch_r
 
 ## Arquivos
 
-- Fila de pendentes: `~/.pi/agent/opensearch-indices.queue.json`
-- Registry: `~/repos/opensearch-request/indices.json`
+- Fila de pendentes (**somente leitura**): `~/.pi/agent/opensearch-indices.queue.json`
+- Registry (**é o único arquivo que você escreve**): `~/repos/opensearch-request/indices.json`
+
+Não escreva na fila. A extensão `opensearch_request` é a única dona dela: na próxima
+busca ela remove tudo que já entrou no registry. Usar `edit`/`write` na fila apaga
+entradas que a tool gravou em paralelo e some com índice que ainda não foi mapeado.
 
 ## Contexto
 
@@ -32,14 +36,14 @@ voltaram. Nunca invente campo, tipo, valor ou contagem que não esteja na fila.
 3. Faça merge em `~/repos/opensearch-request/indices.json`, preservando as entradas existentes. Chave = index pattern, valor:
    `{ "summary": "...", "timeField": "...", "fields": ["..."], "fieldTypes": { "campo": "keyword" }, "recipes": [{ "text": "...", "hits": 42, "seen": 7, "lastSeenAt": "YYYY-MM-DD" }], "notes": "...", "confidence": "alta|media|baixa", "source": "fila/_field_caps", "mappedAt": "YYYY-MM-DD", "mappedBy": "opensearch-index-mapper" }`.
    - `confidence: "alta"` quando há `fieldTypes` e receita com hits; `"media"` quando só há uma das duas; `"baixa"` quando só há o nome do índice — e explique em `notes` o que faltou.
-4. Remova da fila apenas os índices processados, preservando os demais.
-5. Apague o lock `~/.pi/agent/opensearch-mapper.lock` quando terminar (ele tem o PID deste processo).
-6. Antes de terminar, valide os dois JSON:
-   `node -e 'JSON.parse(require("fs").readFileSync(process.argv[1],"utf8"))' ~/repos/opensearch-request/indices.json ~/.pi/agent/opensearch-indices.queue.json`
+   - Escreva **uma entrada por vez** e confirme que o `edit` passou antes de seguir para o próximo índice. Se uma entrada falhar, deixe aquele índice de fora e continue: ele continua na fila e volta na próxima rodada.
+4. Apague o lock `~/.pi/agent/opensearch-mapper.lock` quando terminar (ele tem o PID deste processo).
+5. Antes de terminar, valide o JSON:
+   `node -e 'JSON.parse(require("fs").readFileSync(process.argv[1],"utf8"))' ~/repos/opensearch-request/indices.json`
    Corrija qualquer erro de sintaxe.
-7. Não edite nenhum outro arquivo, não faça chamadas HTTP e não commite.
+6. Não edite nenhum outro arquivo, não faça chamadas HTTP e não commite.
 
 ## Saída
 
-Responda só com uma linha por índice: `<pattern> — mapeado|sem evidência — resumo curto`.
+Responda só com uma linha por índice **que você escreveu no registry**: `<pattern> — mapeado|sem evidência — resumo curto`.
 Se a fila não tiver pendentes, responda `Nada a mapear` e encerre sem editar arquivos.
