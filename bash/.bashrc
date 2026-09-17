@@ -98,3 +98,4 @@ DOTFILES_DIR="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"
 export PATH="/run/wrappers/bin:$PATH"
 
 
+eval "$(atuin init bash)"
