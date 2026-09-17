@@ -4,8 +4,14 @@ const FETCH_TIMEOUT_MS = 20_000;
 
 export interface OpenSearchConfig {
 	url: string;
-	apiKey: string;
+	/** API key (`ApiKey <valor>`). Tem precedência sobre usuário/senha. */
+	apiKey?: string;
+	/** Autenticação básica, usada quando não há apiKey. */
+	username?: string;
+	password?: string;
 	index?: string;
+	/** Campo de tempo usado no filtro `since`/`until` e na ordenação. */
+	timeField?: string;
 }
 
 export interface OpenSearchQuery {
@@ -44,10 +50,23 @@ export class OpenSearchClient {
 		this.config = { ...config, url: config.url.replace(/\/+$/, "") };
 	}
 
+	/**
+	 * Cabeçalho de autenticação: API key quando configurada, senão Basic com
+	 * usuário/senha (`secrets.json` atual usa usuário/senha).
+	 */
+	private authorization(): string {
+		const apiKey = this.config.apiKey?.trim();
+		if (apiKey) return apiKey.startsWith("ApiKey ") ? apiKey : `ApiKey ${apiKey}`;
+		const username = this.config.username ?? "";
+		const password = this.config.password ?? "";
+		return `Basic ${Buffer.from(`${username}:${password}`, "utf8").toString("base64")}`;
+	}
+
 	async search(query: OpenSearchQuery, signal?: AbortSignal): Promise<OpenSearchResult> {
 		const size = Math.min(Math.max(Math.trunc(query.size ?? 20), 1), 50);
 		const from = Math.max(Math.trunc(query.from ?? 0), 0);
 		const index = (query.index?.trim() || this.config.index || "*").replace(/^\/+|\/+$/g, "");
+		const timeField = this.config.timeField?.trim() || "@timestamp";
 		const must = query.text?.trim()
 			? [{ query_string: { query: query.text.trim(), default_operator: "AND" } }]
 			: [{ match_all: {} }];
@@ -55,7 +74,7 @@ export class OpenSearchClient {
 		if (query.since || query.until) {
 			filters.push({
 				range: {
-					"@timestamp": {
+					[timeField]: {
 						...(query.since ? { gte: query.since } : {}),
 						...(query.until ? { lte: query.until } : {}),
 					},
@@ -68,7 +87,7 @@ export class OpenSearchClient {
 			size,
 			track_total_hits: true,
 			query: { bool: { must, filter: filters } },
-			sort: [{ "@timestamp": { order: "desc", unmapped_type: "date" } }],
+			sort: [{ [timeField]: { order: "desc", unmapped_type: "date" } }],
 		};
 		const controller = new AbortController();
 		const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
@@ -83,9 +102,7 @@ export class OpenSearchClient {
 				headers: {
 					Accept: "application/json",
 					"Content-Type": "application/json",
-					Authorization: this.config.apiKey.startsWith("ApiKey ")
-						? this.config.apiKey
-						: `ApiKey ${this.config.apiKey}`,
+					Authorization: this.authorization(),
 				},
 				body: JSON.stringify(body),
 				signal: controller.signal,

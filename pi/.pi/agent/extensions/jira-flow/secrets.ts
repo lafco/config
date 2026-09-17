@@ -36,8 +36,14 @@ export interface ProductsSecrets {
 
 export interface OpenSearchSecrets {
 	url: string;
-	apiKey: string;
+	/** Autenticação por API key (preferida quando presente). */
+	apiKey?: string;
+	/** Autenticação básica (alternativa usada pelo secrets.json atual). */
+	username?: string;
+	password?: string;
 	index?: string;
+	/** Campo de tempo do índice (ex.: `time_iso8601`); o cliente usa `@timestamp` quando ausente. */
+	timeField?: string;
 }
 
 export interface JiraSecrets {
@@ -84,7 +90,13 @@ interface FilesShape {
 	opensearch?: {
 		url?: string;
 		apiKey?: string;
+		username?: string;
+		password?: string;
 		index?: string;
+		timeField?: string;
+	};
+	pw2?: {
+		environments?: Record<string, { autoRunCompanies?: unknown }>;
 	};
 }
 
@@ -135,11 +147,19 @@ export function loadSecrets(): LoadResult {
 		: undefined;
 	const opensearchUrl = data.opensearch?.url ?? env("OPENSEARCH_URL");
 	const opensearchApiKey = data.opensearch?.apiKey ?? env("OPENSEARCH_API_KEY");
-	const opensearch: OpenSearchSecrets | undefined = opensearchUrl && opensearchApiKey
+	const opensearchUsername = data.opensearch?.username ?? env("OPENSEARCH_USERNAME");
+	const opensearchPassword = data.opensearch?.password ?? env("OPENSEARCH_PASSWORD");
+	const opensearchTimeField = data.opensearch?.timeField ?? env("OPENSEARCH_TIME_FIELD");
+	const usableOpenSearch =
+		opensearchUrl && (opensearchApiKey || (opensearchUsername && opensearchPassword));
+	const opensearch: OpenSearchSecrets | undefined = usableOpenSearch
 		? {
 				url: normalizeBaseUrl(opensearchUrl),
 				apiKey: opensearchApiKey,
+				username: opensearchUsername,
+				password: opensearchPassword,
 				index: data.opensearch?.index ?? env("OPENSEARCH_INDEX"),
+				timeField: opensearchTimeField,
 			}
 		: undefined;
 
@@ -165,6 +185,30 @@ export function loadSecrets(): LoadResult {
 }
 
 export { secretsFilePath };
+
+/**
+ * Empresas liberadas para execução sem confirmação em ambientes não-locais
+ * (`pw2.environments.<nome>.autoRunCompanies`). Lido em modo best-effort: serve
+ * só para avisar o refinamento de que um worker vai conseguir validar a task
+ * via `pw2_request` fora do TUI, ou se a validação terá de ser manual.
+ */
+export function loadAutoRunCompanies(): string[] {
+	try {
+		const { data } = readFile();
+		const environments = data.pw2?.environments ?? {};
+		const companies = new Set<string>();
+		for (const config of Object.values(environments)) {
+			const list = config?.autoRunCompanies;
+			if (!Array.isArray(list)) continue;
+			for (const company of list) {
+				if (typeof company === "string" && company.trim()) companies.add(company.trim());
+			}
+		}
+		return [...companies];
+	} catch {
+		return [];
+	}
+}
 
 /**
  * Grava (ou mescla) as credenciais em `~/.pi/agent/secrets.json` com permissão 0600.

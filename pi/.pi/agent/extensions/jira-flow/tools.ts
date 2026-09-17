@@ -20,16 +20,25 @@ import {
 	wrapTextWithAnsi,
 } from "@earendil-works/pi-tui";
 import { Type, type Static } from "typebox";
-import { materializeArtifacts } from "./artifacts.ts";
+import { materializeArtifacts, materializeEpicStories, materializeStoryTasks } from "./artifacts.ts";
+import { refinementShape } from "./issue-type.ts";
 import { McpbClient, McpbError } from "./mcpb.ts";
 import { OpenSearchError } from "./opensearch.ts";
 import { ProductsError } from "./products.ts";
-import { approveAnalysis, getRefinement, stopRefinement } from "./state.ts";
+import { loadAutoRunCompanies } from "./secrets.ts";
+import { getRefinement, stopRefinement } from "./state.ts";
+import { applyValidationDefaults, loadValidationDefaults, type ValidationDefaults } from "./validation-defaults.ts";
 
 let registered = false;
 
 export interface FlowToolsOptions {
 	templatesDir: string;
+	/** Diretório da extension, para ler `validation-defaults.json`. */
+	extDir?: string;
+}
+
+function defaultsFor(options: FlowToolsOptions): ValidationDefaults {
+	return loadValidationDefaults(options.extDir ?? options.templatesDir);
 }
 
 export function registerFlowTools(pi: ExtensionAPI, options: FlowToolsOptions): void {
@@ -92,7 +101,80 @@ const EmitTaskSchema = Type.Object({
 		}),
 	),
 	storyPoints: Type.Optional(Type.Number()),
+	repo: Type.Optional(
+		Type.String({ description: "Caminho do repositório onde a tarefa será implementada (para execução por agentes)." }),
+	),
+	branch: Type.Optional(Type.String({ description: "Branch sugerida para a tarefa (ex.: feat/PROJ-123-task-01)." })),
+	filesLikelyTouched: Type.Optional(
+		Type.Array(Type.String(), {
+			description:
+				"Arquivos/áreas prováveis de alteração. Gate anti-conflito: duas tarefas da mesma onda não podem compartilhar arquivo.",
+		}),
+	),
+	implementableByAgent: Type.Optional(
+		Type.Boolean({
+			description: "false quando a tarefa é só diagnóstico/explicação (fluxos de investigação). Padrão: true.",
+		}),
+	),
+	kind: Type.Optional(
+		Type.String({ description: "diagnóstico | correção | exploração — usado pelos fluxos de investigação." }),
+	),
+	validation: Type.Optional(
+		Type.Object(
+			{
+				kind: Type.Union([Type.Literal("pw2"), Type.Literal("unit-tests"), Type.Literal("manual")], {
+					description: "Como o comportamento será validado.",
+				}),
+				environment: Type.Optional(
+					Type.String({ description: "Ambiente do PW2 (padrão: local). Fora de local exige company." }),
+				),
+				company: Type.Optional(
+					Type.String({ description: "Código da empresa (ex.: a831145); precisa estar em autoRunCompanies." }),
+				),
+				register: Type.Optional(
+					Type.String({ description: "Matrícula usada no teste (padrão local: 236)." }),
+				),
+				steps: Type.Optional(Type.Array(Type.String(), { description: "Passos da validação." })),
+				expected: Type.String({ description: "O que deve ser observado para a validação passar." }),
+			},
+			{ description: "Obrigatória no fluxo Story para tarefas de código." },
+		),
+	),
 });
+
+const StorySchema = Type.Object({
+	id: Type.String({ description: "ID local estável, ex.: STORY-01" }),
+	title: Type.String(),
+	jiraKey: Type.Optional(
+		Type.String({ description: "Key da história no Jira; omita quando ela ainda não existe." }),
+	),
+	wave: Type.Integer({ minimum: 1, description: "Onda de execução da história (1, 2, 3...)" }),
+	dependsOn: Type.Optional(Type.Array(Type.String(), { description: "IDs das histórias predecessoras" })),
+	estimate: Type.Optional(Type.String({ description: "S | M | L ou horas" })),
+	objective: Type.Optional(Type.String()),
+	valorObservavel: Type.String({
+		description:
+			"O que fica demonstrável com a história e para quem (tela, endpoint, teste). Obrigatório e específico; não repetir o título.",
+	}),
+	context: Type.Optional(Type.String()),
+	acceptanceCriteria: Type.Array(
+		Type.String({ description: "Cada item no formato Dado/Quando/Então." }),
+		{ description: "Pelo menos um critério de aceite." },
+	),
+	analysis: Type.Optional(Type.String({ description: "Análise e decisões da story." })),
+	affectedAreas: Type.Optional(Type.String()),
+	outOfScope: Type.Optional(Type.String()),
+	risks: Type.Optional(Type.String()),
+	labels: Type.Optional(Type.Array(Type.String())),
+	storyPoints: Type.Optional(Type.Number()),
+});
+
+const EmitStorySchema = Type.Object({
+	story: StorySchema,
+	tasks: Type.Array(EmitTaskSchema, { description: "Tarefas implementáveis da story, em qualquer ordem" }),
+});
+
+type EmitStoryParams = Static<typeof EmitStorySchema>;
 
 const EmitSchema = Type.Object({
 	epic: Type.Object({
@@ -106,47 +188,164 @@ const EmitSchema = Type.Object({
 		openQuestions: Type.Optional(Type.String()),
 		labels: Type.Optional(Type.Array(Type.String())),
 	}),
-	tasks: Type.Array(EmitTaskSchema, { description: "Tarefas da quebra, em qualquer ordem" }),
+	stories: Type.Optional(
+		Type.Array(StorySchema, {
+			description: "Exclusivo do fluxo Epic: histórias verticais da quebra.",
+		}),
+	),
+	tasks: Type.Optional(
+		Type.Array(EmitTaskSchema, {
+			description: "Tarefas da quebra (fluxos planos: Manutenção/Apoio/Documentação/genérico).",
+		}),
+	),
 });
 
 type EmitParams = Static<typeof EmitSchema>;
 
 function registerEmitTool(pi: ExtensionAPI, options: FlowToolsOptions): void {
+	registerEmitEpicTool(pi, options);
+	registerEmitStoryTool(pi, options);
+}
+
+interface MaterializeMetaLike {
+	jiraKey: string;
+	issueType: string;
+	project: string;
+	jiraUrl: string;
+	syncedAt: string;
+	parentKey?: string;
+	parentSummary?: string;
+}
+
+function metaFor(state: NonNullable<ReturnType<typeof getRefinement>>): MaterializeMetaLike {
+	return {
+		jiraKey: state.key,
+		issueType: state.issueType,
+		project: state.project,
+		jiraUrl: state.jiraUrl,
+		syncedAt: new Date().toISOString(),
+		parentKey: state.parentKey ?? undefined,
+		parentSummary: state.parentSummary ?? undefined,
+	};
+}
+
+function renderWarnings(warnings: string[]): string {
+	if (warnings.length === 0) return "";
+	return `\n\nAvisos:\n${warnings.map((warning) => `- ${warning}`).join("\n")}`;
+}
+
+function registerEmitEpicTool(pi: ExtensionAPI, options: FlowToolsOptions): void {
 	pi.registerTool({
 		name: "emit_epic_artifacts",
 		label: "Gravar artefatos da issue",
 		description:
-			"Ferramenta interna do fluxo /refinar-issue. Entrega a análise da issue e a lista de tarefas/atividades para o harness gravar epic.md, index.md e tasks/*.md. Só chame quando o fluxo /refinar-issue estiver ativo, a análise tiver sido aprovada via `submit_analysis` e a entrega tiver sido validada com o usuário.",
+			"Ferramenta interna do fluxo /refinar-issue. No fluxo Epic entrega a análise + `stories` (histórias verticais); nos fluxos planos (Manutenção/Apoio/Documentação/genérico) entrega a análise + `tasks`. O harness grava epic.md, index.md e stories/*.md ou tasks/*.md. No fluxo Story use `emit_story_artifacts`. Só chame quando o fluxo /refinar-issue estiver ativo, a análise tiver sido aprovada via `submit_analysis` e a entrega tiver sido validada com o usuário.",
 		parameters: EmitSchema,
 		async execute(_toolCallId, params: EmitParams) {
 			const state = getRefinement();
 			if (!state) {
 				return fail("Nenhum refinamento ativo. Inicie com /refinar-issue <KEY>.", {});
 			}
-			if (!state.analysisApproved) {
+
+			const shape = refinementShape(state.flow);
+			if (state.flow === "story") {
 				return fail(
-					"Análise ainda não aprovada. Chame `submit_analysis` e obtenha o OK do usuário antes de emitir os artefatos.",
+					"Esta issue é uma Story: entregue com `emit_story_artifacts` (story + tasks), não com `emit_epic_artifacts`.",
 					{},
 				);
 			}
 
 			try {
+				if (shape === "stories") {
+					if (!params.stories?.length) {
+						return fail(
+							"Epic entrega `stories` (histórias verticais), não `tasks`. Cada história tem id, wave, valorObservavel e critérios de aceite.",
+							{},
+						);
+					}
+					if (params.tasks?.length) {
+						return fail(
+							"Um Epic não emite `tasks` diretamente: cada história será refinada depois com /refinar-issue <STORY-KEY>.",
+							{},
+						);
+					}
+					const result = await materializeEpicStories({
+						dir: state.dir,
+						templatesDir: options.templatesDir,
+						epic: params.epic,
+						stories: params.stories,
+						meta: metaFor(state),
+					});
+					stopRefinement();
+					const list = result.files.map((file) => `- ${file}`).join("\n");
+					return ok(`Artefatos gravados em ${result.dir}\n${list}${renderWarnings(result.warnings)}`, result);
+				}
+
+				if (!params.tasks?.length) {
+					return fail("tasks deve conter pelo menos uma tarefa.", {});
+				}
+				if (params.stories?.length) {
+					return fail(
+						"Este fluxo entrega `tasks`; `stories` é exclusivo do fluxo Epic.",
+						{},
+					);
+				}
 				const result = await materializeArtifacts({
 					dir: state.dir,
 					templatesDir: options.templatesDir,
 					epic: params.epic,
-					tasks: params.tasks,
-					meta: {
-						jiraKey: state.key,
-						issueType: state.issueType,
-						project: state.project,
-						jiraUrl: state.jiraUrl,
-						syncedAt: new Date().toISOString(),
-					},
+					tasks: applyValidationDefaults(params.tasks, defaultsFor(options)),
+					meta: metaFor(state),
+					flow: state.flow,
+					autoRunCompanies: loadAutoRunCompanies(),
 				});
 				stopRefinement();
 				const list = result.files.map((file) => `- ${file}`).join("\n");
-				return ok(`Artefatos gravados em ${result.dir}\n${list}`, result);
+				return ok(`Artefatos gravados em ${result.dir}\n${list}${renderWarnings(result.warnings)}`, result);
+			} catch (error) {
+				const message = error instanceof Error ? error.message : String(error);
+				return fail(`Falha ao gravar artefatos: ${message}`, {});
+			}
+		},
+	});
+}
+
+function registerEmitStoryTool(pi: ExtensionAPI, options: FlowToolsOptions): void {
+	pi.registerTool({
+		name: "emit_story_artifacts",
+		label: "Gravar story e tarefas",
+		description:
+			"Ferramenta interna do fluxo /refinar-issue. Entrega a Story refinada (`story`) e as `tasks` implementáveis por agentes em paralelo; o harness grava story.md, index.md, tasks/*.md e cria evidence/. Declare em cada tarefa de código `repo`, `filesLikelyTouched` e `validation` (pw2/unit-tests/manual) — o gate anti-conflito rejeita tarefas da mesma onda com arquivos em comum. Validação `pw2` fora de `local` exige `company`; ela só roda sem humano quando a empresa está em `autoRunCompanies`. Só chame quando o fluxo /refinar-issue estiver ativo e a análise tiver sido aprovada via `submit_analysis`.",
+		parameters: EmitStorySchema,
+		async execute(_toolCallId, params: EmitStoryParams) {
+			const state = getRefinement();
+			if (!state) {
+				return fail("Nenhum refinamento ativo. Inicie com /refinar-issue <KEY>.", {});
+			}
+			if (refinementShape(state.flow) === "stories") {
+				return fail(
+					"Esta issue é um Epic: entregue `stories` via `emit_epic_artifacts`.",
+					{},
+				);
+			}
+
+			try {
+				const story = {
+					...params.story,
+					jiraKey: params.story.jiraKey?.trim() || (state.flow === "story" ? state.key : undefined),
+				};
+				const result = await materializeStoryTasks({
+					dir: state.dir,
+					templatesDir: options.templatesDir,
+					story,
+					tasks: applyValidationDefaults(params.tasks, defaultsFor(options)),
+					meta: metaFor(state),
+					flow: state.flow,
+					autoRunCompanies: loadAutoRunCompanies(),
+				});
+				stopRefinement();
+				const list = result.files.map((file) => `- ${file}`).join("\n");
+				return ok(`Artefatos gravados em ${result.dir}\n${list}${renderWarnings(result.warnings)}`, result);
 			} catch (error) {
 				const message = error instanceof Error ? error.message : String(error);
 				return fail(`Falha ao gravar artefatos: ${message}`, {});
@@ -538,8 +737,7 @@ const AnalysisSchema = Type.Object({
 type AnalysisParams = Static<typeof AnalysisSchema>;
 
 interface AnalysisDetails {
-	status: "approved" | "rejected" | "cancelled" | "automatic";
-	comment?: string;
+	status: "registered";
 }
 
 function renderAnalysis(params: AnalysisParams): string {
@@ -560,88 +758,35 @@ function renderAnalysis(params: AnalysisParams): string {
 	].join("\n\n");
 }
 
-async function reviewAnalysis(ctx: ExtensionContext, body: string): Promise<AnalysisDetails> {
-	if (ctx.mode !== "tui") {
-		approveAnalysis();
-		return { status: "automatic" };
-	}
-
-	const viewed = await ctx.ui.editor("Revise a análise — Enter continua (texto só de leitura)", body);
-	if (viewed === undefined) return { status: "cancelled" };
-
-	const choice = await ctx.ui.select("Análise do épico", [
-		"Aprovar",
-		"Rejeitar com comentário",
-		"Cancelar",
-	]);
-	if (!choice || choice === "Cancelar") return { status: "cancelled" };
-	if (choice === "Aprovar") {
-		approveAnalysis();
-		return { status: "approved" };
-	}
-
-	const comment = (await ctx.ui.editor("Comentário da rejeição (o que ajustar?)", ""))?.trim();
-	return { status: "rejected", comment: comment || undefined };
-}
-
 function registerAnalysisTool(pi: ExtensionAPI): void {
 	pi.registerTool({
 		name: "submit_analysis",
-		label: "Submeter análise da issue",
+		label: "Registrar o entendimento da issue",
 		description:
-			"Ferramenta interna do fluxo /refinar-issue. Submete o modelo de entendimento da issue para o usuário revisar e aprovar. A entrega não pode ser emitida antes da análise aprovada. Em caso de rejeição, o retorno traz o comentário do usuário para você ajustar e submeter de novo.",
+			"Ferramenta interna do fluxo /refinar-issue. Registra o modelo de entendimento da issue no histórico (fica legível para consulta) e **não bloqueia** a entrega — não abre revisão/aprovação. A validação humana acontece na quebra proposta das tarefas (Fase 2) e na confirmação antes de gravar. Chame uma vez, depois de investigar o repositório, para deixar o entendimento explícito antes de decompor.",
 		parameters: AnalysisSchema,
 		executionMode: "sequential",
-		async execute(_toolCallId, params: AnalysisParams, _signal, _onUpdate, ctx: ExtensionContext) {
+		async execute(_toolCallId, params: AnalysisParams, _signal, _onUpdate, _ctx: ExtensionContext) {
 			if (!getRefinement()) {
 				return fail("Nenhum refinamento ativo. Inicie com /refinar-issue <KEY>.", {
-					status: "cancelled",
+					status: "registered",
 				} satisfies AnalysisDetails);
 			}
 
 			const body = renderAnalysis(params);
-			let review: AnalysisDetails;
-			try {
-				review = await reviewAnalysis(ctx, body);
-			} catch (error) {
-				const message = error instanceof Error ? error.message : String(error);
-				return fail(`Falha ao abrir a revisão: ${message}`, { status: "cancelled" } satisfies AnalysisDetails);
-			}
-
-			if (review.status === "approved" || review.status === "automatic") {
-				const note =
-					review.status === "automatic"
-						? "Modo não interativo: análise registrada sem revisão humana."
-						: "Análise aprovada pelo usuário.";
-				return ok(note, review);
-			}
-			if (review.status === "cancelled") {
-				return fail("Revisão da análise cancelada. Retome com o usuário antes de continuar.", review);
-			}
-			return ok(
-				`Análise rejeitada pelo usuário. Ajuste conforme o comentário e chame \`submit_analysis\` de novo.\nComentário: ${review.comment ?? "(sem comentário)"}`,
-				review,
-			);
+			return ok(`Entendimento registrado (sem gate; a validação é na quebra).\n\n${body}`, {
+				status: "registered",
+			} satisfies AnalysisDetails);
 		},
 		renderCall(_args, theme) {
-			return new Text(theme.fg("toolTitle", theme.bold("submit_analysis ")) + theme.fg("muted", "modelo da issue"), 0, 0);
+			return new Text(
+				theme.fg("toolTitle", theme.bold("submit_analysis ")) + theme.fg("muted", "entendimento da issue"),
+				0,
+				0,
+			);
 		},
-		renderResult(result, _options, theme) {
-			const details = result.details as AnalysisDetails | undefined;
-			switch (details?.status) {
-				case "approved":
-					return new Text(theme.fg("success", "✓ Análise aprovada"), 0, 0);
-				case "automatic":
-					return new Text(theme.fg("warning", "◦ Análise registrada (sem revisão)"), 0, 0);
-				case "rejected":
-					return new Text(
-						theme.fg("error", "✗ Rejeitada") + theme.fg("muted", ` — ${details.comment ?? "sem comentário"}`),
-						0,
-						0,
-					);
-				default:
-					return new Text(theme.fg("warning", "Revisão cancelada"), 0, 0);
-			}
+		renderResult(_result, _options, theme) {
+			return new Text(theme.fg("success", "✓ Entendimento registrado"), 0, 0);
 		},
 	});
 }
@@ -658,6 +803,21 @@ const ConsultSchema = Type.Object({
 
 type ConsultParams = Static<typeof ConsultSchema>;
 
+/**
+ * Nomes dos produtos do índice local, para a mensagem de erro do
+ * `consult_specialist` — sem produto resolvido, a LLM precisa saber o que
+ * pode passar em `produto` (era o ponto em que a tool morria em silêncio).
+ */
+async function availableProducts(state: NonNullable<ReturnType<typeof getRefinement>>): Promise<string[]> {
+	if (!state.mcpbBin) return [];
+	try {
+		const list = await new McpbClient(state.mcpbBin).products();
+		return list.map((item) => (item.displayName ? `${item.name} (${item.displayName})` : item.name));
+	} catch {
+		return [];
+	}
+}
+
 function registerConsultTool(pi: ExtensionAPI): void {
 	pi.registerTool({
 		name: "consult_specialist",
@@ -673,7 +833,25 @@ function registerConsultTool(pi: ExtensionAPI): void {
 			}
 			const product = params.produto?.trim() || state.productContext?.product;
 			if (!product) {
-				return fail("Produto desconhecido: informe `produto` explicitamente ou configure o mapa/mcpb.", {});
+				const available = await availableProducts(state);
+				const hint = available.length
+					? `Produtos disponíveis no índice local: ${available.join(", ")}.`
+					: "Não há índice local (mcpb) disponível; configure o mapa/mcpb ou informe um produto válido.";
+				return fail(
+					`Produto desconhecido: o harness não resolveu o produto desta issue. Passe \`produto\` explicitamente — ${hint}`,
+					{ products: available },
+				);
+			}
+
+			// Produto identificado mas ainda não indexado (indexação gradual): nem o
+			// mcpb nem o catálogo HTTP têm o que responder — diga isso e não invente.
+			if (!state.products && !state.mcpbContext) {
+				const available = await availableProducts(state);
+				const indexed = available.length ? ` Produtos indexados hoje: ${available.join(", ")}.` : "";
+				return fail(
+					`O produto "${product}" ainda não está no índice local (mcpb) e o catálogo HTTP não está configurado — a indexação é gradual.${indexed} Investigue os repositórios do contexto da Fase 0 (grep/read) e registre a dúvida em \`duvidas\`/\`riscos\`.`,
+					{ product, indexed: available },
+				);
 			}
 			const errors: string[] = [];
 

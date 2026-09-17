@@ -1,0 +1,52 @@
+{
+  "pontoweb": {
+    "displayName": "PontoWeb",
+    "description": "Plataforma de ponto e gestão (monólito PHP Vork MVC + frontend React/legacy). Indexado no mcpb; aqui serve de fallback quando o índice está fora.",
+    "repos": ["pw2"]
+  },
+  "vacations": {
+    "displayName": "Vacations",
+    "description": "Ahgora Férias: backend no pw2, frontend Vue2 no vacations-client. Indexado no mcpb; aqui serve de fallback quando o índice está fora.",
+    "repos": ["pw2", "vacations-client"]
+  },
+  "folgas": {
+    "displayName": "Folgas",
+    "description": "Ahgora Folgas — gestão de folgas; nasceu junto do Rostering e hoje é um produto separado.",
+    "repos": ["folgas-api", "folgas-ui"]
+  },
+  "rostering": {
+    "displayName": "Rostering",
+    "description": "Ahgora Rostering — escalas de trabalho complexas com múltiplas restrições, integrado ao PontoWeb.",
+    "repos": ["rostering-api", "rostering-ui"]
+  },
+  "acessoweb": {
+    "displayName": "AcessoWEB",
+    "description": "Acesso físico: controle de acesso (portaria) e equipamentos de entrada/saída.",
+    "repos": ["aw-client", "acessoweb"]
+  },
+  "smartgate": {
+    "displayName": "Smart Gate",
+    "description": "Acesso virtual: liberação remota de acesso via Smart Gate. Backend no pw2; frontend no smartgate-client.",
+    "repos": ["smartgate-client", "pw2"]
+  },
+  "mapa_frequencia": {
+    "displayName": "Mapa de Frequência (Cerca Virtual)",
+    "description": "Cerca virtual / mapa de frequência embarcado no pw2: batidas com localização e geofencing. Módulo `cercas` (mvc/controllers/cercas.php, mvc/views/cercas/** com batidas.php/index.php, js-source/legacy/js/views/cercas/**); permissão/plano `cerca_virtual`. Diferente do produto Live Maps (`livemaps`), que tem repos próprios.",
+    "repos": ["pw2"]
+  },
+  "livemaps": {
+    "displayName": "Live Maps (Mapa de Frequência)",
+    "description": "Live Maps / Mapa de Frequência: mapa de postos de trabalho e posição dos funcionários. API em livemaps (PHP Slim), UI em livemaps-client (Vue), consumer de eventos em livemaps_consumer; o módulo `cercas` do pw2 (mvc/controllers/cercas.php, mvc/views/cercas/**) é a parte embarcada/legada.",
+    "repos": ["livemaps", "livemaps-client", "livemaps_consumer", "pw2"]
+  },
+  "espelho": {
+    "displayName": "Espelho de Ponto",
+    "description": "Espelho de ponto: geração, aprovação e extrato. Frontend próprio (mirror-client); backend permanece no pw2 (gerador_espelhos/gerenciador_espelhos).",
+    "repos": ["mirror-client", "pw2"]
+  },
+  "timesheet": {
+    "displayName": "TimeSheet",
+    "description": "Timesheet — apontamento de atividades (pode ou não estar vinculado às batidas e escalas do PW).",
+    "repos": ["ts", "ts-client"]
+  }
+}

@@ -11,6 +11,16 @@ assignee: ""
 status: backlog
 wave: {{wave}}
 depends_on: {{dependsOnYaml}}
+repo: {{repo}}
+branch: {{branch}}
+files_likely_touched: {{filesLikelyTouchedYaml}}
+implementable_by_agent: {{implementableByAgent}}
+kind: {{kind}}
+validation_kind: {{validationKind}}
+validation_environment: {{validationEnvironment}}
+validation_company: {{validationCompany}}
+validation_register: {{validationRegister}}
+validation_expected: {{validationExpectedYaml}}
 ---
 
 # {{id}} — {{title}}
@@ -19,6 +29,9 @@ depends_on: {{dependsOnYaml}}
 - **Onda:** {{wave}}
 - **Dependências:** {{dependsOnText}}
 - **Estimativa:** {{estimate}}
+- **Repositório:** {{repoText}}
+- **Branch sugerida:** {{branchText}}
+- **Categoria:** {{kindText}}
 
 ## Objetivo
 
@@ -44,6 +57,19 @@ depends_on: {{dependsOnYaml}}
 
 {{affectedAreas}}
 
+## Arquivos prováveis
+
+{{filesLikelyTouchedText}}
+
+## Validação
+
+- **Tipo:** {{validationSummary}}
+- **Esperado:** {{validationExpected}}
+
+Passos:
+
+{{validationSteps}}
+
 ## Testes
 
 {{tests}}
@@ -52,7 +78,9 @@ depends_on: {{dependsOnYaml}}
 
 - [ ] Critérios de aceite atendidos
 - [ ] Testes descritos passando
+- [ ] Validação executada conforme a seção acima
 - [ ] Sem regressões conhecidas
+- [ ] Evidência registrada em `evidence/<ID>-<slug>.md`
 - [ ] Status atualizado para `pronto` no `index.md`
 
 ## Fora de escopo

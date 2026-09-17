@@ -63,6 +63,33 @@ export interface ProductsMap {
 	projects: Record<string, string>;
 	components: Record<string, string>;
 	labels: Record<string, string>;
+	/** Componentes de processo/gestão: existem no Jira mas não são produto. */
+	ignore: string[];
+}
+
+/** De onde o produto foi inferido — importa quando o match é fraco (projeto/label). */
+export type ProductSource = "component" | "project" | "label";
+
+export interface ProductResolution {
+	product: string;
+	source: ProductSource;
+	/** Valor do Jira que casou (componente, key do projeto ou label). */
+	matched: string;
+}
+
+/**
+ * Resultado da resolução. `product: null` com `source: "ignored"` significa
+ * "componente reconhecido, mas não é produto" — para não cair no default do
+ * projeto (ex.: OKR/PLR num projeto cujo default é um produto).
+ */
+export type ProductLookup =
+	| ProductResolution
+	| { product: null; source: "ignored"; matched: string };
+
+export interface McpbProductSummary {
+	name: string;
+	displayName: string;
+	description: string;
 }
 
 /**
@@ -113,7 +140,7 @@ export function findMcpbBin(): string | null {
 }
 
 function emptyProductsMap(): ProductsMap {
-	return { projects: {}, components: {}, labels: {} };
+	return { projects: {}, components: {}, labels: {}, ignore: [] };
 }
 
 /** Carrega o mapa de produtos; nunca lança (arquivo ausente/inválido = mapa vazio). */
@@ -127,6 +154,9 @@ export function loadProductsMap(extDir: string): ProductsMap {
 			projects: stringMap(parsed.projects),
 			components: stringMap(parsed.components),
 			labels: stringMap(parsed.labels),
+			ignore: Array.isArray(parsed.ignore)
+				? parsed.ignore.filter((item): item is string => typeof item === "string" && item.trim().length > 0)
+				: [],
 		};
 	} catch {
 		return emptyProductsMap();
@@ -142,32 +172,67 @@ function normalizeKey(value: string): string {
 		.trim();
 }
 
-function matchTable(values: string[], table: Record<string, string>): string | null {
+function matchTableDetailed(
+	values: string[],
+	table: Record<string, string>,
+): { product: string; matched: string } | null {
 	for (const value of values) {
 		const target = normalizeKey(value);
 		if (!target) continue;
 		for (const [key, product] of Object.entries(table)) {
-			if (normalizeKey(key) === target) return product;
+			if (normalizeKey(key) === target) return { product, matched: value };
 		}
 	}
 	return null;
 }
 
 /**
- * Resolve o produto pela ordem: primeiro componente com match exato
- * (case/acento-insensível) -> project key (uppercase exato) -> labels.
+ * Resolve o produto pela ordem: componente com match exato (case/acento-
+ * insensível) → componente ignorado (não é produto) → project key → label.
  * O componente vence o projeto: um épico do projeto X pode tratar de outro
  * produto (ex.: componente PontoWeb num épico de Férias).
+ *
+ * A versão detalhada devolve a origem, para o harness avisar quando o produto
+ * veio só do projeto (default) ou de uma label — match mais fraco — ou quando
+ * o componente é de processo.
  */
+export function resolveProductFromMapDetailed(
+	map: ProductsMap,
+	issue: { project: string; components: string[]; labels: string[] },
+): ProductLookup | null {
+	const byComponent = matchTableDetailed(issue.components, map.components);
+	if (byComponent) return { product: byComponent.product, source: "component", matched: byComponent.matched };
+
+	const ignored = matchIgnored(issue.components, map.ignore);
+	if (ignored) return { product: null, source: "ignored", matched: ignored };
+
+	const project = issue.project.toUpperCase();
+	const byProject = map.projects[project];
+	if (byProject) return { product: byProject, source: "project", matched: project };
+
+	const byLabel = matchTableDetailed(issue.labels, map.labels);
+	if (byLabel) return { product: byLabel.product, source: "label", matched: byLabel.matched };
+
+	return null;
+}
+
+/** Componente de processo que casa com a lista `ignore` (case/acento-insensível). */
+function matchIgnored(components: string[], ignore: string[]): string | null {
+	for (const value of components) {
+		const target = normalizeKey(value);
+		if (!target) continue;
+		for (const entry of ignore) {
+			if (normalizeKey(entry) === target) return value;
+		}
+	}
+	return null;
+}
+
 export function resolveProductFromMap(
 	map: ProductsMap,
 	issue: { project: string; components: string[]; labels: string[] },
 ): string | null {
-	return (
-		matchTable(issue.components, map.components) ??
-		map.projects[issue.project.toUpperCase()] ??
-		matchTable(issue.labels, map.labels)
-	);
+	return resolveProductFromMapDetailed(map, issue)?.product ?? null;
 }
 
 export class McpbError extends Error {
@@ -248,6 +313,29 @@ export class McpbClient {
 			});
 		}
 		return data as unknown as McpbProductContext;
+	}
+
+	/** `mcpb products` — catálogo de produtos do índice local (nome/descrição). */
+	async products(signal?: AbortSignal): Promise<McpbProductSummary[]> {
+		const data = await this.run(["products"], CONTEXT_TIMEOUT_MS, signal);
+		const list = Array.isArray(data)
+			? data
+			: isRecord(data) && Array.isArray(data.products)
+				? data.products
+				: null;
+		if (!list) {
+			throw new McpbError('Resposta inválida de "mcpb products" (JSON inesperado).', {
+				code: "bad_json",
+			});
+		}
+		return list
+			.filter(isRecord)
+			.map((item) => ({
+				name: typeof item.name === "string" ? item.name : "",
+				displayName: typeof item.displayName === "string" ? item.displayName : "",
+				description: typeof item.description === "string" ? item.description : "",
+			}))
+			.filter((item) => item.name);
 	}
 
 	/** `mcpb ask --product <nome> --question <pergunta>` — resposta + citações. */

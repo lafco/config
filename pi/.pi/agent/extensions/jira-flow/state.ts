@@ -5,6 +5,10 @@
  * as tools (`ask_user`, `submit_analysis`, `consult_specialist`,
  * `emit_epic_artifacts`) leem daqui. Nada é persistido em disco: cada
  * `/refinar-issue` recomeça o estado, e `session_shutdown` zera tudo.
+ *
+ * Não há gate de aprovação da análise: `submit_analysis` só registra o
+ * entendimento; a validação humana é a negociação da quebra e a confirmação
+ * antes de gravar.
  */
 
 import type { JiraClient } from "./jira.ts";
@@ -37,13 +41,15 @@ export interface RefinementState {
 	fallbackRepo: string | null;
 	/** Aviso da Fase 0 (catálogo fora, sem repo etc.), para o resumo/mensagem. */
 	catalogNote: string | null;
+	/** Epic pai, quando a issue refinada é uma Story (contexto do refinamento). */
+	parentKey: string | null;
+	parentSummary: string | null;
+	/** Repositório primário (primeiro do produto ou fallback), para a execução por agentes. */
+	primaryRepo: string | null;
 	/** Contexto local do índice mcpb (Fase 0), quando disponível. */
 	mcpbContext: McpbProductContext | null;
 	/** Caminho do CLI bin/mcpb (fallback do consult_specialist). */
 	mcpbBin: string | null;
-	/** Gate: só emite artefatos depois da análise aprovada via `submit_analysis`. */
-	analysisApproved: boolean;
-	analysisApprovedAt: string | null;
 }
 
 let current: RefinementState | null = null;
@@ -63,13 +69,17 @@ export interface StartRefinementInput {
 	catalogNote: string | null;
 	mcpbContext: McpbProductContext | null;
 	mcpbBin: string | null;
+	parentKey?: string | null;
+	parentSummary?: string | null;
+	primaryRepo?: string | null;
 }
 
 export function startRefinement(input: StartRefinementInput): RefinementState {
 	current = {
 		...input,
-		analysisApproved: false,
-		analysisApprovedAt: null,
+		parentKey: input.parentKey ?? null,
+		parentSummary: input.parentSummary ?? null,
+		primaryRepo: input.primaryRepo ?? null,
 	};
 	return current;
 }
@@ -80,10 +90,4 @@ export function getRefinement(): RefinementState | null {
 
 export function stopRefinement(): void {
 	current = null;
-}
-
-export function approveAnalysis(): void {
-	if (!current) return;
-	current.analysisApproved = true;
-	current.analysisApprovedAt = new Date().toISOString();
 }

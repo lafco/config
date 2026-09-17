@@ -3,8 +3,59 @@
   "components": {
     "PontoWeb": "pontoweb",
     "Ponto Web": "pontoweb",
-    "Vacations": "vacations",
-    "Férias": "vacations"
+    "Meu Ponto Eletrônico": "pontoweb",
+    "Ponto Eletrônico": "pontoweb",
+
+    "Mapa de Frequência": "livemaps",
+    "Cerca virtual": "mapa_frequencia",
+    "Cerca Virtual": "mapa_frequencia",
+
+    "Férias": "vacations",
+    "Férias - Cadastros": "vacations",
+    "Férias - Cálculos": "vacations",
+    "Férias - Processos": "vacations",
+    "Férias - Relatórios": "vacations",
+    "Portal - Férias": "vacations",
+    "Programação de Férias": "vacations",
+    "Aviso de Férias": "vacations",
+    "Manutenção Férias": "vacations",
+    "TAE - Aviso/Recibo de Férias": "vacations",
+
+    "PW-Espelho de Ponto": "espelho",
+    "PW - Aprovação de Espelho": "espelho",
+    "PW-Gerador de Espelhos": "espelho",
+
+    "Rostering - Folgas": "folgas",
+    "Gestão de Escalas": "rostering",
+
+    "Controle de Acesso": "acessoweb",
+    "Controle de Acesso Virtual": "smartgate",
+
+    "TimeSheet": "timesheet",
+    "apontamentos": "timesheet"
   },
-  "labels": {}
+  "ignore": [
+    "JORNARQ-BLOCK",
+    "JORNARQ-OK",
+    "Demanda de cliente",
+    "IA",
+    "Impeditivo GoLive",
+    "integra_ahgora",
+    "Módulos de outros times",
+    "OKR",
+    "Operação",
+    "para_refinar",
+    "PLR",
+    "prioridades",
+    "Privacy by Design",
+    "Score de Risco",
+    "Score de Risco - Alta",
+    "Score de Risco - Baixa",
+    "Score de Risco - Média",
+    "Área de Atuação"
+  ],
+  "labels": {
+    "cerca virtual": "mapa_frequencia",
+    "cerca_virtual": "mapa_frequencia"
+  }
 }

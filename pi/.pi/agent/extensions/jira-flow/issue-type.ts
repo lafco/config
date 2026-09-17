@@ -2,6 +2,18 @@
 
 export type IssueFlow = "epic" | "story" | "maintenance" | "customer-support" | "documentation" | "generic";
 
+/**
+ * Forma da quebra produzida pelo refinamento (o que a issue vira ao ser
+ * entregue):
+ * - `stories`   — Epic: decompõe o escopo em histórias verticais.
+ * - `tasks`     — Story (e fluxos planos): quebra em tarefas implementáveis.
+ * - `diagnosis` — Manutenção/Apoio: investiga o ocorrido antes de corrigir.
+ *
+ * `diagnosis` já é mapeado hoje, mas só passa a ser materializado quando os
+ * fluxos de Manutenção/Apoio tiverem instruções próprias (evolução futura).
+ */
+export type RefinementShape = "stories" | "tasks" | "diagnosis";
+
 export interface IssueTypeClassification {
 	/** Nome original retornado pelo Jira. */
 	rawType: string;
@@ -59,12 +71,29 @@ export function classifyIssueType(type: string | undefined): IssueTypeClassifica
 	return { rawType, flow: "generic", label: rawType || "Tipo desconhecido" };
 }
 
+/**
+ * Traduz o fluxo no formato da entrega. É o gate que decide qual tool de
+ * emissão grava o quê: `stories` ⇒ `emit_epic_artifacts` (epic); qualquer
+ * outra forma ⇒ `emit_story_artifacts` (tasks) — ver `tools.ts`.
+ */
+export function refinementShape(flow: IssueFlow): RefinementShape {
+	switch (flow) {
+		case "epic":
+			return "stories";
+		case "maintenance":
+		case "customer-support":
+			return "diagnosis";
+		default:
+			return "tasks";
+	}
+}
+
 export function flowDescription(flow: IssueFlow): string {
 	switch (flow) {
 		case "epic":
-			return "decomposição de escopo em histórias e tarefas";
+			return "decomposição em histórias verticais";
 		case "story":
-			return "refinamento da história e quebra técnica necessária";
+			return "quebra em tarefas implementáveis por agentes";
 		case "maintenance":
 			return "investigação de causa, evidências, correção e validação";
 		case "customer-support":
