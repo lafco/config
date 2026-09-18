@@ -19,7 +19,6 @@ import {
 	visibleWidth,
 	wrapTextWithAnsi,
 } from "@earendil-works/pi-tui";
-import { cardify } from "../_lib/card.ts";
 import { Type, type Static } from "typebox";
 import { materializeArtifacts, materializeEpicStories, materializeStoryTasks } from "./artifacts.ts";
 import { refinementShape } from "./issue-type.ts";
@@ -236,7 +235,7 @@ function renderWarnings(warnings: string[]): string {
 }
 
 function registerEmitEpicTool(pi: ExtensionAPI, options: FlowToolsOptions): void {
-	pi.registerTool(cardify({
+	pi.registerTool({
 		name: "emit_epic_artifacts",
 		label: "Gravar artefatos da issue",
 		description:
@@ -308,11 +307,11 @@ function registerEmitEpicTool(pi: ExtensionAPI, options: FlowToolsOptions): void
 				return fail(`Falha ao gravar artefatos: ${message}`, {});
 			}
 		},
-	}));
+	});
 }
 
 function registerEmitStoryTool(pi: ExtensionAPI, options: FlowToolsOptions): void {
-	pi.registerTool(cardify({
+	pi.registerTool({
 		name: "emit_story_artifacts",
 		label: "Gravar story e tarefas",
 		description:
@@ -352,7 +351,7 @@ function registerEmitStoryTool(pi: ExtensionAPI, options: FlowToolsOptions): voi
 				return fail(`Falha ao gravar artefatos: ${message}`, {});
 			}
 		},
-	}));
+	});
 }
 
 // ---------------------------------------------------------------------------
@@ -371,7 +370,7 @@ const OpenSearchSchema = Type.Object({
 type OpenSearchParams = Static<typeof OpenSearchSchema>;
 
 function registerOpenSearchTool(pi: ExtensionAPI): void {
-	pi.registerTool(cardify({
+	pi.registerTool({
 		name: "search_opensearch",
 		label: "Buscar logs no OpenSearch",
 		description:
@@ -411,7 +410,7 @@ function registerOpenSearchTool(pi: ExtensionAPI): void {
 				return fail(`Falha ao consultar o OpenSearch: ${message}`, {});
 			}
 		},
-	}, { target: (a) => [a.index, a.text].filter(Boolean).join(" ") || "match_all" }));
+	});
 }
 
 // ---------------------------------------------------------------------------
@@ -428,7 +427,7 @@ const ChangeIssueTypeSchema = Type.Object({
 type ChangeIssueTypeParams = Static<typeof ChangeIssueTypeSchema>;
 
 function registerChangeIssueTypeTool(pi: ExtensionAPI): void {
-	pi.registerTool(cardify({
+	pi.registerTool({
 		name: "change_issue_to_maintenance",
 		label: "Alterar issue para manutenção",
 		description:
@@ -466,7 +465,7 @@ function registerChangeIssueTypeTool(pi: ExtensionAPI): void {
 				return fail(`Não foi possível alterar o tipo da issue: ${error instanceof Error ? error.message : String(error)}`, {});
 			}
 		},
-	}));
+	});
 }
 
 // ---------------------------------------------------------------------------
@@ -507,7 +506,7 @@ interface DisplayOption {
 }
 
 function registerAskTool(pi: ExtensionAPI): void {
-	pi.registerTool(cardify({
+	pi.registerTool({
 		name: "ask_user",
 		label: "Perguntar ao usuário",
 		description:
@@ -714,7 +713,7 @@ function registerAskTool(pi: ExtensionAPI): void {
 			const prefix = details.foiCustom ? theme.fg("muted", "(texto) ") : "";
 			return new Text(`${theme.fg("success", "✓ ")}${prefix}${theme.fg("accent", details.resposta)}`, 0, 0);
 		},
-	}));
+	});
 }
 
 // ---------------------------------------------------------------------------
@@ -760,7 +759,7 @@ function renderAnalysis(params: AnalysisParams): string {
 }
 
 function registerAnalysisTool(pi: ExtensionAPI): void {
-	pi.registerTool(cardify({
+	pi.registerTool({
 		name: "submit_analysis",
 		label: "Registrar o entendimento da issue",
 		description:
@@ -789,7 +788,7 @@ function registerAnalysisTool(pi: ExtensionAPI): void {
 		renderResult(_result, _options, theme) {
 			return new Text(theme.fg("success", "✓ Entendimento registrado"), 0, 0);
 		},
-	}));
+	});
 }
 
 // ---------------------------------------------------------------------------
@@ -820,7 +819,7 @@ async function availableProducts(state: NonNullable<ReturnType<typeof getRefinem
 }
 
 function registerConsultTool(pi: ExtensionAPI): void {
-	pi.registerTool(cardify({
+	pi.registerTool({
 		name: "consult_specialist",
 		label: "Consultar especialista de produto",
 		description:
@@ -909,7 +908,7 @@ function registerConsultTool(pi: ExtensionAPI): void {
 			const text = result.content[0];
 			return new Text(theme.fg("success", "✓ ") + (text?.type === "text" ? text.text : ""), 0, 0);
 		},
-	}));
+	});
 }
 
 // Exports auxiliares de tipagem (não usados pelo runtime do pi).
