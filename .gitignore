@@ -25,6 +25,11 @@ pi/.pi/agent/extensions/opensearch
 pi/.pi/agent/extensions/opensearch-request.md
 pi/.pi/agent/skills/opensearch-request
 
+# debug-bridge — extensão e doc ficam só nesta máquina (repo interno)
+# Sem barra final: os caminhos reais são symlinks para ~/repos/debug-bridge
+pi/.pi/agent/extensions/debug-bridge
+pi/.pi/agent/extensions/debug-bridge.md
+
 # Editor / system
 *~
 *.swp
