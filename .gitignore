@@ -8,13 +8,15 @@ pi/.pi/agent/npm/
 # jira-flow — credenciais locais
 pi/.pi/agent/extensions/jira-flow/.env
 pi/.pi/agent/secrets.json
+pi/.pi/agent/secrets.json.bak*
 
-# pw2_request — extensão, doc e skill ficam só nesta máquina
-# (rotas internas do PW2 e do módulo de férias + códigos de empresa/funcionário)
-# Sem barra final: os caminhos reais são symlinks para ~/repos/pw2-request
-pi/.pi/agent/extensions/pw2
-pi/.pi/agent/extensions/pw2-request.md
+# ahg-request — extensões, doc e skills ficam só nesta máquina
+# (rotas internas do PW2, do módulo de férias e do folgas-api + códigos de empresa/funcionário)
+# Sem barra final: os caminhos reais são symlinks para ~/repos/ahg-request
+pi/.pi/agent/extensions/ahg-request
+pi/.pi/agent/extensions/ahg-request.md
 pi/.pi/agent/skills/pw2-request
+pi/.pi/agent/skills/folgas-request
 
 # opensearch_request — extensão, doc e skill ficam só nesta máquina
 # (instância interna de logs + index patterns internos)
