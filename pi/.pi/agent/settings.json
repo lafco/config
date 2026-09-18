@@ -6,8 +6,9 @@
   "enabledModels": [],
   "hideThinkingBlock": false,
   "packages": [
-    "../../mcpb"
+    "../../mcpb",
+    "git:github.com/lafco/pi-cze-theme"
   ],
-  "theme": "dark",
+  "theme": "cze",
   "enableSkillCommands": true
 }
