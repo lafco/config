@@ -13,6 +13,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type, type Static } from "typebox";
+import { cardify } from "../_lib/card.ts";
 import { resolveEpicsDir } from "./epics-dir.ts";
 import {
 	detectFileConflicts,
@@ -80,7 +81,7 @@ const ListSchema = Type.Object({
 type ListParams = Static<typeof ListSchema>;
 
 function registerListTool(pi: ExtensionAPI): void {
-	pi.registerTool({
+	pi.registerTool(cardify({
 		name: "list_story_tasks",
 		label: "Listar tarefas prontas da story",
 		description:
@@ -130,7 +131,7 @@ function registerListTool(pi: ExtensionAPI): void {
 				return fail(errorMessage(error), {});
 			}
 		},
-	});
+	}, { target: (a) => a.storyKey + (a.wave ? " wave " + a.wave : "") }));
 }
 
 // ---------------------------------------------------------------------------
@@ -151,7 +152,7 @@ const PrepareSchema = Type.Object({
 type PrepareParams = Static<typeof PrepareSchema>;
 
 function registerPrepareTool(pi: ExtensionAPI): void {
-	pi.registerTool({
+	pi.registerTool(cardify({
 		name: "prepare_task_worktrees",
 		label: "Preparar worktrees das tarefas",
 		description:
@@ -215,7 +216,7 @@ function registerPrepareTool(pi: ExtensionAPI): void {
 				return fail(errorMessage(error), {});
 			}
 		},
-	});
+	}, { target: (a) => a.storyKey + " [" + (a.taskIds ?? []).join(", ") + "]" }));
 }
 
 // ---------------------------------------------------------------------------
@@ -233,7 +234,7 @@ const StatusSchema = Type.Object({
 type StatusParams = Static<typeof StatusSchema>;
 
 function registerStatusTool(pi: ExtensionAPI): void {
-	pi.registerTool({
+	pi.registerTool(cardify({
 		name: "update_task_status",
 		label: "Atualizar status da tarefa",
 		description:
@@ -255,7 +256,7 @@ function registerStatusTool(pi: ExtensionAPI): void {
 				return fail(errorMessage(error), {});
 			}
 		},
-	});
+	}, { target: (a) => a.taskId + " " + a.status }));
 }
 
 // ---------------------------------------------------------------------------
@@ -275,7 +276,7 @@ const EvidenceSchema = Type.Object({
 type EvidenceParams = Static<typeof EvidenceSchema>;
 
 function registerEvidenceTool(pi: ExtensionAPI): void {
-	pi.registerTool({
+	pi.registerTool(cardify({
 		name: "write_task_evidence",
 		label: "Gravar evidência da tarefa",
 		description:
@@ -313,7 +314,7 @@ function registerEvidenceTool(pi: ExtensionAPI): void {
 				return fail(errorMessage(error), {});
 			}
 		},
-	});
+	}, { target: (a) => a.taskId, note: (a) => a.status }));
 }
 
 // ---------------------------------------------------------------------------
@@ -334,7 +335,7 @@ const CleanupSchema = Type.Object({
 type CleanupParams = Static<typeof CleanupSchema>;
 
 function registerCleanupTool(pi: ExtensionAPI): void {
-	pi.registerTool({
+	pi.registerTool(cardify({
 		name: "remove_task_worktrees",
 		label: "Remover worktrees das tarefas",
 		description:
@@ -367,7 +368,7 @@ function registerCleanupTool(pi: ExtensionAPI): void {
 				return fail(errorMessage(error), {});
 			}
 		},
-	});
+	}, { target: (a) => a.storyKey, note: (a) => (a.tasks ?? []).length + " worktrees" }));
 }
 
 export default function (pi: ExtensionAPI) {

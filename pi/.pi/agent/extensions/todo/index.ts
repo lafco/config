@@ -12,6 +12,7 @@
 
 import type { ExtensionAPI, ExtensionUIContext } from "@earendil-works/pi-coding-agent";
 import type { KeyId } from "@earendil-works/pi-tui";
+import { toolRenderers } from "../_lib/card.ts";
 import { COLLAPSE_KEY_OFF, loadConfig, resolveCollapseKey, validateGuidanceFields } from "./config.ts";
 import { TodoOverlay } from "./overlay.ts";
 import { buildToolResult, formatCommandTaskLine, formatStatusLabel, renderTodoCall, renderTodoResult } from "./render.ts";
@@ -84,13 +85,15 @@ function registerTodoTool(pi: ExtensionAPI): void {
 			return buildToolResult(args.action, args, result.state, result.op);
 		},
 
-		renderCall(args, theme, _context) {
-			return renderTodoCall(args as unknown as TaskMutationParams & { action: TaskAction }, theme, getRenderState());
-		},
-
-		renderResult(result, _opts, theme, _context) {
-			return renderTodoResult(result, theme);
-		},
+		...toolRenderers({
+			name: "todo",
+			renderCall(args, theme) {
+				return renderTodoCall(args as unknown as TaskMutationParams & { action: TaskAction }, theme, getRenderState());
+			},
+			renderResult(result, _options, theme) {
+				return renderTodoResult(result, theme);
+			},
+		}),
 	});
 }
 
