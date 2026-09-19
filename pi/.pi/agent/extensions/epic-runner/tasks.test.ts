@@ -6,10 +6,14 @@ import {
 	detectFileConflicts,
 	parseFrontmatter,
 	parseScalar,
+	readStory,
 	readTaskFile,
+	reviewRoute,
 	selectReadyWave,
+	setTaskReview,
 	setTaskStatus,
 	updateIndexRow,
+	writeReview,
 	type TaskFile,
 } from "./tasks.ts";
 
@@ -125,5 +129,106 @@ describe("escrita de status", () => {
 		expect(line).toContain("pronto");
 		expect(line).toContain("./evidence/TASK-01-x.md");
 		fs.rmSync(dir, { recursive: true, force: true });
+	});
+});
+
+describe("review da tarefa", () => {
+	function storyFixture(): { dir: string; story: ReturnType<typeof readStory>; file: string } {
+		const dir = fs.mkdtempSync(path.join(os.tmpdir(), "epic-runner-review-"));
+		fs.mkdirSync(path.join(dir, "PROJ-1", "tasks"), { recursive: true });
+		fs.writeFileSync(
+			path.join(dir, "PROJ-1", "index.md"),
+			[
+				"## Tarefas",
+				"",
+				"| ID | Título | Onda | Dependências | Validação | Teste | Status | Evidência | Review |",
+				"|----|--------|------|--------------|-----------|-------|--------|-----------|--------|",
+				"| [TASK-01](./tasks/TASK-01-x.md) | x | 1 | — | unit-tests | tdd | fazendo | — | — |",
+				"",
+			].join("\n"),
+			"utf8",
+		);
+		const file = path.join(dir, "PROJ-1", "tasks", "TASK-01-x.md");
+		fs.writeFileSync(
+			file,
+			[
+				"---",
+				'id: "TASK-01"',
+				"status: fazendo",
+				'attempts: 0',
+				"---",
+				"",
+				"# TASK-01 — x",
+				"",
+			].join("\n"),
+			"utf8",
+		);
+		return { dir, story: readStory("PROJ-1", dir), file };
+	}
+
+	test("readTaskFile lê o contrato de teste e o estado do review", () => {
+		const { dir, file } = storyFixture();
+		setTaskReview(file, { status: "achados", category: "execucao", attempts: 1 });
+		const task = readTaskFile(file);
+		expect(task.reviewStatus).toBe("achados");
+		expect(task.reviewCategory).toBe("execucao");
+		expect(task.attempts).toBe(1);
+		fs.rmSync(dir, { recursive: true, force: true });
+	});
+
+	test("writeReview grava um arquivo por tentativa", () => {
+		const { dir, story } = storyFixture();
+		const task = story.tasks[0]!;
+		const first = writeReview(story, task, 1, "achados da primeira revisão");
+		const second = writeReview(story, task, 2, "achados da re-revisão");
+		expect(fs.existsSync(first)).toBe(true);
+		expect(path.basename(first)).toBe("TASK-01-x-t1.md");
+		expect(path.basename(second)).toBe("TASK-01-x-t2.md");
+		expect(fs.readFileSync(first, "utf8")).toContain("primeira revisão");
+		fs.rmSync(dir, { recursive: true, force: true });
+	});
+
+	test("updateIndexRow preenche a coluna Review", () => {
+		const { dir, story } = storyFixture();
+		updateIndexRow(story.indexFile, "TASK-01", { review: "[achados: execucao](./review/TASK-01-x-t1.md)" });
+		const line = fs.readFileSync(story.indexFile, "utf8").split("\n").find((row) => row.includes("TASK-01"))!;
+		expect(line).toContain("./review/TASK-01-x-t1.md");
+		expect(line).toContain("unit-tests");
+		fs.rmSync(dir, { recursive: true, force: true });
+	});
+
+	test("setFrontmatterLine insere campo ausente no frontmatter", () => {
+		const { dir, file } = storyFixture();
+		// Artefato antigo: sem attempts/review_*. A gravação precisa inserir, não falhar.
+		fs.writeFileSync(file, '---\nid: "TASK-01"\nstatus: backlog\n---\n\n# TASK-01 — x\n', "utf8");
+		setTaskReview(file, { status: "achados", category: "quebra", attempts: 1 });
+		const task = readTaskFile(file);
+		expect(task.status).toBe("backlog");
+		expect(task.reviewStatus).toBe("achados");
+		expect(task.reviewCategory).toBe("quebra");
+		expect(task.attempts).toBe(1);
+		fs.rmSync(dir, { recursive: true, force: true });
+	});
+});
+
+describe("rota do review", () => {
+	test("execucao e ambiente retentam uma vez", () => {
+		expect(reviewRoute("achados", "execucao", 1)).toBe("retry");
+		expect(reviewRoute("achados", "ambiente", 1)).toBe("retry");
+		expect(reviewRoute("achados", "execucao", 2)).toBe("bloqueado");
+	});
+
+	test("quebra, analise e escopo bloqueiam sem retry", () => {
+		expect(reviewRoute("achados", "quebra", 1)).toBe("bloqueado");
+		expect(reviewRoute("achados", "analise", 1)).toBe("bloqueado");
+		expect(reviewRoute("achados", "escopo", 1)).toBe("bloqueado");
+	});
+
+	test("achados sem categoria não retentam", () => {
+		expect(reviewRoute("achados", undefined, 1)).toBe("bloqueado");
+	});
+
+	test("veredito ok não tem rota de retry", () => {
+		expect(reviewRoute("ok", undefined, 1)).toBe("ok");
 	});
 });

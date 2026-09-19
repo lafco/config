@@ -31,6 +31,17 @@ export interface TaskFile {
 	validationRegister?: string;
 	validationExpected?: string;
 	kind?: string;
+	/** Contrato de teste declarado na quebra (`tdd`, `verify-only`, `none`). */
+	testStrategy?: string;
+	testFile?: string;
+	testRedCommand?: string;
+	testGreenCommand?: string;
+	/** Veredito do review: `ok` ou `achados`. */
+	reviewStatus?: string;
+	/** Categoria dos achados: quebra | analise | execucao | ambiente | escopo. */
+	reviewCategory?: string;
+	/** Tentativas de implementação já revisadas. */
+	attempts: number;
 }
 
 export interface StoryDir {
@@ -38,6 +49,7 @@ export interface StoryDir {
 	dir: string;
 	tasksDir: string;
 	evidenceDir: string;
+	reviewDir: string;
 	indexFile: string;
 	tasks: TaskFile[];
 }
@@ -171,6 +183,13 @@ export function readTaskFile(file: string): TaskFile {
 		validationCompany: asString(front.validation_company),
 		validationRegister: asString(front.validation_register),
 		validationExpected: asString(front.validation_expected),
+		testStrategy: asString(front.test_strategy),
+		testFile: asString(front.test_file),
+		testRedCommand: asString(front.test_red_command),
+		testGreenCommand: asString(front.test_green_command),
+		reviewStatus: asString(front.review_status),
+		reviewCategory: asString(front.review_category),
+		attempts: asNumber(front.attempts, 0),
 	};
 }
 
@@ -194,6 +213,7 @@ export function readStory(storyKey: string, epicsDir: string): StoryDir {
 		dir,
 		tasksDir,
 		evidenceDir: path.join(dir, "evidence"),
+		reviewDir: path.join(dir, "review"),
 		indexFile: path.join(dir, "index.md"),
 		tasks,
 	};
@@ -266,14 +286,68 @@ export function detectFileConflicts(tasks: TaskFile[]): string[] {
 // Escrita de status e evidência
 // ---------------------------------------------------------------------------
 
-const STATUS_LINE = /^(\s*status:\s*).*$/m;
+// ---------------------------------------------------------------------------
+// Review da tarefa
+// ---------------------------------------------------------------------------
+
+/** Categorias que retentam sozinhas; as demais voltam para o refinamento. */
+export const RETRYABLE_CATEGORIES = new Set(["execucao", "ambiente"]);
+/** Tentativas revisadas antes de bloquear (1 retry). */
+export const MAX_ATTEMPTS = 2;
+
+export type ReviewRoute = "ok" | "retry" | "bloqueado";
+
+export const REVIEW_CATEGORIES = ["quebra", "analise", "execucao", "ambiente", "escopo"] as const;
+export type ReviewCategory = (typeof REVIEW_CATEGORIES)[number];
+
+/**
+ * Rota do review. O registro não bloqueia a esteira: a categoria decide se a
+ * tarefa volta para o agente (`execucao`, `ambiente`) ou se para e volta ao
+ * refinamento — repetir uma tarefa mal quebrada reproduz a mesma falha.
+ */
+export function reviewRoute(
+	verdict: "ok" | "achados",
+	category: string | undefined,
+	attempts: number,
+): ReviewRoute {
+	if (verdict === "ok") return "ok";
+	return RETRYABLE_CATEGORIES.has((category ?? "").trim()) && attempts < MAX_ATTEMPTS ? "retry" : "bloqueado";
+}
+
+/**
+ * Troca o valor de um campo do frontmatter da tarefa. Campo ausente (artefato
+ * refinado antes de o campo existir) é inserido antes do `---` de fechamento.
+ */
+function setFrontmatterLine(file: string, key: string, value: string): void {
+	const markdown = fs.readFileSync(file, "utf8");
+	const line = new RegExp(`^(\\s*${key}:\\s*).*$`, "m");
+	if (line.test(markdown)) {
+		fs.writeFileSync(file, markdown.replace(line, `$1${value}`), "utf8");
+		return;
+	}
+	const lines = markdown.split("\n");
+	if (lines[0]?.trim() !== "---") return;
+	const end = lines.findIndex((item, index) => index > 0 && item.trim() === "---");
+	if (end < 0) return;
+	lines.splice(end, 0, `${key}: ${value}`);
+	fs.writeFileSync(file, lines.join("\n"), "utf8");
+}
 
 export function setTaskStatus(file: string, status: string): void {
-	const markdown = fs.readFileSync(file, "utf8");
-	const next = STATUS_LINE.test(markdown)
-		? markdown.replace(STATUS_LINE, `$1${status}`)
-		: markdown;
-	fs.writeFileSync(file, next, "utf8");
+	setFrontmatterLine(file, "status", status);
+}
+
+export interface TaskReviewState {
+	/** `ok` (sem achados) ou `achados`. */
+	status: string;
+	category?: string;
+	attempts: number;
+}
+/** Grava o veredito do review no frontmatter da tarefa. */
+export function setTaskReview(file: string, state: TaskReviewState): void {
+	setFrontmatterLine(file, "review_status", `"${state.status}"`);
+	setFrontmatterLine(file, "review_category", `"${state.category ?? ""}"`);
+	setFrontmatterLine(file, "attempts", String(state.attempts));
 }
 
 function splitRow(line: string): string[] {
@@ -300,7 +374,7 @@ function taskIdOfCell(cell: string): string | undefined {
 export function updateIndexRow(
 	indexFile: string,
 	taskId: string,
-	updates: { status?: string; evidence?: string },
+	updates: { status?: string; evidence?: string; review?: string },
 ): boolean {
 	if (!fs.existsSync(indexFile)) return false;
 	const lines = fs.readFileSync(indexFile, "utf8").split("\n");
@@ -325,6 +399,10 @@ export function updateIndexRow(
 				const column = header.findIndex((name) => name.toLowerCase().startsWith("evid"));
 				if (column >= 0) rowCells[column] = updates.evidence;
 			}
+			if (updates.review !== undefined) {
+				const column = header.findIndex((name) => name.toLowerCase().startsWith("review"));
+				if (column >= 0) rowCells[column] = updates.review;
+			}
 			lines[j] = joinRow(rowCells);
 			fs.writeFileSync(indexFile, lines.join("\n"), "utf8");
 			return true;
@@ -337,6 +415,18 @@ export function updateIndexRow(
 export function writeEvidence(story: StoryDir, task: TaskFile, content: string): string {
 	fs.mkdirSync(story.evidenceDir, { recursive: true });
 	const file = path.join(story.evidenceDir, `${task.id}-${task.slug}.md`);
+	fs.writeFileSync(file, content.endsWith("\n") ? content : `${content}\n`, "utf8");
+	return file;
+}
+
+/**
+ * Grava o veredito do review em `review/<ID>-<slug>-t<attempts>.md`. Uma
+ * tentativa por arquivo: a segunda revisão não apaga a primeira, que é a
+ * evidência de que a tarefa voltou.
+ */
+export function writeReview(story: StoryDir, task: TaskFile, attempt: number, content: string): string {
+	fs.mkdirSync(story.reviewDir, { recursive: true });
+	const file = path.join(story.reviewDir, `${task.id}-${task.slug}-t${attempt}.md`);
 	fs.writeFileSync(file, content.endsWith("\n") ? content : `${content}\n`, "utf8");
 	return file;
 }

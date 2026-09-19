@@ -17,10 +17,13 @@ import { resolveEpicsDir } from "./epics-dir.ts";
 import {
 	detectFileConflicts,
 	readStory,
+	reviewRoute,
 	selectReadyWave,
+	setTaskReview,
 	setTaskStatus,
 	updateIndexRow,
 	writeEvidence,
+	writeReview,
 	type TaskFile,
 } from "./tasks.ts";
 import { addWorktree, removeWorktree, worktreePath } from "./worktrees.ts";
@@ -65,6 +68,16 @@ function taskBrief(task: TaskFile) {
 					expected: task.validationExpected ?? null,
 				}
 			: null,
+		test: task.testStrategy
+			? {
+					strategy: task.testStrategy,
+					file: task.testFile ?? null,
+					redCommand: task.testRedCommand ?? null,
+					greenCommand: task.testGreenCommand ?? null,
+				}
+			: null,
+		review: task.reviewStatus ? { status: task.reviewStatus, category: task.reviewCategory ?? null } : null,
+		attempts: task.attempts,
 		file: task.file,
 	};
 }
@@ -107,6 +120,11 @@ function registerListTool(pi: ExtensionAPI): void {
 						repo: task.repo ?? null,
 					})),
 				};
+				const reviewOf = new Map(
+					story.tasks
+						.filter((task) => task.reviewStatus === "achados" && task.reviewCategory)
+						.map((task) => [task.id, task] as const),
+				);
 				if (ready.tasks.length === 0) {
 					return ok(
 						ready.blockedByDependencies.length > 0
@@ -119,12 +137,27 @@ function registerListTool(pi: ExtensionAPI): void {
 					(task) =>
 						`- ${task.id} (onda ${task.wave}) — ${task.title}${task.repo ? ` · ${task.repo}` : ""}${
 							task.branch ? ` · ${task.branch}` : ""
-						}${task.validationKind ? ` · validação ${task.validationKind}` : ""}`,
+						}${task.validationKind ? ` · validação ${task.validationKind}` : ""}${
+							task.testStrategy ? ` · teste ${task.testStrategy}` : ""
+						}${
+							task.reviewStatus === "achados" ? ` · review: ${task.reviewCategory ?? "achados"} (tentativa ${task.attempts})` : ""
+						}`,
 				);
+				const inherited = ready.tasks
+					.flatMap((task) =>
+						(task.dependsOn ?? [])
+							.map((dep) => reviewOf.get(dep))
+							.filter((depTask): depTask is TaskFile => Boolean(depTask)),
+					)
+					.map(
+						(depTask) =>
+							`- ${depTask.id} (dependência) foi revisada com achados \`${depTask.reviewCategory}\` — leia \`review/${depTask.id}-${depTask.slug}-t${depTask.attempts}.md\` antes de construir em cima.`,
+					);
+				const inheritedBlock = inherited.length > 0 ? `\n\nAchados herdados:\n${inherited.join("\n")}` : "";
 				const warning = conflicts.length > 0 ? `\n\nConflitos de arquivo:\n- ${conflicts.join("\n- ")}` : "";
 				return ok(
-					`Onda ${ready.wave} — ${ready.tasks.length} tarefa(s) pronta(s):\n${lines.join("\n")}${warning}`,
-					details,
+					`Onda ${ready.wave} — ${ready.tasks.length} tarefa(s) pronta(s):\n${lines.join("\n")}${inheritedBlock}${warning}`,
+					{ ...details, inheritedReviews: inherited },
 				);
 			} catch (error) {
 				return fail(errorMessage(error), {});
@@ -317,6 +350,107 @@ function registerEvidenceTool(pi: ExtensionAPI): void {
 }
 
 // ---------------------------------------------------------------------------
+// write_task_review
+// ---------------------------------------------------------------------------
+
+const ReviewSchema = Type.Object({
+	storyKey: Type.String({ description: "Key da story (ex.: PROJ-123)." }),
+	taskId: Type.String({ description: "ID da tarefa (ex.: TASK-01)." }),
+	verdict: Type.Union([Type.Literal("ok"), Type.Literal("achados")], {
+		description: "`ok` quando a tarefa entregou o pedido; `achados` quando há algo a corrigir ou a escalar.",
+	}),
+	category: Type.Optional(
+		Type.Union(
+			[
+				Type.Literal("quebra"),
+				Type.Literal("analise"),
+				Type.Literal("execucao"),
+				Type.Literal("ambiente"),
+				Type.Literal("escopo"),
+			],
+			{
+				description:
+					"Obrigatória quando verdict=achados. `quebra` = tarefa não autocontida/ambígua; `analise` = a tarefa pede a coisa errada; `execucao` = implementação incompleta (retenta); `ambiente` = suíte/endpoint/credencial (retenta); `escopo` = fora do que a story pede.",
+			},
+		),
+	),
+	findings: Type.String({
+		description: "Achados com evidência concreta (arquivo:linha, comando, saída). Vazio quando verdict=ok.",
+	}),
+});
+type ReviewParams = Static<typeof ReviewSchema>;
+
+function registerReviewTool(pi: ExtensionAPI): void {
+	pi.registerTool({
+		name: "write_task_review",
+		label: "Gravar review da tarefa",
+		description:
+			"Registra o veredito do revisor em `review/TASK-NN-<slug>-t<attempts>.md`, incrementa `attempts` e preenche a coluna Review do `index.md`. Não bloqueia a esteira: a tool decide a rota pela categoria — `execucao` e `ambiente` retentam uma vez, as demais vão para `bloqueado` com o motivo registrado. Leia `route` na resposta e só re-despache o worker quando for `retry` (levando os achados no brief).",
+		parameters: ReviewSchema,
+		executionMode: "sequential",
+		async execute(_toolCallId, params: ReviewParams) {
+			try {
+				const story = readStory(params.storyKey, resolveEpicsDir());
+				const task = story.tasks.find((item) => item.id === params.taskId.trim().toUpperCase());
+				if (!task) return fail(`${params.taskId} não encontrada em ${story.dir}.`, {});
+
+				const findings = params.findings.trim();
+				if (params.verdict === "ok" && findings) {
+					return fail("verdict=ok não leva `findings`; use `achados` quando houver o que corrigir.", {});
+				}
+				const category = params.category?.trim();
+				if (params.verdict === "achados" && !category) {
+					return fail("verdict=achados exige `category` (quebra | analise | execucao | ambiente | escopo).", {});
+				}
+				if (params.verdict === "achados" && !findings) {
+					return fail("verdict=achados exige `findings` com a evidência do que ficou faltando.", {});
+				}
+
+				const attempts = task.attempts + 1;
+				const route = reviewRoute(params.verdict, category, attempts);
+
+				const status = params.verdict === "ok" ? "ok" : "achados";
+				setTaskReview(task.file, { status, category, attempts });
+
+				const header = [
+					`# Review — ${task.id} ${task.title}`,
+					"",
+					`- **Story:** ${story.key}`,
+					`- **Tentativa:** ${attempts}`,
+					`- **Veredito:** ${status}`,
+					category ? `- **Categoria:** ${category}` : "",
+					`- **Rota:** ${route}`,
+					`- **Registrado em:** ${new Date().toISOString()}`,
+					task.branch ? `- **Branch:** ${task.branch}` : "",
+					"",
+					"---",
+					"",
+				].filter(Boolean);
+				const file = writeReview(story, task, attempts, `${header.join("\n")}\n${findings || "Sem achados."}`);
+
+				const label = route === "ok" ? "ok" : `${status}: ${category ?? "—"}`;
+				const link = `[${label}](./review/${path.basename(file)})`;
+				updateIndexRow(story.indexFile, task.id, { review: link });
+				if (route === "bloqueado") {
+					setTaskStatus(task.file, "bloqueado");
+					updateIndexRow(story.indexFile, task.id, { status: "bloqueado" });
+				}
+
+				const message =
+					route === "retry"
+						? `${task.id}: achados \`${category}\` na tentativa ${attempts} — re-despache o worker levando o review ${file}.`
+						: route === "bloqueado"
+							? `${task.id}: achados \`${category}\` na tentativa ${attempts} — marcada como bloqueado (sem retry). Review em ${file}.`
+							: `${task.id}: review ok na tentativa ${attempts}. Review em ${file}.`;
+				return ok(message, { file, attempts, route, status, category: category ?? null });
+			} catch (error) {
+				return fail(errorMessage(error), {});
+			}
+		},
+	});
+}
+
+// ---------------------------------------------------------------------------
 // remove_task_worktrees
 // ---------------------------------------------------------------------------
 
@@ -375,5 +509,6 @@ export default function (pi: ExtensionAPI) {
 	registerPrepareTool(pi);
 	registerStatusTool(pi);
 	registerEvidenceTool(pi);
+	registerReviewTool(pi);
 	registerCleanupTool(pi);
 }
