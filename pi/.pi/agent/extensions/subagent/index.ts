@@ -29,6 +29,14 @@ import {
 import { Container, Markdown, Spacer, Text } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
 import { type AgentConfig, type AgentScope, discoverAgents } from "./agents.ts";
+import {
+	EMPTY_CONFIG,
+	failureReason,
+	loadModelConfig,
+	resolveModel,
+	shouldFallback,
+	type SubagentModelConfig,
+} from "./models.ts";
 
 const MAX_PARALLEL_TASKS = 8;
 const MAX_CONCURRENCY = 4;
@@ -158,6 +166,10 @@ interface SingleResult {
 	stopReason?: string;
 	errorMessage?: string;
 	step?: number;
+	/** Tentativas que morreram antes de produzir resposta, na ordem. */
+	fallbacks?: { model: string; reason: string }[];
+	/** De onde veio o modelo que rodou (`dispatch`, `config`, `frontmatter`, `sessao`). */
+	modelSource?: string;
 }
 
 interface SubagentDetails {
@@ -181,6 +193,18 @@ function getFinalOutput(messages: Message[]): string {
 
 function isFailedResult(result: SingleResult): boolean {
 	return result.exitCode !== 0 || result.stopReason === "error" || result.stopReason === "aborted";
+}
+
+/**
+ * Linha de cabeçalho do resultado quando a cadeia de modelos precisou cair
+ * para o fallback — sem isso, o orchestrator não vê que o modelo preferido
+ * falhou, e o sintoma ("a tarefa ignorou a instrução") aparece sem causa.
+ */
+function fallbackNote(result: SingleResult): string {
+	if (!result.fallbacks || result.fallbacks.length === 0) return "";
+	const lines = result.fallbacks.map((item) => `- ${item.model}: ${item.reason}`);
+	const ran = result.model ? ` Rodou com ${result.model}.` : "";
+	return `[fallback de modelo]\n${lines.join("\n")}${ran}\n\n`;
 }
 
 function getResultOutput(result: SingleResult): string {
@@ -267,8 +291,12 @@ type OnUpdateCallback = (partial: AgentToolResult<SubagentDetails>) => void;
 interface DispatchDefaults {
 	model?: string;
 	thinkingLevel?: ThinkingLevel;
+	/** Modelo da sessão, usado como último recurso da cadeia. */
+	sessionModel?: string;
+	config?: SubagentModelConfig;
 }
 
+/** Uma tentativa: resolve a cadeia de modelos e tenta cada candidato. */
 async function runSingleAgent(
 	defaultCwd: string,
 	dispatchDefaults: DispatchDefaults,
@@ -280,6 +308,63 @@ async function runSingleAgent(
 	signal: AbortSignal | undefined,
 	onUpdate: OnUpdateCallback | undefined,
 	makeDetails: (results: SingleResult[]) => SubagentDetails,
+	dispatchModel?: string,
+): Promise<SingleResult> {
+	const agent = agents.find((a) => a.name === agentName);
+	if (!agent) {
+		return runSingleAgentOnce(defaultCwd, dispatchDefaults, agents, agentName, task, cwd, step, signal, onUpdate, makeDetails);
+	}
+
+	const resolution = resolveModel({
+		agentName: agent.name,
+		agentModel: agent.model,
+		dispatchModel,
+		sessionModel: dispatchDefaults.sessionModel ?? dispatchDefaults.model,
+		config: dispatchDefaults.config ?? EMPTY_CONFIG,
+	});
+
+	const fallbacks: { model: string; reason: string }[] = [];
+	let result: SingleResult | undefined;
+	for (let index = 0; index < resolution.models.length; index++) {
+		const candidate = resolution.models[index];
+		result = await runSingleAgentOnce(
+			defaultCwd,
+			dispatchDefaults,
+			agents,
+			agentName,
+			task,
+			cwd,
+			step,
+			signal,
+			onUpdate,
+			makeDetails,
+			{ model: candidate, thinking: resolution.thinking },
+		);
+
+		const hasNext = index < resolution.models.length - 1;
+		if (!hasNext || !shouldFallback(result)) break;
+		fallbacks.push({ model: candidate ?? "(modelo da sessão)", reason: failureReason(result) });
+	}
+
+	if (result) {
+		result.modelSource = resolution.source;
+		if (fallbacks.length > 0) result.fallbacks = fallbacks;
+	}
+	return result!;
+}
+
+async function runSingleAgentOnce(
+	defaultCwd: string,
+	dispatchDefaults: DispatchDefaults,
+	agents: AgentConfig[],
+	agentName: string,
+	task: string,
+	cwd: string | undefined,
+	step: number | undefined,
+	signal: AbortSignal | undefined,
+	onUpdate: OnUpdateCallback | undefined,
+	makeDetails: (results: SingleResult[]) => SubagentDetails,
+	attempt?: { model?: string; thinking?: string },
 ): Promise<SingleResult> {
 	const agent = agents.find((a) => a.name === agentName);
 
@@ -298,12 +383,10 @@ async function runSingleAgent(
 	}
 
 	const args: string[] = ["--mode", "json", "-p", "--no-session"];
-	const inheritsDispatchConfig = !agent.model;
-	const model = agent.model ?? dispatchDefaults.model;
-	if (model) args.push("--model", model);
-	if (inheritsDispatchConfig && dispatchDefaults.thinkingLevel) {
-		args.push("--thinking", dispatchDefaults.thinkingLevel);
-	}
+	// O esforço de raciocínio é escolha da fase (`models.json`), independente de
+	// onde veio o modelo — antes era ignorado quando o agente declarava `model:`.
+	if (attempt?.thinking) args.push("--thinking", attempt.thinking);
+	if (attempt?.model) args.push("--model", attempt.model);
 	if (agent.tools && agent.tools.length > 0) args.push("--tools", agent.tools.join(","));
 
 	let tmpPromptDir: string | null = null;
@@ -317,7 +400,7 @@ async function runSingleAgent(
 		messages: [],
 		stderr: "",
 		usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, cost: 0, contextTokens: 0, turns: 0 },
-		model,
+		model: attempt?.model,
 		step,
 	};
 
@@ -441,12 +524,19 @@ const TaskItem = Type.Object({
 	agent: Type.String({ description: "Name of the agent to invoke" }),
 	task: Type.String({ description: "Task to delegate to the agent" }),
 	cwd: Type.Optional(Type.String({ description: "Working directory for the agent process" })),
+	model: Type.Optional(
+		Type.String({
+			description:
+				"Modelo para este despacho (sobrepõe o models.json). Use só para escalar uma tarefa cujo review apontou achados `execucao`.",
+		}),
+	),
 });
 
 const ChainItem = Type.Object({
 	agent: Type.String({ description: "Name of the agent to invoke" }),
 	task: Type.String({ description: "Task with optional {previous} placeholder for prior output" }),
 	cwd: Type.Optional(Type.String({ description: "Working directory for the agent process" })),
+	model: Type.Optional(Type.String({ description: "Modelo para este passo (sobrepõe o models.json)." })),
 });
 
 const AgentScopeSchema = StringEnum(["user", "project", "both"] as const, {
@@ -464,6 +554,9 @@ const SubagentParams = Type.Object({
 		Type.Boolean({ description: "Prompt before running project-local agents. Default: true.", default: true }),
 	),
 	cwd: Type.Optional(Type.String({ description: "Working directory for the agent process (single mode)" })),
+	model: Type.Optional(
+		Type.String({ description: "Modelo para este despacho (sobrepõe o models.json). Single mode." }),
+	),
 });
 
 export default function (pi: ExtensionAPI) {
@@ -483,6 +576,8 @@ export default function (pi: ExtensionAPI) {
 			const dispatchDefaults: DispatchDefaults = {
 				model: ctx.model ? `${ctx.model.provider}/${ctx.model.id}` : undefined,
 				thinkingLevel: ctx.thinkingLevel,
+				sessionModel: ctx.model ? `${ctx.model.provider}/${ctx.model.id}` : undefined,
+				config: loadModelConfig(),
 			};
 			const discovery = discoverAgents(ctx.cwd, agentScope);
 			const agents = discovery.agents;
@@ -579,6 +674,7 @@ export default function (pi: ExtensionAPI) {
 						signal,
 						chainUpdate,
 						makeDetails("chain"),
+						step.model,
 					);
 					results.push(result);
 
@@ -658,6 +754,7 @@ export default function (pi: ExtensionAPI) {
 							}
 						},
 						makeDetails("parallel"),
+						t.model,
 					);
 					allResults[index] = result;
 					emitParallelUpdate();
@@ -670,7 +767,7 @@ export default function (pi: ExtensionAPI) {
 					const status = isFailedResult(r)
 						? `failed${r.stopReason && r.stopReason !== "end" ? ` (${r.stopReason})` : ""}`
 						: "completed";
-					return `### [${r.agent}] ${status}\n\n${output}`;
+					return `### [${r.agent}] ${status}\n\n${fallbackNote(r)}${output}`;
 				});
 				return {
 					content: [
@@ -695,6 +792,7 @@ export default function (pi: ExtensionAPI) {
 					signal,
 					onUpdate,
 					makeDetails("single"),
+					params.model,
 				);
 				const isError = isFailedResult(result);
 				if (isError) {
@@ -706,7 +804,7 @@ export default function (pi: ExtensionAPI) {
 					};
 				}
 				return {
-					content: [{ type: "text", text: getFinalOutput(result.messages) || "(no output)" }],
+					content: [{ type: "text", text: `${fallbackNote(result)}${getFinalOutput(result.messages) || "(no output)"}` }],
 					details: makeDetails("single")([result]),
 				};
 			}

@@ -70,7 +70,7 @@ Para cada tarefa da leva, já com a evidência gravada:
 3. Com a resposta de cada revisor, chame `write_task_review` com `verdict` (`ok`/`achados`), `category` e `findings` **copiados do revisor**. Não reclassifique por conta própria: se discordar da categoria, diga isso no resumo final, não troque o valor.
 4. Siga a `route` que a tool devolveu:
    - `ok` → `update_task_status` para `pronto`.
-   - `retry` → despache o `worker` de novo, na **mesma worktree**, com o brief abaixo, e repita os passos 4 e 5 para essa tarefa (nova evidência, novo pacote, novo review, novo `write_task_review`).
+   - `retry` → despache o `worker` de novo, na **mesma worktree**, com o brief abaixo, e repita os passos 4 e 5 para essa tarefa (nova evidência, novo pacote, novo review, novo `write_task_review`). Quando os achados forem `execucao` e o modelo do worker já tiver falhado antes, você pode escalar passando `model` no item do `subagent` (o padrão vem do `models.json`).
    - `bloqueado` → a tool já marcou o status. Não insista: registre no resumo e siga com as outras tarefas.
 
 Brief do retry (acrescente ao brief normal — sem os achados é repetição, não correção):

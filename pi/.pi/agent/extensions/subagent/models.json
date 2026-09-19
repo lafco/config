@@ -1,0 +1,28 @@
+{
+  "agents": {
+    "scout": ["opencode-go/qwen3.8-flash", "deepseek/deepseek-flash"],
+    "research": ["opencode-go/glm-5.3", "deepseek/deepseek-v4-pro"],
+    "planner": ["opencode-go/glm-5.3", "deepseek/deepseek-v4-pro"],
+    "worker": ["opencode-go/kimi-k2.7-code", "deepseek/deepseek-v4-pro"],
+    "validator": ["opencode-go/qwen3.7-max", "deepseek/deepseek-v4-pro"],
+    "reviewer": ["opencode-go/gpt-5.6-luna", "deepseek/deepseek-v4-pro"],
+    "task-reviewer": ["opencode-go/gpt-5.6-luna", "deepseek/deepseek-v4-pro"],
+    "explainer": ["opencode-go/glm-5.3", "deepseek/deepseek-v4-pro"],
+    "pw2-endpoint-mapper": ["opencode-go/qwen3.8-flash", "deepseek/deepseek-flash"],
+    "folgas-endpoint-mapper": ["opencode-go/qwen3.8-flash", "deepseek/deepseek-flash"],
+    "opensearch-index-mapper": ["opencode-go/qwen3.8-flash", "deepseek/deepseek-flash"]
+  },
+  "thinking": {
+    "scout": "low",
+    "research": "medium",
+    "planner": "high",
+    "worker": "medium",
+    "validator": "high",
+    "reviewer": "high",
+    "task-reviewer": "high",
+    "explainer": "medium",
+    "pw2-endpoint-mapper": "low",
+    "folgas-endpoint-mapper": "low",
+    "opensearch-index-mapper": "low"
+  }
+}
