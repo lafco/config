@@ -5,6 +5,9 @@ pi/.pi/agent/sessions/
 pi/.pi/agent/bin/
 pi/.pi/agent/npm/
 
+# Pi agent — clones dos pacotes (gerenciados por `pi install`/`pi update`)
+pi/.pi/agent/git/
+
 # jira-flow — credenciais locais
 pi/.pi/agent/extensions/jira-flow/.env
 pi/.pi/agent/secrets.json
