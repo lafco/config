@@ -26,6 +26,9 @@ test_file: {{testFileYaml}}
 test_red_command: {{testRedCommandYaml}}
 test_green_command: {{testGreenCommandYaml}}
 test_why: {{testWhyYaml}}
+review_status: ""
+review_category: ""
+attempts: 0
 ---
 
 # {{id}} — {{title}}

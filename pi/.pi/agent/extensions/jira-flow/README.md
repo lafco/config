@@ -102,18 +102,19 @@ Fora do TUI (`pi -p`, `--mode json/rpc`), `ask_user` avisa que não há interfac
 <epicsDir>/<STORY-KEY>/
 ├── jira-source.md          # inclui `parent_key` do epic pai
 ├── story.md                # história refinada (contexto do epic pai + análise)
-├── index.md                # tabela de tarefas com Validação/Status/Evidência
+├── index.md                # tabela de tarefas com Validação/Teste/Status/Evidência/Review
 ├── tasks/
 │   └── TASK-01-<slug>.md   # repo, branch, filesLikelyTouched, validação, contrato de teste
-└── evidence/
-    └── TASK-01-<slug>.md   # evidência da validação (gerada pelo epic-runner)
+├── evidence/
+│   └── TASK-01-<slug>.md   # evidência da validação (gerada pelo epic-runner)
+└── review/
+    └── TASK-01-<slug>-t1.md # veredito do revisor: categoria dos achados e rota
 ```
-
 **Fluxos planos** (Manutenção/Apoio/Documentação/genérico): `jira-source.md`, `epic.md`, `index.md` e `tasks/TASK-NN-<slug>.md`.
 
 `<epicsDir>` é `epicsDir` (secrets) / `EPICS_DIR` (env) quando configurado e acessível; senão **`~/epics`** — centralizado, independente do repo onde o pi roda.
 
-Refazer o refinamento de uma issue já refinada exige `--force`, que **remove os artefatos conhecidos** (`epic.md`, `story.md`, `index.md`, `tasks/`, `stories/`, `evidence/`) antes de regravar. Sem isso, uma tarefa do formato anterior continuaria sendo lida pelo `epic-runner` ao lado das novas.
+Refazer o refinamento de uma issue já refinada exige `--force`, que **remove os artefatos conhecidos** (`epic.md`, `story.md`, `index.md`, `tasks/`, `stories/`, `evidence/`, `review/`) antes de regravar. Sem isso, uma tarefa do formato anterior continuaria sendo lida pelo `epic-runner` ao lado das novas.
 
 ## Credenciais e configuração
 

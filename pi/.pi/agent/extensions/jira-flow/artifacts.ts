@@ -707,7 +707,7 @@ export async function materializeStoryTasks(input: {
 		.map((task) => {
 			const deps = (task.dependsOn ?? []).join(", ") || "—";
 			const link = `[${task.id}](./tasks/${task.id}-${slugify(task.title)}.md)`;
-			return `| ${link} | ${cell(task.title)} | ${task.wave} | ${deps} | ${validationSummary(task.validation)} | backlog | — |`;
+			return `| ${link} | ${cell(task.title)} | ${task.wave} | ${deps} | ${validationSummary(task.validation)} | ${testSummary(task.test)} | backlog | — | — |`;
 		})
 		.join("\n");
 
@@ -722,7 +722,7 @@ export async function materializeStoryTasks(input: {
 			summary: story.title,
 			jiraUrl: `${meta.jiraUrl}/browse/${jiraKey}`,
 			syncedAt: meta.syncedAt,
-			taskRows: taskRows || "| — | — | — | — | — | — | — |",
+			taskRows: taskRows || "| — | — | — | — | — | — | — | — | — |",
 			waveSections: waveSections(sorted, "—"),
 		}),
 		files,

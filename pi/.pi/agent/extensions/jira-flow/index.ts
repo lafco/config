@@ -100,7 +100,7 @@ const INSTRUCTION_FILES = ["epic-refinement.md", "tools.md", "quebra-padroes.md"
  * Artefatos que o harness grava. `--force` remove só estes: uma tarefa antiga
  * (formato plano) continuaria sendo lida pelo `epic-runner` ao lado das novas.
  */
-const ARTIFACT_PATHS = ["epic.md", "story.md", "index.md", "tasks", "stories", "evidence"];
+const ARTIFACT_PATHS = ["epic.md", "story.md", "index.md", "tasks", "stories", "evidence", "review"];
 
 async function clearArtifacts(dir: string): Promise<string[]> {
 	const removed: string[] = [];
