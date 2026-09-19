@@ -32,7 +32,9 @@ Use a tool `subagent` no modo **paralelo** (`tasks: [...]`), **um `worker` por t
 Implemente a tarefa <TASK-ID> da story <STORY-KEY>.
 
 1. Leia ~/epics/<STORY-KEY>/tasks/<TASK-ID>-<slug>.md (critérios de aceite, notas técnicas e a seção Validação).
-2. Implemente no repositório <repo>, na worktree <cwd>, branch <branch>. Altere apenas o que a tarefa pede.
+2. Trabalhe **exclusivamente** dentro da worktree `<cwd>` (checkout do repo na branch `<branch>`). O checkout principal do repo NÃO é seu
+   território: não rode comando fora da worktree, não crie arquivo nele e não faça `cd` para fora — todo comando (testes incluídos)
+   roda com cwd = `<cwd>`. Registre na evidência o diretório de execução de cada comando, para o RED ser auditável.
 3. Rode a validação declarada:
    - kind=pw2: chame pw2_request com environment/company/register da tarefa (nos testes locais: company a408453 e
      matrícula 236) e compare com o "Esperado".
@@ -46,7 +48,9 @@ Implemente a tarefa <TASK-ID> da story <STORY-KEY>.
      e guarde a saída. Teste que passa de primeira não prova nada — se passou, o teste está errado, conserte o teste.
    - `verify-only`: rode os testes indicados e guarde a saída.
    - `none`: não há teste; a validação é a declarada na tarefa.
-5. Ao final, devolva no formato do agente worker: o que foi feito, arquivos alterados, comandos executados,
+5. Commite na branch da tarefa: **um commit por tarefa**, mensagem no padrão do repo (ex.: `feat(<STORY-KEY>): <o que mudou>`).
+   Sem commit não há diff — o pacote de review vai do ponto de bifurcação até o HEAD, e alteração não commitada não entra.
+6. Ao final, devolva no formato do agente worker: o que foi feito, arquivos alterados, comandos executados,
    a saída do RED e do GREEN (quando houver contrato `tdd`), resultado bruto da validação (com status HTTP/response
    relevante) e o veredito (passou | falhou | manual pendente).
 NÃO atualize status nem escreva em ~/epics — o orquestrador faz isso.
@@ -67,7 +71,7 @@ Para cada tarefa da leva, já com a evidência gravada:
 
 1. `prepare_review_package` com a story e a tarefa. Guarde o caminho do arquivo `.diff`.
 2. Despache `task-reviewer` no modo **paralelo** (`subagent` com `tasks: [...]`), um por tarefa, passando: o caminho do arquivo da tarefa, o caminho do pacote de review e o caminho da evidência. Instrua-o a não rodar `git diff`/`git log` — o pacote já é o diff.
-3. Com a resposta de cada revisor, chame `write_task_review` com `verdict` (`ok`/`achados`), `category` e `findings` **copiados do revisor**. Não reclassifique por conta própria: se discordar da categoria, diga isso no resumo final, não troque o valor.
+3. Com a resposta de cada revisor, chame `write_task_review` com `verdict` (`ok`/`achados`), `category` e `findings` **copiados do revisor**, e `report` com o relatório dele **verbatim** (é o que fica gravado para releitura — no `ok`, o relatório é o único registro das ressalvas e sugestões). Não reclassifique por conta própria: se discordar da categoria, diga isso no resumo final, não troque o valor.
 4. Siga a `route` que a tool devolveu:
    - `ok` → `update_task_status` para `pronto`.
    - `retry` → despache o `worker` de novo, na **mesma worktree**, com o brief abaixo, e repita os passos 4 e 5 para essa tarefa (nova evidência, novo pacote, novo review, novo `write_task_review`). Quando os achados forem `execucao` e o modelo do worker já tiver falhado antes, você pode escalar passando `model` no item do `subagent` (o padrão vem do `models.json`).
@@ -80,7 +84,7 @@ Esta é a tentativa 2 da tarefa <TASK-ID>: a revisão anterior encontrou:
 
 <findings copiados do review>
 
-Corrija exatamente esses pontos na mesma worktree/branch. Não refaça o que já estava certo e não
+Corrija exatamente esses pontos na mesma worktree/branch e **commite** a correção. Não refaça o que já estava certo e não
 amplie o escopo. Se algum achado for impossível de atender no escopo da tarefa, diga isso em vez de inventar.
 ```
 
@@ -92,6 +96,6 @@ Volte ao passo 1. Repita até não haver tarefa pronta. Ao mudar de onda, confir
 
 Quando todas as ondas terminarem (ou quando o usuário pedir para parar):
 
-- Chame `remove_task_worktrees` com o `repo` e as tarefas concluídas.
+- Chame `remove_task_worktrees` **só depois** que o merge/decisão humana aconteceu. A branch é a entrega: a tool apaga a branch apenas se ela já estiver mergeada (`git branch -d`) — se ela ainda estiver pendente, ela fica preservada e a tool diz isso. Antes do merge, prefira não limpar nada: a worktree é o lugar onde a correção seria feita.
 - **Não** faça merge nem push: as branches ficam para o usuário decidir. Antes de qualquer merge, releia a coluna **Review**: branch com achado `execucao`/`ambiente` aberto só entra depois de alguém olhar.
 - Feche com um resumo: tarefas por onda, veredito de cada uma **com a categoria dos achados**, branches criadas e o que ficou pendente (validação manual, tarefas bloqueadas). Tarefa bloqueada por `quebra`/`analise`/`escopo` volta ao refinamento (`/refinar-issue <STORY-KEY> --force`) — a correção é na quebra, não na tarefa. Se a mesma categoria se repetir na leva, diga isso no resumo: é sintoma do refinamento, não do agente.

@@ -14,7 +14,20 @@ Bash é somente leitura (`git log`, `git show`, `git diff`, `wc`, `rg`). Você *
 2. Leia o pacote de review. Ele **é** a sua visão da mudança: as linhas de contexto dele são os arquivos alterados. Não repita `git log`/`git diff` e não percorra o repositório. Leia um arquivo à parte só quando um trecho que você precisa julgar estiver cortado no meio — e diga isso no veredito.
 3. Leia a evidência da tarefa (caminho informado) quando ela existir: é o que o implementador alega ter rodado.
 
+## O que não é da sua conta
+
+O agente implementador recebeu instruções explícitas de **não** mexer em contabilidade da esteira. Não conte como achado:
+
+- `status`, `index.md` ou `evidence/` desatualizados — são do orquestrador, e o status só vira `pronto` depois do seu veredito;
+- ausência de merge, push ou limpeza de worktree — decisão humana;
+- trabalho que a tarefa declarou como fora de escopo.
+
+Julgue duas coisas: o **diff** contra o que foi pedido, e a **evidência** declarada contra o que ela mostra. Um critério de aceite do qual a evidência não é prova é achado; a papelada da esteira não é.
+
 ## Veredito de conformidade
+
+Pacote **sem alterações** numa tarefa que previa mudança de código é achado (`execucao`) — não é "nada a revisar".
+Significa que a entrega não foi commitada ou não existe; diga em qual dos dois casos você concluiu isso.
 
 Compare o pedido com o diff: **nada a mais, nada a menos**. Vale como achado:
 
