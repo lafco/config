@@ -140,6 +140,34 @@ const EmitTaskSchema = Type.Object({
 			{ description: "Obrigatória no fluxo Story para tarefas de código." },
 		),
 	),
+	test: Type.Optional(
+		Type.Object(
+			{
+				strategy: Type.Union([Type.Literal("tdd"), Type.Literal("verify-only"), Type.Literal("none")], {
+					description:
+					"Como a tarefa trata o teste. `tdd` (padrão) escreve o teste antes; `verify-only` valida o que já existe; `none` não tem teste. Não é opcional: `verify-only` e `none` exigem `why`.",
+				}),
+				file: Type.Optional(
+					Type.String({ description: "Arquivo de teste criado ou estendido pela tarefa (obrigatório em `tdd`)." }),
+				),
+				redCommand: Type.Optional(
+					Type.String({
+						description: "Comando que deve FALHAR antes da implementação (obrigatório em `tdd`).",
+					}),
+				),
+				greenCommand: Type.Optional(
+					Type.String({ description: "Comando que deve PASSAR depois da implementação (obrigatório em `tdd`)." }),
+				),
+				why: Type.Optional(
+					Type.String({ description: "Por que a tarefa não segue `tdd` (obrigatório em `verify-only` e `none`)." }),
+				),
+			},
+			{
+				description:
+					"Contrato de teste. Obrigatório para tarefa de código no fluxo Story: o harness rejeita emissão sem `test.strategy`.",
+			},
+		),
+	),
 });
 
 const StorySchema = Type.Object({
@@ -315,7 +343,7 @@ function registerEmitStoryTool(pi: ExtensionAPI, options: FlowToolsOptions): voi
 		name: "emit_story_artifacts",
 		label: "Gravar story e tarefas",
 		description:
-			"Ferramenta interna do fluxo /refinar-issue. Entrega a Story refinada (`story`) e as `tasks` implementáveis por agentes em paralelo; o harness grava story.md, index.md, tasks/*.md e cria evidence/. Declare em cada tarefa de código `repo`, `filesLikelyTouched` e `validation` (pw2/unit-tests/manual) — o gate anti-conflito rejeita tarefas da mesma onda com arquivos em comum. Validação `pw2` fora de `local` exige `company`; ela só roda sem humano quando a empresa está em `autoRunCompanies`. Só chame quando o fluxo /refinar-issue estiver ativo e a análise tiver sido aprovada via `submit_analysis`.",
+			"Ferramenta interna do fluxo /refinar-issue. Entrega a Story refinada (`story`) e as `tasks` implementáveis por agentes em paralelo; o harness grava story.md, index.md, tasks/*.md e cria evidence/. Declare em cada tarefa de código `repo`, `filesLikelyTouched`, `test` (estrategia + arquivos/comandos do teste) e `validation` (pw2/unit-tests/manual) — o harness recusa a emissão sem eles e o gate anti-conflito rejeita tarefas da mesma onda com arquivos em comum. Prefira `test.strategy: tdd` com o comando que deve falhar antes (RED) e o que deve passar depois (GREEN); `verify-only` e `none` exigem `test.why`. Validação `pw2` fora de `local` exige `company`; ela só roda sem humano quando a empresa está em `autoRunCompanies`. Só chame quando o fluxo /refinar-issue estiver ativo e a análise tiver sido aprovada via `submit_analysis`.",
 		parameters: EmitStorySchema,
 		async execute(_toolCallId, params: EmitStoryParams) {
 			const state = getRefinement();

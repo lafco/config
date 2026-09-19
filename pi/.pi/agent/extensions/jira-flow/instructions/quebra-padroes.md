@@ -32,6 +32,7 @@ Quando a quebra vai virar tarefas despachadas a agentes em paralelo (`/implement
 - **Autocontida:** a tarefa declara `repo`, `filesLikelyTouched`, como validar e o que é sucesso. O agente não deve precisar decidir produto no meio do caminho.
 - **Sem colisão:** tarefas da mesma onda não compartilham arquivo — se compartilham, são a mesma tarefa ou vão para ondas diferentes.
 - **Validação declarada:** `pw2` (com ambiente/empresa), `unit-tests` ou `manual`. Prefira a validação que o próprio agente executa; mutações e dependência de dado humano ficam `manual`. Nos testes locais do PW2, use sempre a empresa `a408453` e a matrícula padrão `236` (convenção do harness).
+- **Teste declarado:** toda tarefa de código diz como o teste é tratado — `tdd` (arquivo + comando que falha antes e passa depois), `verify-only` (o teste já existe) ou `none` (sem teste), os dois últimos com justificativa. Sem isso o harness recusa a emissão.
 - **Regra non-TUI:** `pw2` fora de `local` só roda sozinho com a empresa em `autoRunCompanies`; caso contrário, declare `manual` e registre o roteiro.
 
 O Epic não entra aqui: no Epic a quebra para em **histórias**, e cada história é refinada com `/refinar-issue` antes de virar tarefas.

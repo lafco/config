@@ -20,6 +20,7 @@ Além dos campos usuais (`id`, `title`, `wave`, `dependsOn`, `objective`, `valor
 | `branch` | Branch sugerida (ex.: `feat/PROJ-123-task-01`). |
 | `filesLikelyTouched` | Arquivos/áreas prováveis. **Gate:** duas tarefas da mesma onda não podem compartilhar arquivo. |
 | `validation` | Como provar que funcionou (ver abaixo). |
+| `test` | Como a tarefa trata o teste — `tdd`, `verify-only` ou `none` (ver abaixo). |
 | `kind` | `correção` para tarefa de código; `diagnóstico`/`exploração` só em fluxos de investigação. |
 
 ## Validação (`validation`)
@@ -40,6 +41,32 @@ Além dos campos usuais (`id`, `title`, `wave`, `dependsOn`, `objective`, `valor
 - **`manual`** — exige um humano no TUI. Use para mutações (POST/PUT/PATCH/DELETE) e para o que depender de dado que o agente não pode preparar. `expected` descreve o que a pessoa deve observar.
 
 Escolha o tipo mais forte que o agente consegue executar sozinho; não declare `pw2` para algo que exigirá humano (vira falso negativo na onda).
+
+## Contrato de teste (`test`)
+
+`tdd` é o padrão: a tarefa nasce com **arquivo de teste**, o comando que deve **falhar antes** (RED) e o que deve **passar depois** (GREEN). A evidência carrega os dois — sem o vermelho registrado, um teste que passa de primeira não prova nada.
+
+```jsonc
+{
+  "strategy": "tdd",                                  // "tdd" | "verify-only" | "none"
+  "file": "tests/periods-import.test.ts",
+  "redCommand": "bun test tests/periods-import.test.ts",
+  "greenCommand": "bun test tests/periods-import.test.ts"
+}
+```
+
+- **`verify-only`** — o teste já existe no repo; a tarefa só o executa e reporta o resultado. Exige `why`.
+- **`none`** — não há teste (dado de produção, validação só manual, texto). Exige `why`.
+
+`test` e `validation` são ortogonais: `test.strategy` diz **como o trabalho é feito**; `validation.kind` diz **como o resultado é provado**. Tarefa cujo único caminho de prova é `pw2` manual declara `verify-only`/`none` com a justificativa — não `tdd` com um teste de mentira.
+
+## Definition of ready
+
+O harness **recusa a emissão** quando uma tarefa de código do fluxo Story não declara:
+
+- `test.strategy` — com `file`/`redCommand`/`greenCommand` em `tdd`, ou `why` em `verify-only`/`none`;
+- `repo`;
+- `filesLikelyTouched` — sem isso o gate anti-conflito da onda não tem o que comparar.
 
 ## Ondas e paralelismo
 

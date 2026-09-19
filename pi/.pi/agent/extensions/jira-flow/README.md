@@ -38,7 +38,7 @@ O **harness** (esta extension) faz o I/O; a **LLM** conduz análise, investigaç
 | **Manutenção / Apoio / Documentação / genérico** | tarefas (formato plano atual) | `emit_epic_artifacts` |
 
 - **Epic:** decompõe o escopo em **histórias** — fatias verticais negociáveis, com `valorObservavel` e critérios Dado/Quando/Então. O Epic **não** emite tarefas; cada história é refinada depois com `/refinar-issue <STORY-KEY>`.
-- **Story:** refina a história e gera as tarefas implementáveis. A quebra parte da **fatia mínima completa** (default: 1 tarefa) e cada tarefa carrega `valorObservavel`, critérios verificáveis, `repo`, `filesLikelyTouched` e `validation` (pw2/unit-tests/manual). O gate anti-conflito rejeita tarefas da mesma onda com arquivos em comum.
+- **Story:** refina a história e gera as tarefas implementáveis. A quebra parte da **fatia mínima completa** (default: 1 tarefa) e cada tarefa carrega `valorObservavel`, critérios verificáveis, `repo`, `filesLikelyTouched`, `validation` (pw2/unit-tests/manual) e `test` (contrato de teste — `tdd` com comandos RED/GREEN, `verify-only` ou `none` com justificativa). O gate anti-conflito rejeita tarefas da mesma onda com arquivos em comum, e a emissão é recusada quando falta `test.strategy`, `repo` ou `filesLikelyTouched`.
 - **Manutenção:** investiga causa, evidências, impacto e correção; entrega **uma correção** (ou uma investigação, se a causa não estiver comprovada) + um `Associado [CLIENTE]` por relato afetado. Pode usar `search_opensearch`.
 - **Apoio ao cliente:** diagnostica, testa e explica o ocorrido sem implementar código. Pode usar `search_opensearch` e, com confirmação explícita, `change_issue_to_maintenance`.
 - **Documentação:** por enquanto segue o fluxo genérico; o fluxo dedicado ficará para uma evolução posterior.
@@ -104,7 +104,7 @@ Fora do TUI (`pi -p`, `--mode json/rpc`), `ask_user` avisa que não há interfac
 ├── story.md                # história refinada (contexto do epic pai + análise)
 ├── index.md                # tabela de tarefas com Validação/Status/Evidência
 ├── tasks/
-│   └── TASK-01-<slug>.md   # repo, branch, filesLikelyTouched, validação
+│   └── TASK-01-<slug>.md   # repo, branch, filesLikelyTouched, validação, contrato de teste
 └── evidence/
     └── TASK-01-<slug>.md   # evidência da validação (gerada pelo epic-runner)
 ```

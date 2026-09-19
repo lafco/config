@@ -91,6 +91,130 @@ describe("validateTasks", () => {
 	});
 });
 
+describe("contrato de teste e definition of ready", () => {
+	const CODIGO = {
+		type: "Codificação",
+		acceptanceCriteria: ["Dado/Quando/Então"],
+		repo: "/r",
+		filesLikelyTouched: ["src/a.ts"],
+		validation: { kind: "unit-tests" as const, expected: "o teste passa" },
+	};
+
+	test("tarefa de código do fluxo Story exige test.strategy", () => {
+		const errors = validateTasks({ flow: "story", tasks: [task({ id: "TASK-01", ...CODIGO })] });
+		expect(errors.join("\n")).toContain("test.strategy");
+	});
+
+	test("tdd exige arquivo e os dois comandos", () => {
+		const errors = validateTasks({
+			flow: "story",
+			tasks: [task({ id: "TASK-01", ...CODIGO, test: { strategy: "tdd" } })],
+		});
+		const joined = errors.join("\n");
+		expect(joined).toContain("test.file");
+		expect(joined).toContain("test.redCommand");
+		expect(joined).toContain("test.greenCommand");
+	});
+
+	test("tdd completo passa", () => {
+		const errors = validateTasks({
+			flow: "story",
+			tasks: [
+				task({
+					id: "TASK-01",
+					...CODIGO,
+					test: {
+						strategy: "tdd",
+						file: "tests/a.test.ts",
+						redCommand: "bun test tests/a.test.ts",
+						greenCommand: "bun test tests/a.test.ts",
+					},
+				}),
+			],
+		});
+		expect(errors).toEqual([]);
+	});
+
+	test("verify-only e none exigem justificativa", () => {
+		const semWhy = validateTasks({
+			flow: "story",
+			tasks: [task({ id: "TASK-01", ...CODIGO, test: { strategy: "verify-only" } })],
+		});
+		expect(semWhy.join("\n")).toContain("test.why");
+
+		const comWhy = validateTasks({
+			flow: "story",
+			tasks: [
+				task({ id: "TASK-01", ...CODIGO, test: { strategy: "none", why: "sem suíte no repo; prova é manual" } }),
+			],
+		});
+		expect(comWhy).toEqual([]);
+	});
+
+	test("estratégia desconhecida é recusada", () => {
+		const errors = validateTasks({
+			flow: "story",
+			tasks: [task({ id: "TASK-01", ...CODIGO, test: { strategy: "red-green" as never } })],
+		});
+		expect(errors.join("\n")).toContain("inválido");
+	});
+
+	test("fluxo Story exige repo e filesLikelyTouched", () => {
+		const errors = validateTasks({
+			flow: "story",
+			tasks: [
+				task({
+					id: "TASK-01",
+					...CODIGO,
+					repo: undefined,
+					filesLikelyTouched: [],
+					test: { strategy: "none", why: "sem suíte" },
+				}),
+			],
+		});
+		const joined = errors.join("\n");
+		expect(joined).toContain("precisa de `repo`");
+		expect(joined).toContain("filesLikelyTouched");
+	});
+
+	test("tarefa de diagnóstico (implementableByAgent false) não exige teste", () => {
+		const errors = validateTasks({
+			flow: "story",
+			tasks: [
+				task({
+					id: "TASK-01",
+					type: "Codificação",
+					acceptanceCriteria: ["Dado/Quando/Então"],
+					implementableByAgent: false,
+					validation: { kind: "manual", expected: "o humano confere" },
+				}),
+			],
+		});
+		expect(errors.join("\n")).not.toContain("test.strategy");
+	});
+
+	test("fluxo plano não exige contrato de teste, mas exige quando kind é correção", () => {
+		const plano = validateTasks({
+			flow: "maintenance",
+			tasks: [task({ id: "TASK-01", type: "Codificação", acceptanceCriteria: ["Dado/Quando/Então"] })],
+		});
+		expect(plano).toEqual([]);
+
+		const correcao = validateTasks({
+			flow: "maintenance",
+			tasks: [
+				task({
+					id: "TASK-01",
+					kind: "correção",
+					acceptanceCriteria: ["Dado/Quando/Então"],
+					validation: { kind: "manual", expected: "sem erro no log" },
+				}),
+			],
+		});
+		expect(correcao.join("\n")).toContain("test.strategy");
+	});
+});
+
 describe("validateArtifacts (paralelismo e avisos)", () => {
 	test("recusa duas tarefas da mesma onda com o mesmo arquivo", () => {
 		const report = validateArtifacts({
@@ -160,18 +284,24 @@ describe("materialização", () => {
 			dir,
 			templatesDir: TEMPLATES,
 			story: story({ id: "STORY-01", title: "Cadastrar algo", jiraKey: "PROJ-10" }),
-			tasks: [
-				task({
-					id: "TASK-01",
-					title: "Ajustar endpoint",
-					type: "Codificação",
-					acceptanceCriteria: ["Dado/Quando/Então"],
-					repo: "/r",
-					branch: "feat/PROJ-10-task-01",
-					filesLikelyTouched: ["src/a.ts"],
-					validation: { kind: "pw2", environment: "local", expected: "200" },
-				}),
-			],
+				tasks: [
+					task({
+						id: "TASK-01",
+						title: "Ajustar endpoint",
+						type: "Codificação",
+						acceptanceCriteria: ["Dado/Quando/Então"],
+						repo: "/r",
+						branch: "feat/PROJ-10-task-01",
+						filesLikelyTouched: ["src/a.ts"],
+						validation: { kind: "pw2", environment: "local", expected: "200" },
+						test: {
+							strategy: "tdd",
+							file: "tests/endpoint.test.ts",
+							redCommand: "bun test tests/endpoint.test.ts",
+							greenCommand: "bun test tests/endpoint.test.ts",
+						},
+					}),
+				],
 			meta,
 			flow: "story",
 		});
@@ -182,6 +312,9 @@ describe("materialização", () => {
 		const taskContent = fs.readFileSync(taskFile, "utf8");
 		expect(taskContent).toContain('validation_kind: "pw2"');
 		expect(taskContent).toContain("repo:");
+		expect(taskContent).toContain('test_strategy: "tdd"');
+		expect(taskContent).toContain("- **Arquivo de teste:** tests/endpoint.test.ts");
+		expect(taskContent).toContain("- **Deve falhar antes (RED):** bun test tests/endpoint.test.ts");
 		const index = fs.readFileSync(path.join(dir, "index.md"), "utf8");
 		expect(index).toContain("Validação");
 		expect(result.files.length).toBeGreaterThanOrEqual(3);

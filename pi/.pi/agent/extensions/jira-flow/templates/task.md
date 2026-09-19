@@ -21,6 +21,11 @@ validation_environment: {{validationEnvironment}}
 validation_company: {{validationCompany}}
 validation_register: {{validationRegister}}
 validation_expected: {{validationExpectedYaml}}
+test_strategy: {{testStrategyYaml}}
+test_file: {{testFileYaml}}
+test_red_command: {{testRedCommandYaml}}
+test_green_command: {{testGreenCommandYaml}}
+test_why: {{testWhyYaml}}
 ---
 
 # {{id}} — {{title}}
@@ -70,7 +75,13 @@ Passos:
 
 {{validationSteps}}
 
-## Testes
+## Teste
+
+- **Estratégia:** {{testSummary}}
+- **Arquivo de teste:** {{testFileText}}
+- **Deve falhar antes (RED):** {{testRedCommandText}}
+- **Deve passar depois (GREEN):** {{testGreenCommandText}}
+{{testWhyLine}}
 
 {{tests}}
 
@@ -78,6 +89,7 @@ Passos:
 
 - [ ] Critérios de aceite atendidos
 - [ ] Testes descritos passando
+- [ ] Contrato de teste cumprido (`test.strategy`); em `tdd`, a evidência traz o RED (falhou antes) e o GREEN (passou depois)
 - [ ] Validação executada conforme a seção acima
 - [ ] Sem regressões conhecidas
 - [ ] Evidência registrada em `evidence/<ID>-<slug>.md`

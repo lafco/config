@@ -31,6 +31,44 @@ function requiresValidation(task: TaskArtifact): boolean {
 	return isCodeTask(task.type);
 }
 
+const TEST_STRATEGIES = new Set<string>(["tdd", "verify-only", "none"]);
+
+/**
+ * Definition of ready do contrato de teste: toda tarefa de código declara
+ * `test.strategy`; `tdd` exige arquivo + comando vermelho + comando verde;
+ * `verify-only` e `none` exigem justificativa.
+ */
+function validateTestContract(task: TaskArtifact): string[] {
+	const errors: string[] = [];
+	const strategy = (task.test?.strategy ?? "").trim();
+
+	if (!strategy) {
+		errors.push(
+			`${task.id} precisa de \`test.strategy\` (\`tdd\`, \`verify-only\` ou \`none\`): declarar como o teste é tratado é parte da quebra.`,
+		);
+		return errors;
+	}
+	if (!TEST_STRATEGIES.has(strategy)) {
+		errors.push(`${task.id}: \`test.strategy\` inválido ("${strategy}"); use \`tdd\`, \`verify-only\` ou \`none\`.`);
+		return errors;
+	}
+	if (strategy === "tdd") {
+		if (!task.test?.file?.trim()) {
+			errors.push(`${task.id}: \`test.strategy: tdd\` exige \`test.file\`.`);
+		}
+		if (!task.test?.redCommand?.trim()) {
+			errors.push(`${task.id}: \`test.strategy: tdd\` exige \`test.redCommand\` — o comando que deve falhar antes da implementação.`);
+		}
+		if (!task.test?.greenCommand?.trim()) {
+			errors.push(`${task.id}: \`test.strategy: tdd\` exige \`test.greenCommand\` — o comando que deve passar depois.`);
+		}
+	} else if (!task.test?.why?.trim()) {
+		errors.push(`${task.id}: \`test.strategy: ${strategy}\` exige \`test.why\` justificando por que a tarefa não segue \`tdd\`.`);
+	}
+
+	return errors;
+}
+
 export interface EpicArtifact {
 	key: string;
 	summary: string;
@@ -78,6 +116,26 @@ export interface ValidationSpec {
 	expected: string;
 }
 
+export type TestStrategy = "tdd" | "verify-only" | "none";
+
+/**
+ * Contrato de teste da tarefa. `tdd` é o padrão: a tarefa declara o teste que
+ * deve falhar antes (RED) e o comando que deve passar depois (GREEN), e a
+ * evidência carrega os dois. `verify-only` e `none` exigem justificativa —
+ * declarar por que não há teste é diferente de não decidir.
+ */
+export interface TestSpec {
+	strategy: TestStrategy;
+	/** Arquivo de teste criado ou estendido pela tarefa (obrigatório em `tdd`). */
+	file?: string;
+	/** Comando que deve FALHAR antes da implementação (obrigatório em `tdd`). */
+	redCommand?: string;
+	/** Comando que deve PASSAR depois da implementação (obrigatório em `tdd`). */
+	greenCommand?: string;
+	/** Por que não é `tdd` (obrigatório em `verify-only` e `none`). */
+	why?: string;
+}
+
 export interface TaskArtifact {
 	id: string;
 	title: string;
@@ -107,6 +165,8 @@ export interface TaskArtifact {
 	kind?: string;
 	/** Como validar a implementação (obrigatória no fluxo Story para código). */
 	validation?: ValidationSpec;
+	/** Contrato de teste (RED/GREEN) da tarefa de código. */
+	test?: TestSpec;
 }
 
 export interface MaterializeMeta {
@@ -191,6 +251,14 @@ function inline(value: string | undefined, max = 90): string {
 
 function cell(value: string | undefined): string {
 	return (value ?? "").replace(/\|/g, "\\|").replace(/\n/g, " ").trim() || "—";
+}
+
+function testSummary(test: TestSpec | undefined): string {
+	const strategy = (test?.strategy ?? "").trim();
+	if (strategy === "tdd") return "tdd (RED antes, GREEN depois)";
+	if (strategy === "verify-only") return "verify-only (valida o que já existe)";
+	if (strategy === "none") return "none (sem teste)";
+	return "—";
 }
 
 function validationSummary(validation: ValidationSpec | undefined): string {
@@ -324,6 +392,24 @@ export function validateTasks(input: { tasks: TaskArtifact[]; flow?: IssueFlow }
 			const environment = (task.validation.environment ?? "local").trim() || "local";
 			if (environment !== "local" && !task.validation.company?.trim()) {
 				errors.push(`${task.id}: validação pw2 em "${environment}" exige \`validation.company\`.`);
+			}
+		}
+
+		// Definition of ready: a tarefa despachada a um agente nasce com teste
+		// declarado, repositório e arquivos prováveis.
+		const correcao = (task.kind ?? "").trim().toLowerCase() === "correção";
+		const agentTask = requiresValidation(task) && task.implementableByAgent !== false;
+		if (agentTask && (storyFlow || correcao)) {
+			errors.push(...validateTestContract(task));
+		}
+		if (agentTask && storyFlow) {
+			if (!task.repo?.trim()) {
+				errors.push(`${task.id} precisa de \`repo\`: a tarefa é despachada numa worktree própria.`);
+			}
+			if (!task.filesLikelyTouched?.length) {
+				errors.push(
+					`${task.id} precisa de \`filesLikelyTouched\`: sem isso o gate anti-conflito da onda não tem o que comparar.`,
+				);
 			}
 		}
 	}
@@ -675,6 +761,16 @@ function taskVars(task: TaskArtifact, meta: MaterializeMeta): Record<string, str
 		validationExpected: text(task.validation?.expected),
 		validationSteps: bullets(task.validation?.steps),
 		validationSummary: validationSummary(task.validation),
+		testSummary: testSummary(task.test),
+		testStrategyYaml: yamlString(task.test?.strategy ?? ""),
+		testFileYaml: yamlString(task.test?.file ?? ""),
+		testFileText: text(task.test?.file),
+		testRedCommandYaml: yamlString(task.test?.redCommand ?? ""),
+		testRedCommandText: text(task.test?.redCommand),
+		testGreenCommandYaml: yamlString(task.test?.greenCommand ?? ""),
+		testGreenCommandText: text(task.test?.greenCommand),
+		testWhyYaml: yamlString(task.test?.why ?? ""),
+		testWhyLine: task.test?.why?.trim() ? `- **Justificativa:** ${task.test.why.trim()}` : "",
 		title: task.title,
 		objective: text(task.objective),
 		valorObservavel: text(task.valorObservavel),
