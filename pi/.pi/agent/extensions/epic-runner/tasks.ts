@@ -42,6 +42,8 @@ export interface TaskFile {
 	reviewCategory?: string;
 	/** Tentativas de implementação já revisadas. */
 	attempts: number;
+	/** Commit de bifurcação da branch da tarefa (base do diff do review). */
+	baseSha?: string;
 }
 
 export interface StoryDir {
@@ -190,6 +192,7 @@ export function readTaskFile(file: string): TaskFile {
 		reviewStatus: asString(front.review_status),
 		reviewCategory: asString(front.review_category),
 		attempts: asNumber(front.attempts, 0),
+		baseSha: asString(front.base_sha),
 	};
 }
 
@@ -335,6 +338,11 @@ function setFrontmatterLine(file: string, key: string, value: string): void {
 
 export function setTaskStatus(file: string, status: string): void {
 	setFrontmatterLine(file, "status", status);
+}
+
+/** Escreve um campo arbitrário do frontmatter da tarefa (ex.: `base_sha`). */
+export function setTaskField(file: string, key: string, value: string): void {
+	setFrontmatterLine(file, key, value);
 }
 
 export interface TaskReviewState {

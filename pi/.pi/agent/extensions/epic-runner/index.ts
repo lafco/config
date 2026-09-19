@@ -19,6 +19,7 @@ import {
 	readStory,
 	reviewRoute,
 	selectReadyWave,
+	setTaskField,
 	setTaskReview,
 	setTaskStatus,
 	updateIndexRow,
@@ -26,6 +27,7 @@ import {
 	writeReview,
 	type TaskFile,
 } from "./tasks.ts";
+import { buildReviewPackage } from "./review-package.ts";
 import { addWorktree, removeWorktree, worktreePath } from "./worktrees.ts";
 
 const STATUSES = ["backlog", "fazendo", "pronto", "bloqueado", "cancelado"] as const;
@@ -57,6 +59,7 @@ function taskBrief(task: TaskFile) {
 		dependsOn: task.dependsOn,
 		repo: task.repo ?? null,
 		branch: task.branch ?? null,
+		baseSha: task.baseSha ?? null,
 		filesLikelyTouched: task.filesLikelyTouched,
 		kind: task.kind ?? null,
 		validation: task.validationKind
@@ -237,6 +240,7 @@ function registerPrepareTool(pi: ExtensionAPI): void {
 					});
 					results.push({ ...result, title: task.title });
 					setTaskStatus(task.file, "fazendo");
+					if (result.baseSha) setTaskField(task.file, "base_sha", result.baseSha);
 					updateIndexRow(story.indexFile, task.id, { status: "fazendo" });
 				}
 
@@ -451,6 +455,63 @@ function registerReviewTool(pi: ExtensionAPI): void {
 }
 
 // ---------------------------------------------------------------------------
+// prepare_review_package
+// ---------------------------------------------------------------------------
+
+const PackageSchema = Type.Object({
+	storyKey: Type.String({ description: "Key da story (ex.: PROJ-123)." }),
+	taskId: Type.String({ description: "ID da tarefa (ex.: TASK-01)." }),
+	baseBranch: Type.Optional(
+		Type.String({
+			description:
+				"Branch base, usada só quando a tarefa não tem `base_sha` gravado (artefato antigo ou worktree reaproveitada).",
+		}),
+	),
+});
+type PackageParams = Static<typeof PackageSchema>;
+
+function registerPackageTool(pi: ExtensionAPI): void {
+	pi.registerTool({
+		name: "prepare_review_package",
+		label: "Montar o pacote de review da tarefa",
+		description:
+			"Escreve `review/<TASK-ID>-<slug>-<base7>.diff` com a lista de commits, o resumo de alterações e o diff (contexto 10) do ponto de bifurcação da tarefa até o HEAD dela, e devolve o caminho. Despache o agente `task-reviewer` com esse arquivo em vez de mandar rodar `git diff`: o pacote é a visão da mudança e evita varrer o repositório. Chame depois do worker, antes de `write_task_review`.",
+		parameters: PackageSchema,
+		executionMode: "sequential",
+		async execute(_toolCallId, params: PackageParams) {
+			try {
+				const story = readStory(params.storyKey, resolveEpicsDir());
+				const task = story.tasks.find((item) => item.id === params.taskId.trim().toUpperCase());
+				if (!task) return fail(`${params.taskId} não encontrada em ${story.dir}.`, {});
+				const repo = (task.repo ?? "").trim();
+				if (!repo) return fail(`${task.id} não declara \`repo\`.`, {});
+				const branch = (task.branch ?? `feat/${story.key}-${task.id.toLowerCase()}`).trim();
+
+				const pkg = await buildReviewPackage({
+					repo,
+					baseRef: task.baseSha,
+					baseBranch: params.baseBranch,
+					branch,
+					outFile: path.join(
+						story.reviewDir,
+						`${task.id}-${task.slug}-${(task.baseSha ?? "nobase").slice(0, 7)}.diff`,
+					),
+				});
+
+				const short = `${pkg.base.slice(0, 7)}..${pkg.head.slice(0, 7)}`;
+				const note = pkg.truncated ? " (TRUNCADO: diff acima de 400 KB)" : "";
+				return ok(
+					`Pacote de ${task.id} (${short}): ${pkg.commits} commit(s), ${pkg.files} arquivo(s), ${Math.round(pkg.bytes / 1024)} KB${note} → ${pkg.file}`,
+					{ ...pkg, taskId: task.id, branch },
+				);
+			} catch (error) {
+				return fail(errorMessage(error), {});
+			}
+		},
+	});
+}
+
+// ---------------------------------------------------------------------------
 // remove_task_worktrees
 // ---------------------------------------------------------------------------
 
@@ -504,11 +565,12 @@ function registerCleanupTool(pi: ExtensionAPI): void {
 	});
 }
 
-export default function (pi: ExtensionAPI) {
+	export default function (pi: ExtensionAPI) {
 	registerListTool(pi);
 	registerPrepareTool(pi);
 	registerStatusTool(pi);
 	registerEvidenceTool(pi);
+	registerPackageTool(pi);
 	registerReviewTool(pi);
 	registerCleanupTool(pi);
 }

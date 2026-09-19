@@ -105,10 +105,12 @@ Fora do TUI (`pi -p`, `--mode json/rpc`), `ask_user` avisa que não há interfac
 ├── index.md                # tabela de tarefas com Validação/Teste/Status/Evidência/Review
 ├── tasks/
 │   └── TASK-01-<slug>.md   # repo, branch, filesLikelyTouched, validação, contrato de teste
+│                            # + review_status/review_category/attempts/base_sha (gravados na execução)
 ├── evidence/
 │   └── TASK-01-<slug>.md   # evidência da validação (gerada pelo epic-runner)
 └── review/
-    └── TASK-01-<slug>-t1.md # veredito do revisor: categoria dos achados e rota
+    ├── TASK-01-<slug>-<base7>.diff    # pacote de review (commits + resumo + diff)
+    └── TASK-01-<slug>-t1.md           # veredito do revisor: categoria dos achados e rota
 ```
 **Fluxos planos** (Manutenção/Apoio/Documentação/genérico): `jira-source.md`, `epic.md`, `index.md` e `tasks/TASK-NN-<slug>.md`.
 

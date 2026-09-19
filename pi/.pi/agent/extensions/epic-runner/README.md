@@ -13,6 +13,7 @@ Ela **não** implementa nada por conta própria: expõe tools que o prompt `/imp
 | `update_task_status({ storyKey, taskId, status })` | Grava `backlog\|fazendo\|pronto\|bloqueado\|cancelado` no frontmatter da tarefa e na tabela do índice. |
 | `write_task_evidence({ storyKey, taskId, content, status? })` | Grava `evidence/TASK-NN-<slug>.md` e linka na coluna **Evidência** do índice. |
 | `write_task_review({ storyKey, taskId, verdict, category?, findings })` | Grava o veredito do revisor em `review/TASK-NN-<slug>-t<tentativa>.md`, incrementa `attempts` e preenche a coluna **Review**. A tool decide a rota pela categoria: `execucao`/`ambiente` retentam uma vez (`retry`), as demais vão para `bloqueado`. |
+| `prepare_review_package({ storyKey, taskId, baseBranch? })` | Escreve `review/<TASK-ID>-<slug>-<base7>.diff` com commits, resumo e diff (contexto 10) do ponto de bifurcação da tarefa até o HEAD dela. É o insumo do agente `task-reviewer` — evita que ele rode `git diff` e varra o repositório. |
 | `remove_task_worktrees({ storyKey, repo, tasks })` | Remove worktrees e branches (best-effort). Rode depois do merge/decisão humana. |
 
 ## Ciclo esperado
@@ -22,7 +23,7 @@ Ela **não** implementa nada por conta própria: expõe tools que o prompt `/imp
 2. prepare_task_worktrees  → cwd + branch por tarefa
 3. subagent (parallel)     → 1 worker por tarefa, cwd = worktree
 4. write_task_evidence     → evidência por tarefa
-5. subagent (parallel)     → 1 revisor por tarefa (conformidade + qualidade)
+5. subagent (parallel)     → 1 revisor (`task-reviewer`) por tarefa, com o pacote de review
 6. write_task_review       → veredito + categoria; leia `route`
    ├── retry        → volta ao passo 3 levando os achados (uma vez)
    └── bloqueado/ok → update_task_status
@@ -46,4 +47,5 @@ O review **não bloqueia** a esteira: ele registra a categoria dos achados para 
 |---|---|
 | `index.ts` | Registro das cinco tools |
 | `tasks.ts` | Parse do frontmatter/índice, `selectReadyWave`, `detectFileConflicts`, `reviewRoute`, escrita de status/evidência/review |
-| `worktrees.ts` | Wrapper de `git worktree` |
+| `review-package.ts` | Monta o pacote de review (commits + resumo + diff do ponto de bifurcação), com truncamento marcado |
+| `worktrees.ts` | Wrapper de `git worktree`; devolve o `baseSha` (merge-base) da branch da tarefa |

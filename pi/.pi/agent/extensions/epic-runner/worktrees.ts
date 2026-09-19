@@ -29,6 +29,11 @@ function git(args: string[], cwd: string): Promise<string> {
 	});
 }
 
+/** Executa git lendo o repositório (usado pelo pacote de review). */
+export function gitRun(args: string[], cwd: string): Promise<string> {
+	return git(args, cwd);
+}
+
 export function worktreePath(repo: string, storyKey: string, taskId: string): string {
 	return path.join(repo, ".worktrees", `${storyKey}-${taskId}`);
 }
@@ -52,6 +57,8 @@ export interface WorktreeResult {
 	branch: string;
 	cwd: string;
 	created: boolean;
+	/** Ponto de bifurcação da branch da tarefa: base do diff do review. */
+	baseSha?: string;
 }
 
 /** Cria (ou reaproveita) a worktree da tarefa e devolve o diretório/branch. */
@@ -66,11 +73,25 @@ export async function addWorktree(input: {
 	const cwd = worktreePath(repo, storyKey, taskId);
 	if (await branchExists(repo, branch)) {
 		await git(["worktree", "add", cwd, branch], repo);
-		return { taskId, repo, branch, cwd, created: true };
+		const base = baseBranch?.trim() || (await currentBranch(repo));
+		return { taskId, repo, branch, cwd, created: true, baseSha: await mergeBase(repo, base, branch) };
 	}
 	const base = baseBranch?.trim() || (await currentBranch(repo));
 	await git(["worktree", "add", "-b", branch, cwd, base], repo);
-	return { taskId, repo, branch, cwd, created: true };
+	return { taskId, repo, branch, cwd, created: true, baseSha: await mergeBase(repo, base, branch) };
+}
+
+/**
+ * Ponto de bifurcação entre a base e a branch da tarefa. `merge-base` (e não
+ * `HEAD~1`) mantém o diff do review correto mesmo com vários commits na
+ * tarefa ou com a base avançando durante a execução.
+ */
+async function mergeBase(repo: string, base: string, branch: string): Promise<string | undefined> {
+	try {
+		return await git(["merge-base", base, branch], repo);
+	} catch {
+		return undefined;
+	}
 }
 
 /** Remove a worktree e a branch (best-effort na branch). */

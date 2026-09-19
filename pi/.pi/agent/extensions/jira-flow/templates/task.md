@@ -29,6 +29,7 @@ test_why: {{testWhyYaml}}
 review_status: ""
 review_category: ""
 attempts: 0
+base_sha: ""
 ---
 
 # {{id}} — {{title}}
