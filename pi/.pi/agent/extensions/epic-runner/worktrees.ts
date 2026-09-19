@@ -94,26 +94,34 @@ async function mergeBase(repo: string, base: string, branch: string): Promise<st
 	}
 }
 
-/** Remove a worktree e a branch (best-effort na branch). */
+/**
+ * Remove a worktree e, **só se já estiver mergeada**, a branch.
+ *
+ * `git branch -d` (não `-D`): a branch da tarefa carrega o único commit da
+ * entrega e o merge é decisão humana. Deletar à força aqui apagaria o trabalho
+ * — foi o que um modelo percebeu e recusou durante o teste do fluxo.
+ */
 export async function removeWorktree(input: {
 	taskId: string;
 	repo: string;
 	branch?: string;
 	storyKey: string;
-}): Promise<{ taskId: string; cwd: string; removed: boolean; branchDeleted: boolean }> {
+}): Promise<{ taskId: string; cwd: string; removed: boolean; branchDeleted: boolean; branchKept?: string }> {
 	const { taskId, repo, branch, storyKey } = input;
 	const cwd = worktreePath(repo, storyKey, taskId);
 	await git(["worktree", "remove", "--force", cwd], repo);
 	let branchDeleted = false;
+	let branchKept: string | undefined;
 	if (branch?.trim()) {
 		try {
-			await git(["branch", "-D", branch.trim()], repo);
+			await git(["branch", "-d", branch.trim()], repo);
 			branchDeleted = true;
 		} catch {
 			branchDeleted = false;
+			branchKept = branch.trim();
 		}
 	}
-	return { taskId, cwd, removed: true, branchDeleted };
+	return { taskId, cwd, removed: true, branchDeleted, branchKept };
 }
 
 export async function listWorktrees(repo: string): Promise<string> {

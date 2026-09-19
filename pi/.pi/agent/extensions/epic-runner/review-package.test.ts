@@ -4,7 +4,7 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { buildReviewPackage } from "./review-package.ts";
-import { addWorktree } from "./worktrees.ts";
+import { addWorktree, removeWorktree } from "./worktrees.ts";
 
 function repoG(): { dir: string; base: string; git: (...a: string[]) => void } {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "rp-"));
@@ -88,6 +88,29 @@ describe("integracao com worktree", () => {
     expect(pkg.commits).toBe(1);
     expect(pkg.files).toBe(1);
     expect(fs.readFileSync(pkg.file, "utf8")).toContain("+novo");
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
+});
+
+describe("limpeza preserva o trabalho", () => {
+  test("remove a worktree mas não apaga branch não mergeada", async () => {
+    const { dir } = repoG();
+    const wt = await addWorktree({ taskId: "TASK-01", repo: dir, branch: "feat/lab-task-01", storyKey: "LAB-1" });
+    fs.writeFileSync(path.join(wt.cwd, "c.txt"), "entrega\n");
+    void execFileSync("git", ["add", "."], { cwd: wt.cwd, stdio: "pipe" });
+    void execFileSync("git", ["-c", "user.email=t@t", "-c", "user.name=t", "commit", "-qm", "entrega"], {
+      cwd: wt.cwd,
+      stdio: "pipe",
+    });
+
+    const result = await removeWorktree({ taskId: "TASK-01", repo: dir, branch: "feat/lab-task-01", storyKey: "LAB-1" });
+    expect(result.removed).toBe(true);
+    expect(result.branchDeleted).toBe(false);
+    expect(result.branchKept).toBe("feat/lab-task-01");
+    // A branch e o commit da entrega continuam lá.
+    const branches = execFileSync("git", ["branch", "--list", "feat/lab-task-01"], { cwd: dir, encoding: "utf8" });
+    expect(branches).toContain("feat/lab-task-01");
+    expect(execFileSync("git", ["log", "--oneline", "feat/lab-task-01"], { cwd: dir, encoding: "utf8" })).toContain("entrega");
     fs.rmSync(dir, { recursive: true, force: true });
   });
 });

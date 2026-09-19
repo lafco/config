@@ -428,6 +428,44 @@ export function writeEvidence(story: StoryDir, task: TaskFile, content: string):
 }
 
 /**
+ * Conteúdo do arquivo de review. Guarda o veredito **e** o relatório do
+ * revisor: no veredito `ok` o relatório é o único registro das ressalvas e
+ * sugestões — sem ele, revisitar a tarefa depois não tem o que reler.
+ */
+export function reviewDocument(input: {
+	storyKey: string;
+	taskId: string;
+	title: string;
+	attempt: number;
+	status: string;
+	category?: string;
+	route: string;
+	branch?: string;
+	findings: string;
+	report?: string;
+	at?: string;
+}): string {
+	const header = [
+		`# Review — ${input.taskId} ${input.title}`,
+		"",
+		`- **Story:** ${input.storyKey}`,
+		`- **Tentativa:** ${input.attempt}`,
+		`- **Veredito:** ${input.status}`,
+		input.category ? `- **Categoria:** ${input.category}` : "",
+		`- **Rota:** ${input.route}`,
+		`- **Registrado em:** ${input.at ?? new Date().toISOString()}`,
+		input.branch ? `- **Branch:** ${input.branch}` : "",
+		"",
+		"---",
+		"",
+	];
+	const findings = input.findings.trim() || "Sem achados.";
+	const report = input.report?.trim();
+	const body = report ? `${findings}\n\n---\n\n## Relatório do revisor\n\n${report}` : findings;
+	return `${header.filter(Boolean).join("\n")}\n${body}`;
+}
+
+/**
  * Grava o veredito do review em `review/<ID>-<slug>-t<attempts>.md`. Uma
  * tentativa por arquivo: a segunda revisão não apaga a primeira, que é a
  * evidência de que a tarefa voltou.

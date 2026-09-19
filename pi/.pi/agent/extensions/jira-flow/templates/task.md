@@ -91,13 +91,16 @@ Passos:
 
 ## Definição de Pronto (DoD)
 
+Os itens abaixo são do **agente implementador**; os marcados como *orquestrador* não são dele.
+
 - [ ] Critérios de aceite atendidos
 - [ ] Testes descritos passando
 - [ ] Contrato de teste cumprido (`test.strategy`); em `tdd`, a evidência traz o RED (falhou antes) e o GREEN (passou depois)
-- [ ] Validação executada conforme a seção acima
+- [ ] Validação executada conforme a seção acima, com o resultado bruto no relatório
 - [ ] Sem regressões conhecidas
-- [ ] Evidência registrada em `evidence/<ID>-<slug>.md`
-- [ ] Status atualizado para `pronto` no `index.md`
+- [ ] Commit feito na branch da tarefa
+- [ ] *(orquestrador)* Evidência registrada em `evidence/<ID>-<slug>.md`
+- [ ] *(orquestrador)* Status no `index.md` atualizado — `pronto` só depois do review da tarefa
 
 ## Fora de escopo
 

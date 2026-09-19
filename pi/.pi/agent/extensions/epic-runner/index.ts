@@ -17,6 +17,7 @@ import { resolveEpicsDir } from "./epics-dir.ts";
 import {
 	detectFileConflicts,
 	readStory,
+	reviewDocument,
 	reviewRoute,
 	selectReadyWave,
 	setTaskField,
@@ -28,7 +29,7 @@ import {
 	type TaskFile,
 } from "./tasks.ts";
 import { buildReviewPackage } from "./review-package.ts";
-import { addWorktree, removeWorktree, worktreePath } from "./worktrees.ts";
+import { addWorktree, gitRun, removeWorktree, worktreePath } from "./worktrees.ts";
 
 const STATUSES = ["backlog", "fazendo", "pronto", "bloqueado", "cancelado"] as const;
 
@@ -381,6 +382,12 @@ const ReviewSchema = Type.Object({
 	findings: Type.String({
 		description: "Achados com evidência concreta (arquivo:linha, comando, saída). Vazio quando verdict=ok.",
 	}),
+	report: Type.Optional(
+		Type.String({
+			description:
+				"Relatório completo do revisor, copiado sem reescrever. É o que fica gravado para releitura — no veredito `ok` ele é o único registro das ressalvas e sugestões.",
+		}),
+	),
 });
 type ReviewParams = Static<typeof ReviewSchema>;
 
@@ -416,21 +423,23 @@ function registerReviewTool(pi: ExtensionAPI): void {
 				const status = params.verdict === "ok" ? "ok" : "achados";
 				setTaskReview(task.file, { status, category, attempts });
 
-				const header = [
-					`# Review — ${task.id} ${task.title}`,
-					"",
-					`- **Story:** ${story.key}`,
-					`- **Tentativa:** ${attempts}`,
-					`- **Veredito:** ${status}`,
-					category ? `- **Categoria:** ${category}` : "",
-					`- **Rota:** ${route}`,
-					`- **Registrado em:** ${new Date().toISOString()}`,
-					task.branch ? `- **Branch:** ${task.branch}` : "",
-					"",
-					"---",
-					"",
-				].filter(Boolean);
-				const file = writeReview(story, task, attempts, `${header.join("\n")}\n${findings || "Sem achados."}`);
+				const file = writeReview(
+					story,
+					task,
+					attempts,
+					reviewDocument({
+						storyKey: story.key,
+						taskId: task.id,
+						title: task.title,
+						attempt: attempts,
+						status,
+						category,
+						route,
+						branch: task.branch,
+						findings,
+						report: params.report,
+					}),
+				);
 
 				const label = route === "ok" ? "ok" : `${status}: ${category ?? "—"}`;
 				const link = `[${label}](./review/${path.basename(file)})`;
@@ -475,7 +484,7 @@ function registerPackageTool(pi: ExtensionAPI): void {
 		name: "prepare_review_package",
 		label: "Montar o pacote de review da tarefa",
 		description:
-			"Escreve `review/<TASK-ID>-<slug>-<base7>.diff` com a lista de commits, o resumo de alterações e o diff (contexto 10) do ponto de bifurcação da tarefa até o HEAD dela, e devolve o caminho. Despache o agente `task-reviewer` com esse arquivo em vez de mandar rodar `git diff`: o pacote é a visão da mudança e evita varrer o repositório. Chame depois do worker, antes de `write_task_review`.",
+			"Escreve `review/<TASK-ID>-<slug>-<base7>.diff` com a lista de commits, o resumo de alterações e o diff (contexto 10) do ponto de bifurcação da tarefa até o HEAD dela, e devolve o caminho. Recusa quando a worktree tem alteração **não commitada** — sem commit não há diff, e um pacote vazio seria lido como 'nada mudou'. Despache o agente `task-reviewer` com esse arquivo em vez de mandar rodar `git diff`. Chame depois do worker, antes de `write_task_review`.",
 		parameters: PackageSchema,
 		executionMode: "sequential",
 		async execute(_toolCallId, params: PackageParams) {
@@ -486,6 +495,22 @@ function registerPackageTool(pi: ExtensionAPI): void {
 				const repo = (task.repo ?? "").trim();
 				if (!repo) return fail(`${task.id} não declara \`repo\`.`, {});
 				const branch = (task.branch ?? `feat/${story.key}-${task.id.toLowerCase()}`).trim();
+
+				// Alteração não commitada não entra no diff — e um pacote vazio seria
+				// lido como "nada mudou". Falhar aqui é melhor que revisar o nada.
+				const cwd = worktreePath(repo, story.key, task.id);
+				if (fs.existsSync(cwd)) {
+					const dirty = await gitRun(["status", "--porcelain"], cwd);
+					if (dirty.trim()) {
+						return fail(
+							`A worktree de ${task.id} tem alteração não commitada — o pacote de review sairia vazio. Peça ao worker para commitar (um commit por tarefa) e chame de novo.\n${dirty
+								.split("\n")
+								.slice(0, 10)
+								.join("\n")}`,
+							{ dirty },
+						);
+					}
+				}
 
 				const pkg = await buildReviewPackage({
 					repo,
@@ -533,7 +558,7 @@ function registerCleanupTool(pi: ExtensionAPI): void {
 		name: "remove_task_worktrees",
 		label: "Remover worktrees das tarefas",
 		description:
-			"Remove as worktrees das tarefas (e as branches, best-effort). Chame ao encerrar a leva, depois do merge/decisão humana — as branches não são mergeadas automaticamente.",
+			"Remove as worktrees das tarefas. A branch só é apagada se **já estiver mergeada** (`git branch -d`): ela carrega o único commit da entrega, e um `-D` aqui apagaria o trabalho. Chame só depois do merge/decisão humana — as branches não são mergeadas automaticamente.",
 		parameters: CleanupSchema,
 		executionMode: "sequential",
 		async execute(_toolCallId, params: CleanupParams) {
@@ -555,7 +580,10 @@ function registerCleanupTool(pi: ExtensionAPI): void {
 					results.push(result);
 				}
 				const lines = results.map(
-					(result) => `- ${result.taskId}: ${result.removed ? "removida" : "não encontrada"}${result.branchDeleted ? " (branch apagada)" : ""}`,
+					(result) =>
+						`- ${result.taskId}: ${result.removed ? "removida" : "não encontrada"}${
+							result.branchDeleted ? " (branch apagada)" : ""
+						}${result.branchKept ? ` (branch ${result.branchKept} preservada: não está mergeada)` : ""}`,
 				);
 				return ok(`Limpeza:\n${lines.join("\n")}`, { results });
 			} catch (error) {

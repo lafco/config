@@ -8,6 +8,7 @@ import {
 	parseScalar,
 	readStory,
 	readTaskFile,
+	reviewDocument,
 	reviewRoute,
 	selectReadyWave,
 	setTaskReview,
@@ -230,5 +231,46 @@ describe("rota do review", () => {
 
 	test("veredito ok não tem rota de retry", () => {
 		expect(reviewRoute("ok", undefined, 1)).toBe("ok");
+	});
+});
+
+describe("documento do review", () => {
+	test("grava o veredito e o relatório do revisor", () => {
+		const doc = reviewDocument({
+			storyKey: "PROJ-1",
+			taskId: "TASK-01",
+			title: "Ajustar import",
+			attempt: 1,
+			status: "ok",
+			route: "ok",
+			branch: "feat/PROJ-1-task-01",
+			findings: "",
+			report: "## Conformidade\nnada a mais, nada a menos\n\n## Sugestões\n- src/a.ts:10 — extrair helper",
+			at: "2026-01-01T00:00:00.000Z",
+		});
+		expect(doc).toContain("# Review — TASK-01 Ajustar import");
+		expect(doc).toContain("- **Veredito:** ok");
+		expect(doc).toContain("- **Rota:** ok");
+		expect(doc).toContain("Sem achados.");
+		expect(doc).toContain("## Relatório do revisor");
+		expect(doc).toContain("extrair helper");
+		expect(doc).not.toContain("- **Categoria:**");
+	});
+
+	test("achados com categoria aparecem no cabeçalho", () => {
+		const doc = reviewDocument({
+			storyKey: "PROJ-1",
+			taskId: "TASK-02",
+			title: "x",
+			attempt: 2,
+			status: "achados",
+			category: "execucao",
+			route: "bloqueado",
+			findings: "- src/a.ts:88 — faltou tratar duplicado",
+		});
+		expect(doc).toContain("- **Categoria:** execucao");
+		expect(doc).toContain("- **Tentativa:** 2");
+		expect(doc).toContain("faltou tratar duplicado");
+		expect(doc).not.toContain("## Relatório do revisor");
 	});
 });
