@@ -29,8 +29,6 @@ import { loadAutoRunCompanies } from "./secrets.ts";
 import { getRefinement, stopRefinement } from "./state.ts";
 import { applyValidationDefaults, loadValidationDefaults, type ValidationDefaults } from "./validation-defaults.ts";
 
-let registered = false;
-
 export interface FlowToolsOptions {
 	templatesDir: string;
 	/** Diretório da extension, para ler `validation-defaults.json`. */
@@ -42,8 +40,6 @@ function defaultsFor(options: FlowToolsOptions): ValidationDefaults {
 }
 
 export function registerFlowTools(pi: ExtensionAPI, options: FlowToolsOptions): void {
-	if (registered) return;
-	registered = true;
 	registerEmitTool(pi, options);
 	registerOpenSearchTool(pi);
 	registerChangeIssueTypeTool(pi);
