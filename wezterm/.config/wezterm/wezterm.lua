@@ -35,6 +35,11 @@ config.default_prog = { 'bash', '-l' }
 -- Reativar se a detecção de modificadores do pi regredir.
 config.enable_kitty_keyboard = false
 
+-- Linux: com window_decorations = 'NONE', a janela maximizada perde o
+-- tamanho ao trocar de foco no Wayland nativo (wezterm#2536, #5389, #6275;
+-- GUI do pacote 20240203 em uso). XWayland evita — verificado 2026-09-29.
+config.enable_wayland = false
+
 -- Miscellaneous settings
 config.max_fps = 120
 config.prefer_egl = true
