@@ -51,7 +51,7 @@ Não é preciso confirmar o contexto à parte: ele entra na revisão da Fase 1.
 
 ## Fase 1/4 — Entendimento, investigação e validação (sem gate)
 
-1. **Investigue o repositório** para fundamentar a análise: onde o código toca o épico, o que já existe, o que falta. Anote caminhos concretos. Se as tools `mcpb_*` estiverem disponíveis, comece por elas (`mcpb_search_code`, `mcpb_read_file`, `mcpb_explain_flow`); grep/read direto complementam.
+1. **Investigue o repositório** para fundamentar a análise: onde o código toca o épico, o que já existe, o que falta. Anote caminhos concretos. Se as tools `mcpb_*` estiverem disponíveis, comece por elas (`mcpb_search_code`, `mcpb_read_file`, `mcpb_explain_flow`); grep/read direto complementam. Se for defeito, **reproduza o problema** e guarde a evidência do antes (entrada, saída observada, comando ou teste que falha); o que não conseguir reproduzir vira `duvidas`.
 2. **Consulte o especialista** (`consult_specialist`) para o que o código não responde: regra de negócio, comportamento esperado, restrições do produto. A tool usa o catálogo HTTP quando disponível e cai para o índice local (`mcpb ask`, com citações) quando não.
 3. Resuma a issue (3–5 linhas) e valide com o usuário com `ask_user`: objetivo, personas/cliente afetado, restrições e fora de escopo.
 4. Valide com **INVEST** (Independente, Negociável, Valioso, Estimável, Testável — "Pequeno" é o objetivo da quebra). Sinalize problemas e proponha ajustes.
@@ -78,6 +78,7 @@ Não é preciso confirmar o contexto à parte: ele entra na revisão da Fase 1.
 - **Validação local do PW2 (convenção do harness, no fim desta mensagem):** `environment: "local"`, `company: "a408453"` e matrícula padrão `236` nos `steps`. O harness preenche `company`/`register` quando você deixar vazio; declare explicitamente só quando o cenário pedir outra matrícula.
 - Critérios de aceite em **Dado/Quando/Então**, verificáveis por teste (3–8 por item); para `Codificação`/`Defeito`, pelo menos 1 é obrigatório (o harness rejeita a gravação sem isso).
 - Todo item traz `valorObservavel`: o que fica demonstrável com ele e para quem (tela, endpoint, teste) — específico, sem repetir o título.
+- Item que corrige defeito traz `problema`: o que está quebrado hoje, o caminho do código e a evidência de reprodução (entrada, saída observada, comando). O harness rejeita tarefa `Defeito`/`Bug` sem ele; na história é exigência sua. Em tarefa de código, o RED do `test` reproduz o `problema`.
 - Os passos sugeridos na descrição não podem reaparecer como itens: o que não pertence à fatia vai para `outOfScope`/`riscos`.
 - Escreva pensando no agente implementador: autocontido, sem ambiguidade, caminhos de arquivo concretos quando conhecidos, "Fora de escopo" explícito.
 - Use `consult_specialist` de novo quando surgir dúvida técnica na especificação.

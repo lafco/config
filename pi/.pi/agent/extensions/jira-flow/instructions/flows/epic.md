@@ -15,6 +15,7 @@ A issue é um **Epic**. Sua entrega é a lista de **histórias** (`stories`) —
 - `title` curto, orientado a resultado (não a atividade).
 - `valorObservavel` — o que fica demonstrável com a história e para quem.
 - `acceptanceCriteria` (≥ 1, em Dado/Quando/Então) — o contrato de negócio da fatia.
+- `problema` — o que está quebrado hoje e a evidência de reprodução; obrigatório na história que corrige defeito.
 - `objective`, `context`, `outOfScope`, `risks` quando ajudarem a especificar.
 - `wave` (onda) e `dependsOn` — o sequenciamento do epic.
 - `estimate` (`S`/`M`/`L` ou horas) e `storyPoints` (opcional).

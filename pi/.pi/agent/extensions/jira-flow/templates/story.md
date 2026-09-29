@@ -29,6 +29,10 @@ depends_on: {{dependsOnYaml}}
 
 {{valorObservavel}}
 
+## Problema e evidência
+
+{{problema}}
+
 ## Critérios de aceite
 
 {{acceptanceCriteria}}

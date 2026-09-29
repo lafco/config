@@ -75,6 +75,35 @@ describe("validateTasks", () => {
 		expect(errors).toEqual([]);
 	});
 
+	test("tarefa de Defeito exige problema com a evidência do antes", () => {
+		const semProblema = validateTasks({
+			flow: "maintenance",
+			tasks: [task({ id: "TASK-01", type: "Defeito", acceptanceCriteria: ["Dado/Quando/Então"] })],
+		});
+		expect(semProblema.join("\n")).toContain("problema");
+
+		const comProblema = validateTasks({
+			flow: "maintenance",
+			tasks: [
+				task({
+					id: "TASK-01",
+					type: "Defeito",
+					acceptanceCriteria: ["Dado/Quando/Então"],
+					problema: "criar com data futura grava em dt_demissao; saída observada: dt_demissao='2026-10-08'",
+				}),
+			],
+		});
+		expect(comProblema).toEqual([]);
+	});
+
+	test("tarefa de Codificação não exige problema", () => {
+		const errors = validateTasks({
+			flow: "maintenance",
+			tasks: [task({ id: "TASK-01", type: "Codificação", acceptanceCriteria: ["Dado/Quando/Então"] })],
+		});
+		expect(errors).toEqual([]);
+	});
+
 	test("pw2 fora de local exige company", () => {
 		const errors = validateTasks({
 			flow: "story",
@@ -266,11 +295,15 @@ describe("materialização", () => {
 			dir,
 			templatesDir: TEMPLATES,
 			epic,
-			stories: [story({ id: "STORY-01", title: "Cadastrar algo", jiraKey: "PROJ-10" })],
+			stories: [story({ id: "STORY-01", title: "Cadastrar algo", jiraKey: "PROJ-10", problema: "nasce desligado; evidência: dt_demissao='2026-10-08'" })],
 			meta,
 		});
 		expect(fs.existsSync(path.join(dir, "epic.md"))).toBe(true);
-		expect(fs.existsSync(path.join(dir, "stories", "STORY-01-cadastrar-algo.md"))).toBe(true);
+		const storyFile = path.join(dir, "stories", "STORY-01-cadastrar-algo.md");
+		expect(fs.existsSync(storyFile)).toBe(true);
+		const storyContent = fs.readFileSync(storyFile, "utf8");
+		expect(storyContent).toContain("## Problema e evidência");
+		expect(storyContent).toContain("nasce desligado; evidência: dt_demissao='2026-10-08'");
 		const index = fs.readFileSync(path.join(dir, "index.md"), "utf8");
 		expect(index).toContain("STORY-01");
 		expect(index).toContain("./PROJ-10/index.md");
@@ -283,13 +316,19 @@ describe("materialização", () => {
 		const result = await materializeStoryTasks({
 			dir,
 			templatesDir: TEMPLATES,
-			story: story({ id: "STORY-01", title: "Cadastrar algo", jiraKey: "PROJ-10" }),
+			story: story({
+				id: "STORY-01",
+				title: "Cadastrar algo",
+				jiraKey: "PROJ-10",
+				problema: "o cadastro com data futura nasce desligado; evidência: dt_demissao='2026-10-08'",
+			}),
 				tasks: [
 					task({
 						id: "TASK-01",
 						title: "Ajustar endpoint",
 						type: "Codificação",
 						acceptanceCriteria: ["Dado/Quando/Então"],
+						problema: "criar com data futura grava em dt_demissao; saída observada: dt_demissao='2026-10-08'",
 						repo: "/r",
 						branch: "feat/PROJ-10-task-01",
 						filesLikelyTouched: ["src/a.ts"],
@@ -315,6 +354,11 @@ describe("materialização", () => {
 		expect(taskContent).toContain('test_strategy: "tdd"');
 		expect(taskContent).toContain("- **Arquivo de teste:** tests/endpoint.test.ts");
 		expect(taskContent).toContain("- **Deve falhar antes (RED):** bun test tests/endpoint.test.ts");
+		expect(taskContent).toContain("## Problema e evidência");
+		expect(taskContent).toContain("saída observada: dt_demissao='2026-10-08'");
+		const storyContent = fs.readFileSync(path.join(dir, "story.md"), "utf8");
+		expect(storyContent).toContain("## Problema e evidência");
+		expect(storyContent).toContain("o cadastro com data futura nasce desligado");
 		const index = fs.readFileSync(path.join(dir, "index.md"), "utf8");
 		expect(index).toContain("Validação");
 		expect(result.files.length).toBeGreaterThanOrEqual(3);
@@ -327,7 +371,7 @@ describe("materialização", () => {
 			dir,
 			templatesDir: TEMPLATES,
 			epic,
-			tasks: [task({ id: "TASK-01", title: "Corrigir cálculo", type: "Defeito", acceptanceCriteria: ["Dado/Quando/Então"] })],
+			tasks: [task({ id: "TASK-01", title: "Corrigir cálculo", type: "Defeito", acceptanceCriteria: ["Dado/Quando/Então"], problema: "o total sai dobrado; saída observada: 20 em vez de 10" })],
 			meta,
 			flow: "maintenance",
 		});

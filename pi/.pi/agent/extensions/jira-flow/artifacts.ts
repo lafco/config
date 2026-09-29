@@ -25,6 +25,12 @@ function isCodeTask(type: string | undefined): boolean {
 	return value === "Defeito" || value.startsWith("Codificação");
 }
 
+/** Tarefa que corrige defeito: precisa descrever o antes com evidência de reprodução. */
+function isBugTask(type: string | undefined): boolean {
+	const value = (type ?? "").trim();
+	return value === "Defeito" || value === "Bug";
+}
+
 /** Tarefa que precisa declarar como será validada. */
 function requiresValidation(task: TaskArtifact): boolean {
 	if ((task.kind ?? "").trim().toLowerCase() === "correção") return true;
@@ -92,6 +98,8 @@ export interface StoryArtifact {
 	estimate?: string;
 	objective?: string;
 	valorObservavel?: string;
+	/** O que está quebrado hoje e a evidência de reprodução, quando a história corrige defeito. */
+	problema?: string;
 	context?: string;
 	acceptanceCriteria?: string[];
 	analysis?: string;
@@ -144,6 +152,8 @@ export interface TaskArtifact {
 	estimate?: string;
 	objective?: string;
 	valorObservavel?: string;
+	/** O que está quebrado hoje e a evidência de reprodução; obrigatório em Defeito/Bug. */
+	problema?: string;
 	context?: string;
 	acceptanceCriteria?: string[];
 	technicalNotes?: string;
@@ -381,6 +391,11 @@ export function validateTasks(input: { tasks: TaskArtifact[]; flow?: IssueFlow }
 		if (isCodeTask(task.type) && !(task.acceptanceCriteria?.length)) {
 			errors.push(`${task.id} (${task.type}) precisa de ao menos um critério de aceite.`);
 		}
+		if (isBugTask(task.type) && !(task.problema ?? "").trim()) {
+			errors.push(
+				`${task.id} (${task.type}) precisa de \`problema\`: o que está quebrado hoje, o caminho do código e a evidência de reprodução.`,
+			);
+		}
 		if ((storyFlow || (task.kind ?? "").toLowerCase() === "correção") && requiresValidation(task)) {
 			if (!task.validation?.expected?.trim()) {
 				errors.push(
@@ -593,6 +608,7 @@ export async function materializeEpicStories(input: {
 				title: story.title,
 				objective: text(story.objective),
 				valorObservavel: text(story.valorObservavel),
+				problema: text(story.problema),
 				context: text(story.context),
 				acceptanceCriteria: bullets(story.acceptanceCriteria),
 				analysis: text(story.analysis),
@@ -682,6 +698,7 @@ export async function materializeStoryTasks(input: {
 			title: story.title,
 			objective: text(story.objective),
 			valorObservavel: text(story.valorObservavel),
+			problema: text(story.problema),
 			context: text(story.context),
 			acceptanceCriteria: bullets(story.acceptanceCriteria),
 			analysis: text(story.analysis),
@@ -774,6 +791,7 @@ function taskVars(task: TaskArtifact, meta: MaterializeMeta): Record<string, str
 		title: task.title,
 		objective: text(task.objective),
 		valorObservavel: text(task.valorObservavel),
+		problema: text(task.problema),
 		context: text(task.context),
 		acceptanceCriteria: bullets(task.acceptanceCriteria),
 		technicalNotes: text(task.technicalNotes),

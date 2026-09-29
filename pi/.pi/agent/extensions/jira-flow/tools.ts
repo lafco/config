@@ -77,6 +77,12 @@ const EmitTaskSchema = Type.Object({
 		description:
 			"O que fica demonstrável com esta tarefa e para quem (tela, endpoint, teste). Obrigatório e específico; não repetir o título.",
 	}),
+	problema: Type.Optional(
+		Type.String({
+			description:
+				"O que está quebrado hoje, em que caminho do código, e a evidência de reprodução (entrada, saída observada, comando). Obrigatório quando `type` é `Defeito` ou `Bug`.",
+		}),
+	),
 	context: Type.Optional(Type.String()),
 	acceptanceCriteria: Type.Optional(
 		Type.Array(Type.String(), {
@@ -180,6 +186,12 @@ const StorySchema = Type.Object({
 		description:
 			"O que fica demonstrável com a história e para quem (tela, endpoint, teste). Obrigatório e específico; não repetir o título.",
 	}),
+	problema: Type.Optional(
+		Type.String({
+			description:
+				"O que está quebrado hoje e a evidência de reprodução (entrada, saída observada, comando). Obrigatório quando a história corrige um defeito; omita em história de funcionalidade nova.",
+		}),
+	),
 	context: Type.Optional(Type.String()),
 	acceptanceCriteria: Type.Array(
 		Type.String({ description: "Cada item no formato Dado/Quando/Então." }),
@@ -283,7 +295,7 @@ function registerEmitEpicTool(pi: ExtensionAPI, options: FlowToolsOptions): void
 				if (shape === "stories") {
 					if (!params.stories?.length) {
 						return fail(
-							"Epic entrega `stories` (histórias verticais), não `tasks`. Cada história tem id, wave, valorObservavel e critérios de aceite.",
+							"Epic entrega `stories` (histórias verticais), não `tasks`. Cada história tem id, wave, valorObservavel e critérios de aceite, mais `problema` quando corrige defeito.",
 							{},
 						);
 					}
@@ -339,7 +351,7 @@ function registerEmitStoryTool(pi: ExtensionAPI, options: FlowToolsOptions): voi
 		name: "emit_story_artifacts",
 		label: "Gravar story e tarefas",
 		description:
-			"Ferramenta interna do fluxo /refinar-issue. Entrega a Story refinada (`story`) e as `tasks` implementáveis por agentes em paralelo; o harness grava story.md, index.md, tasks/*.md e cria evidence/. Declare em cada tarefa de código `repo`, `filesLikelyTouched`, `test` (estrategia + arquivos/comandos do teste) e `validation` (pw2/unit-tests/manual) — o harness recusa a emissão sem eles e o gate anti-conflito rejeita tarefas da mesma onda com arquivos em comum. Prefira `test.strategy: tdd` com o comando que deve falhar antes (RED) e o que deve passar depois (GREEN); `verify-only` e `none` exigem `test.why`. Validação `pw2` fora de `local` exige `company`; ela só roda sem humano quando a empresa está em `autoRunCompanies`. Só chame quando o fluxo /refinar-issue estiver ativo e a análise tiver sido aprovada via `submit_analysis`.",
+			"Ferramenta interna do fluxo /refinar-issue. Entrega a Story refinada (`story`) e as `tasks` implementáveis por agentes em paralelo; o harness grava story.md, index.md, tasks/*.md e cria evidence/. Declare em cada tarefa de código `repo`, `filesLikelyTouched`, `test` (estrategia + arquivos/comandos do teste) e `validation` (pw2/unit-tests/manual) — o harness recusa a emissão sem eles e o gate anti-conflito rejeita tarefas da mesma onda com arquivos em comum. Tarefa `Defeito`/`Bug` também declara `problema` (o que está quebrado hoje e a evidência de reprodução). Prefira `test.strategy: tdd` com o comando que deve falhar antes (RED) e o que deve passar depois (GREEN); `verify-only` e `none` exigem `test.why`. Validação `pw2` fora de `local` exige `company`; ela só roda sem humano quando a empresa está em `autoRunCompanies`. Só chame quando o fluxo /refinar-issue estiver ativo e a análise tiver sido aprovada via `submit_analysis`.",
 		parameters: EmitStorySchema,
 		async execute(_toolCallId, params: EmitStoryParams) {
 			const state = getRefinement();

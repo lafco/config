@@ -19,6 +19,7 @@ Além dos campos usuais (`id`, `title`, `wave`, `dependsOn`, `objective`, `valor
 | `repo` | Caminho do repositório onde a tarefa será implementada. |
 | `branch` | Branch sugerida (ex.: `feat/PROJ-123-task-01`). |
 | `filesLikelyTouched` | Arquivos/áreas prováveis. **Gate:** duas tarefas da mesma onda não podem compartilhar arquivo. |
+| `problema` | O que está quebrado hoje, o caminho do código e a evidência de reprodução. **Gate:** obrigatório em `Defeito`/`Bug`. |
 | `validation` | Como provar que funcionou (ver abaixo). |
 | `test` | Como a tarefa trata o teste — `tdd`, `verify-only` ou `none` (ver abaixo). |
 | `kind` | `correção` para tarefa de código; `diagnóstico`/`exploração` só em fluxos de investigação. |

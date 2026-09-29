@@ -50,6 +50,10 @@ base_sha: ""
 
 {{valorObservavel}}
 
+## Problema e evidência
+
+{{problema}}
+
 ## Contexto
 
 {{context}}
