@@ -136,7 +136,20 @@ vim.api.nvim_create_user_command('Prdbook', function()
   vim.cmd('cd ~/prdbook')
   require('mini.files').open('~/prdbook')
 end, { desc = 'Open prdbook knowledge base' })
-map('n', '<leader>fp', '<cmd>Staging<cr>', { desc = 'Open prdbook staging' })
+map('n', '<leader>fp', '<cmd>Dotfiles<cr>', { desc = 'Open dotfiles folder' })
+
+-- Dotfiles: abrir a pasta do repositório de configuração
+vim.api.nvim_create_user_command('Dotfiles', function()
+  vim.cmd('cd ~/dotfiles')
+  require('mini.files').open('~/dotfiles')
+end, { desc = 'Open dotfiles folder' })
+
+-- Epics: pasta padrão das análises do pi
+vim.api.nvim_create_user_command('Epics', function()
+  vim.cmd('cd ~/epics')
+  require('mini.files').open('~/epics')
+end, { desc = 'Open epics folder' })
+map('n', '<leader>fe', '<cmd>Epics<cr>', { desc = 'Open epics folder' })
 
 -- Prdbook staging: open feature staging folder
 vim.api.nvim_create_user_command('Staging', function()
