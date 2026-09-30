@@ -83,6 +83,16 @@ Leitura pura dispensa go-ahead; o resto segue a seção Colaboração.
   valida conforme o `validation` declarado (`pw2_request` quando for `pw2`) e registra a evidência em `evidence/`.
   As branches não são mergeadas automaticamente.
 
+## Análises e reviews
+
+- `~/epics` é o repositório padrão dos documentos de análise, independente da pasta onde o pi rodou (configurável por `epicsDir` no `secrets.json` ou `EPICS_DIR`).
+- Review de branch vai em `~/epics/<branch>/review/branch-review-<sha7>.md`:
+  - use o nome da **branch** como pasta quando a issue ainda não tem diretório em `~/epics` — troque `/` por `-` (`feat/login-sso` -> `feat-login-sso`); crie a pasta se não existir;
+  - `<sha7>` são os 7 primeiros dígitos do head revisado;
+  - quando a branch for de uma issue já refinada (`DRHJNES-1065`), a pasta coincide com `~/epics/<KEY>/`.
+- Formato do documento (padrão da casa): metadados (repo, branch, base = merge-base com `origin/master`, head, data, escopo), Commits, Objetivo da branch, Arquivos alterados (tabela arquivo -> mudança), Execução dos testes (comando + resultado), Achados por severidade (Critical/Important/Minor, citando `arquivo:linha`), Recommendations, Fora de julgamento e Próximos passos.
+- Análise de issue refinada continua em `~/epics/<KEY>/` (ver Refinamento de epics; a execução da story grava `evidence/` e `review/` via `epic-runner`).
+
 ---
 
 > ⚠️ Este arquivo é carregado em **todas** as sessões do pi.
