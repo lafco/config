@@ -1,0 +1,20 @@
+{
+    "kiroAgent.workflows.enabled": true,
+    "workbench.iconTheme": "flow-deep",
+    "terminal.integrated.ignoreProcessNames": [
+        "starship",
+        "oh-my-posh",
+        "zsh"
+    ],
+    "terminal.integrated.defaultProfile.linux": "bash",
+    "terminal.integrated.profiles.linux": {
+        "bash": {
+            "path": "/bin/bash"
+        }
+    },
+    "terminal.integrated.env.linux": {
+        "SHELL": "/bin/bash"
+    },
+    "php.codeLens.enabled": false,
+    "editor.minimap.enabled": false
+}

@@ -11,7 +11,7 @@
 #   - Instalação resiliente: ferramenta com falha não interrompe o init;
 #     as falhas ficam registradas em packages/failed_tools.txt (dot retry-failed)
 #   - Symlinks via GNU Stow (pacotes: bash nvim pi wezterm zellij television
-#     starship atuin gh-dash herdr)
+#     starship atuin gh-dash herdr kiro)
 #
 # Comandos: init | update | doctor | stow | retry-failed | link | unlink | edit | help
 
@@ -38,7 +38,7 @@ NO_BACKUP=false
 BACKUP_DIR=""
 
 # Pacotes Stow (lista explícita — evita stowar diretórios que não são pacotes)
-readonly STOW_PACKAGES="bash nvim pi wezterm zellij television starship atuin gh-dash herdr"
+readonly STOW_PACKAGES="bash nvim pi wezterm zellij television starship atuin gh-dash herdr kiro"
 
 # Cores
 readonly RED='\033[0;31m'
