@@ -38,7 +38,7 @@ NO_BACKUP=false
 BACKUP_DIR=""
 
 # Pacotes Stow (lista explícita — evita stowar diretórios que não são pacotes)
-readonly STOW_PACKAGES="bash nvim pi wezterm zellij television starship atuin gh-dash herdr kiro"
+readonly STOW_PACKAGES="bash nvim pi wezterm zellij television starship atuin gh-dash herdr kiro vscode zed"
 
 # Cores
 readonly RED='\033[0;31m'

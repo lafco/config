@@ -1,0 +1,89 @@
+// Keymap do Zed, portado do Kiro.
+// Fonte da verdade: ~/dotfiles/zed/.config/zed/keymap.json
+// (linkado em ~/.config/zed/keymap.json pelo stow - veja ~/dotfiles/dot).
+//
+// O Zed nao tem when fino, nao tem chord e nao encadeia acoes numa mesma tecla.
+// Os comentarios marcam o default do Zed que cada bind desloca.
+// O terminal nunca e afetado: as binds de painel/fluxo levam !Terminal e as de
+// editor usam o contexto Editor (que o terminal nao tem), entao as teclas do
+// shell (ctrl-e, ctrl-l, ctrl-q, ctrl-w, alt-b, ...) continuam indo pro PTY.
+[
+  // ---- paineis, pickers e fluxo ----
+  {
+    "context": "Workspace && !Terminal",
+    "bindings": {
+      "ctrl-e": "project_panel::ToggleFocus", // era file_finder::Toggle (o file finder segue no ctrl-p)
+      "ctrl-g": "git_panel::ToggleFocus", // era go_to_line::Toggle (gotoLine vai pro ctrl-;)
+      "ctrl-;": "go_to_line::Toggle", // era editor::ToggleLineNumbers
+      "ctrl-f": "project_search::ToggleFocus", // era buffer_search::Deploy (busca no arquivo vai pro ctrl-/)
+      "ctrl-o": "pane::GoBack", // era workspace::OpenFiles (abrir arquivo vai pro ctrl-shift-f)
+      "ctrl-i": "pane::GoForward",
+      "ctrl-q": "pane::CloseActiveItem", // era zed::Quit (sair do Zed fica no menu / alt+F4)
+      "ctrl-l": "agent::ToggleFocus", // era editor::SelectLine (o ctrl-? do Zed continua valendo)
+      "ctrl-'": "terminal_panel::Toggle", // era editor::ToggleSelectedDiffHunks (o ctrl-` continua valendo)
+      "ctrl-shift-f": "workspace::OpenFiles", // era project_search::ToggleFocus (que agora e o ctrl-f)
+      "ctrl-shift-o": "workspace::AddFolderToProject", // nao existe workspace::OpenFolder no Zed; este e o nome real
+      "alt-o": "project_symbols::Toggle"
+    }
+  },
+  {
+    "context": "Workspace && !Terminal && !BufferSearchBar",
+    "bindings": {
+      "alt-c": "git_panel::ToggleFocus" // dentro da busca o alt-c continua alternando case sensitive
+    }
+  },
+  {
+    "context": "!Editor && !Terminal",
+    "bindings": {
+      "ctrl-w": "editor::ToggleFocus" // voltar pro editor quando o foco esta em painel/picker
+    }
+  },
+  // ---- editor: movimentos, selecao, simbolos, diff/git ----
+  {
+    "context": "Editor",
+    "bindings": {
+      "alt-h": "editor::MoveLeft",
+      "alt-l": "editor::MoveRight",
+      "alt-j": "editor::MoveDown",
+      "alt-k": "editor::MoveUp",
+      "alt-b": "editor::MoveToPreviousWordStart",
+      "alt-e": "editor::MoveToNextWordEnd",
+      "alt-[": "editor::MoveToBeginningOfLine",
+      "alt-]": "editor::MoveToEndOfLine",
+      "shift-alt-h": "editor::SelectLeft",
+      "shift-alt-l": "editor::SelectRight",
+      "shift-alt-j": "editor::SelectDown",
+      "shift-alt-k": "editor::SelectUp",
+      "shift-alt-b": "editor::SelectToPreviousWordStart",
+      "shift-alt-e": "editor::SelectToNextWordEnd",
+      "shift-alt-[": "editor::MoveToStartOfLargerSyntaxNode",
+      "shift-alt-]": "editor::MoveToEndOfLargerSyntaxNode",
+      "ctrl-d": "editor::MovePageDown", // era editor::SelectNext (que segue no ctrl-shift-down)
+      "ctrl-u": "editor::MovePageUp", // era editor::UndoSelection
+      "ctrl-j": "editor::MoveToEnclosingBracket", // era workspace::ToggleBottomDock
+      "ctrl-r": "editor::ExpandAllDiffHunks", // era projects::OpenRecent
+      "ctrl-n": "editor::GoToHunk", // era menu::SelectNext / workspace::NewFile
+      "ctrl-p": "editor::GoToPreviousHunk",
+      "alt-n": "editor::GoToNextChange",
+      "alt-p": "editor::GoToPreviousChange",
+      "alt-d": "editor::GoToImplementation",
+      "alt-u": "editor::FindAllReferences",
+      "alt-s": "git::ToggleStaged",
+      "alt-x": "editor::RevertSelectedHunks",
+      "ctrl-w": "outline::Toggle", // no Zed 1.16 nao existe mais picker de simbolos do arquivo: e o painel Outline
+      "ctrl-/": "buffer_search::Deploy" // era editor::ToggleComments
+    }
+  },
+  {
+    "context": "Editor && !BufferSearchBar",
+    "bindings": {
+      "alt-w": "outline::Toggle" // dentro da busca o alt-w continua alternando whole word
+    }
+  },
+  {
+    "context": "BufferSearchBar",
+    "bindings": {
+      "ctrl-c": "buffer_search::Dismiss"
+    }
+  }
+]
