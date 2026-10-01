@@ -560,7 +560,12 @@ __backup_conflicts() {
     local hm_conflicts=() pkg rel target link_dest pkg_dir backup_root
     backup_root="${HOME}/.dotfiles-backup/$(date +%Y%m%d-%H%M%S)"
 
-    for pkg in $STOW_PACKAGES; do
+    # Sem argumentos varre todos os pacotes (caso do `dot init`); com argumentos,
+    # só os pacotes que foram passados ao stow (ex.: `dot stow kiro`).
+    local packages=("$@")
+    (( ${#packages[@]} )) || packages=($STOW_PACKAGES)
+
+    for pkg in "${packages[@]}"; do
         pkg_dir="${DOTFILES_DIR}/${pkg}"
         [[ -d "$pkg_dir" ]] || continue
 
@@ -581,11 +586,19 @@ __backup_conflicts() {
                     hm_conflicts+=("$rel")
                     continue
                 fi
-                # já é um link do próprio repo (stow) → ok
-                case "$(readlink -m "$target")" in
-                    "$DOTFILES_DIR"/*) continue ;;
-                esac
             fi
+
+            # já é arquivo do próprio repo → ok. Dois casos:
+            #   1. o stow dobrou um diretório pai em symlink (ex.:
+            #      ~/.config/nvim -> dotfiles/nvim/.config/nvim): o leaf não é
+            #      link, mas mora fisicamente no repo;
+            #   2. o leaf é um link que resolve para dentro do repo.
+            case "$(readlink -m "$(dirname "$target")")" in
+                "$DOTFILES_DIR"/*) continue ;;
+            esac
+            case "$(readlink -m "$target")" in
+                "$DOTFILES_DIR"/*) continue ;;
+            esac
 
             mkdir -p "${backup_root}/$(dirname "$rel")"
             mv "$target" "${backup_root}/${rel}"
@@ -784,7 +797,7 @@ cmd_stow() {
     done
     __print_header "Stow"
     if ! $dry_run; then
-        __backup_conflicts || return 1
+        __backup_conflicts $pkgs || return 1
     fi
     __run stow -R -v -d "$DOTFILES_DIR" -t "$HOME" "${args[@]}" $pkgs
 }
