@@ -97,5 +97,7 @@ DOTFILES_DIR="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"
 # setuid e quebra com "must be owned by uid 0 and have the setuid bit set".
 export PATH="/run/wrappers/bin:$PATH"
 
-
-eval "$(atuin init bash)"
+# ── atuin (histórico de comandos) ─────────────────────────────────────────────
+if command -v atuin &>/dev/null; then
+    eval "$(atuin init bash)"
+fi
