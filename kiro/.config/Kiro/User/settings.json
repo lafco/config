@@ -1,5 +1,7 @@
 {
     "kiroAgent.workflows.enabled": true,
+    "kiroAgent.enableTabAutocomplete": false,
+    "editor.inlineSuggest.enabled": false,
     "workbench.iconTheme": "flow-deep",
     "terminal.integrated.ignoreProcessNames": [
         "starship",
