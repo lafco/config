@@ -29,6 +29,13 @@ describe("loadLocalProducts", () => {
 		expect(loaded.vacations?.repos).toEqual(["pw2", "vacations-client"]);
 	});
 
+	test("lê os aliases de produto (sinônimos do Jira)", () => {
+		const loaded = loadLocalProducts(import.meta.dir);
+		expect(loaded.vacations?.aliases).toContain("ferias");
+		expect(loaded.rostering?.aliases).toContain("escalas");
+		expect(loaded.espelho?.aliases).toContain("espelho de ponto");
+	});
+
 	test("cai para vazio quando o arquivo não existe", () => {
 		const dir = fs.mkdtempSync(path.join(os.tmpdir(), "local-products-"));
 		expect(loadLocalProducts(dir)).toEqual({});

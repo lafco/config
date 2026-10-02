@@ -22,6 +22,12 @@ export interface LocalProduct {
 	displayName: string;
 	description: string;
 	repos: string[];
+	/**
+	 * Sinônimos em pt-BR para casar o texto da issue quando o componente/label do
+	 * Jira não ajuda (ex.: `vacations` -> "ferias"). Usados no passo de match de
+	 * texto da Fase 0, junto de `name`/`displayName`.
+	 */
+	aliases?: string[];
 }
 
 export type LocalProducts = Record<string, LocalProduct>;
@@ -42,10 +48,14 @@ export function loadLocalProducts(extDir: string): LocalProducts {
 			const repos = Array.isArray(item.repos)
 				? item.repos.filter((repo): repo is string => typeof repo === "string" && repo.trim().length > 0)
 				: [];
+			const aliases = Array.isArray(item.aliases)
+				? item.aliases.filter((alias): alias is string => typeof alias === "string" && alias.trim().length > 0)
+				: [];
 			out[name] = {
 				displayName: asString(item.displayName) ?? name,
 				description: asString(item.description) ?? "",
 				repos,
+				...(aliases.length > 0 ? { aliases } : {}),
 			};
 		}
 		return out;

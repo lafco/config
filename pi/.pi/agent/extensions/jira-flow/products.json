@@ -7,17 +7,20 @@
   "vacations": {
     "displayName": "Vacations",
     "description": "Ahgora Férias: backend no pw2, frontend Vue2 no vacations-client. Indexado no mcpb; aqui serve de fallback quando o índice está fora.",
-    "repos": ["pw2", "vacations-client"]
+    "repos": ["pw2", "vacations-client"],
+    "aliases": ["ferias", "férias"]
   },
   "folgas": {
     "displayName": "Folgas",
     "description": "Ahgora Folgas — gestão de folgas; nasceu junto do Rostering e hoje é um produto separado.",
-    "repos": ["folgas-api", "folgas-ui"]
+    "repos": ["folgas-api", "folgas-ui"],
+    "aliases": ["dayoff", "gestão de folgas"]
   },
   "rostering": {
     "displayName": "Rostering",
     "description": "Ahgora Rostering — escalas de trabalho complexas com múltiplas restrições, integrado ao PontoWeb.",
-    "repos": ["rostering-api", "rostering-ui"]
+    "repos": ["rostering-api", "rostering-ui"],
+    "aliases": ["escalas", "gestão de escalas"]
   },
   "acessoweb": {
     "displayName": "AcessoWEB",
@@ -42,11 +45,13 @@
   "espelho": {
     "displayName": "Espelho de Ponto",
     "description": "Espelho de ponto: geração, aprovação e extrato. Frontend próprio (mirror-client); backend permanece no pw2 (gerador_espelhos/gerenciador_espelhos).",
-    "repos": ["mirror-client", "pw2"]
+    "repos": ["mirror-client", "pw2"],
+    "aliases": ["espelho de ponto", "espelho"]
   },
   "timesheet": {
     "displayName": "TimeSheet",
     "description": "Timesheet — apontamento de atividades (pode ou não estar vinculado às batidas e escalas do PW).",
-    "repos": ["ts", "ts-client"]
+    "repos": ["ts", "ts-client"],
+    "aliases": ["apontamento", "apontamentos"]
   }
 }

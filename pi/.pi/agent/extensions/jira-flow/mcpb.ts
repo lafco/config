@@ -5,6 +5,10 @@
  *   1. `products-map.json` (projects/components/labels -> produto);
  *   2. `mcpb context --product <nome>` -> produto, repos (com path), overview
  *      (memória curada) e frescura do índice;
+ *   3. `mcpb products` -> catálogo (com repos) para o reverse-lookup do repo
+ *      (`resolveProductFromRepos`) e o match do texto da issue
+ *      (`resolveProductFromText`) quando o mapa não resolve — unido ao
+ *      `products.json` local via `buildProductCatalog`.
  *
  * `consult_specialist` usa `mcpb ask` como fallback quando o catálogo HTTP de
  * produtos não está configurado/fora do ar.
@@ -68,7 +72,7 @@ export interface ProductsMap {
 }
 
 /** De onde o produto foi inferido — importa quando o match é fraco (projeto/label). */
-export type ProductSource = "component" | "project" | "label";
+export type ProductSource = "component" | "project" | "label" | "repo" | "text" | "user";
 
 export interface ProductResolution {
 	product: string;
@@ -90,6 +94,68 @@ export interface McpbProductSummary {
 	name: string;
 	displayName: string;
 	description: string;
+	repos: McpbRepoInfo[];
+}
+
+/**
+ * Entrada do catálogo usado no reverse-lookup: junta o que vem do `mcpb
+ * products` (nome/displayName/repos) com o registro local (`products.json`),
+ * que acrescenta os `aliases` em pt-BR e os produtos ainda não indexados.
+ */
+export interface ProductCatalogEntry {
+	name: string;
+	displayName: string;
+	repos: { name: string; path?: string }[];
+	aliases?: string[];
+}
+
+/** Entrada crua do `mcpb products`: repos podem ter path nulo. */
+export interface ProductCatalogSource {
+	name: string;
+	displayName: string;
+	repos: { name: string; path?: string | null }[];
+}
+
+/**
+ * Une o catálogo do mcpb ao registro local (`products.json`): o mcpb vence em
+ * repos e displayName; o local completa o que falta (produtos ainda não
+ * indexados, repos quando o mcpb não tem, e os `aliases` em pt-BR).
+ */
+export function buildProductCatalog(
+	mcpbProducts: ProductCatalogSource[],
+	localProducts: Record<string, { displayName: string; repos: { name: string; path?: string | null }[]; aliases?: string[] }>,
+): ProductCatalogEntry[] {
+	const entries = new Map<string, ProductCatalogEntry>();
+	for (const summary of mcpbProducts) {
+		entries.set(summary.name, {
+			name: summary.name,
+			displayName: summary.displayName || summary.name,
+			repos: summary.repos.map((repo) => ({
+				name: repo.name,
+				...(repo.path ? { path: repo.path } : {}),
+			})),
+		});
+	}
+	for (const [name, product] of Object.entries(localProducts)) {
+		const repos = product.repos.map((repo) => ({
+			name: repo.name,
+			...(repo.path ? { path: repo.path } : {}),
+		}));
+		const existing = entries.get(name);
+		if (existing) {
+			if (existing.repos.length === 0) existing.repos = repos;
+			if (!existing.displayName) existing.displayName = product.displayName;
+			if (product.aliases?.length) existing.aliases = product.aliases;
+		} else {
+			entries.set(name, {
+				name,
+				displayName: product.displayName || name,
+				repos,
+				...(product.aliases?.length ? { aliases: product.aliases } : {}),
+			});
+		}
+	}
+	return [...entries.values()];
 }
 
 /**
@@ -235,6 +301,80 @@ export function resolveProductFromMap(
 	return resolveProductFromMapDetailed(map, issue)?.product ?? null;
 }
 
+/** Caminho idêntico ou um contido no outro (repo e subdiretório do repo). */
+function samePathOrInside(outer: string, inner: string): boolean {
+	const rel = path.relative(outer, inner);
+	return rel === "" || (!rel.startsWith("..") && !path.isAbsolute(rel));
+}
+
+/**
+ * O candidato (`--repo`/cwd) pertence a este repo do catálogo? Casa pelo path
+ * quando o catálogo tem um, senão pelo basename.
+ */
+function repoMatches(repo: { name: string; path?: string }, candidate: string): boolean {
+	if (repo.path) {
+		const repoPath = path.resolve(repo.path);
+		const resolved = path.resolve(candidate);
+		if (samePathOrInside(repoPath, resolved) || samePathOrInside(resolved, repoPath)) return true;
+	}
+	return path.basename(path.resolve(candidate)) === repo.name;
+}
+
+/**
+ * Passo 3 da Fase 0 — reverse-lookup do repositório: `--repo`/cwd é checkout de
+ * um produto do catálogo. Devolve `null` quando nenhum candidato pertence a
+ * exatamente um produto: `pw2`, compartilhado por vários, fica ambíguo e não
+ * resolve. Um candidato ambíguo não aborta os seguintes.
+ */
+export function resolveProductFromRepos(
+	catalog: ProductCatalogEntry[],
+	candidates: string[],
+): ProductResolution | null {
+	for (const candidate of candidates) {
+		const trimmed = candidate?.trim();
+		if (!trimmed) continue;
+		const matches = catalog.filter((entry) => entry.repos.some((repo) => repoMatches(repo, trimmed)));
+		if (matches.length === 1) return { product: matches[0].name, source: "repo", matched: trimmed };
+	}
+	return null;
+}
+
+/** Palavra/frase inteira no texto normalizado (bordas não alfanuméricas). */
+function containsToken(haystack: string, token: string): boolean {
+	const escaped = token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+	return new RegExp(`(^|[^a-z0-9])${escaped}([^a-z0-9]|$)`, "i").test(haystack);
+}
+
+/**
+ * Passo 4 da Fase 0 — match do texto da issue (resumo/componentes/labels)
+ * contra `name`/`displayName`/`aliases` do catálogo. Só resolve com match
+ * único; dois produtos batendo o mesmo termo ficam ambíguos e não resolvem.
+ */
+export function resolveProductFromText(
+	catalog: ProductCatalogEntry[],
+	issue: { summary?: string; components: string[]; labels: string[] },
+): ProductResolution | null {
+	const haystack = [issue.summary ?? "", ...issue.components, ...issue.labels]
+		.map((value) => normalizeKey(value))
+		.filter(Boolean)
+		.join(" \n ");
+	if (!haystack.trim()) return null;
+
+	const matches = new Map<string, string>();
+	for (const entry of catalog) {
+		const keywords = [entry.name, entry.displayName, ...(entry.aliases ?? [])];
+		for (const keyword of keywords) {
+			const token = normalizeKey(keyword);
+			if (!token || !containsToken(haystack, token)) continue;
+			matches.set(entry.name, keyword);
+			break;
+		}
+	}
+	if (matches.size !== 1) return null;
+	const [product, matched] = [...matches.entries()][0];
+	return { product, source: "text", matched };
+}
+
 export class McpbError extends Error {
 	readonly code: string;
 	readonly exitCode?: number;
@@ -263,6 +403,20 @@ function stringMap(value: unknown): Record<string, string> {
 		if (typeof item === "string" && item.trim()) out[key] = item.trim();
 	}
 	return out;
+}
+
+/** Normaliza a lista `repos` do `mcpb products` (name/path/head/indexedAt). */
+function parseMcpbRepos(value: unknown): McpbRepoInfo[] {
+	if (!Array.isArray(value)) return [];
+	return value
+		.filter(isRecord)
+		.map((repo) => ({
+			name: typeof repo.name === "string" ? repo.name : "",
+			path: typeof repo.path === "string" && repo.path ? repo.path : null,
+			head: typeof repo.head === "string" && repo.head ? repo.head : null,
+			indexedAt: typeof repo.indexedAt === "string" && repo.indexedAt ? repo.indexedAt : null,
+		}))
+		.filter((repo) => repo.name);
 }
 
 function truncateStderr(text: string | undefined): string | undefined {
@@ -334,6 +488,7 @@ export class McpbClient {
 				name: typeof item.name === "string" ? item.name : "",
 				displayName: typeof item.displayName === "string" ? item.displayName : "",
 				description: typeof item.description === "string" ? item.description : "",
+				repos: parseMcpbRepos(item.repos),
 			}))
 			.filter((item) => item.name);
 	}

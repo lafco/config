@@ -33,17 +33,22 @@ import { JiraClient, JiraError } from "./jira.ts";
 import { classifyIssueType, flowDescription, refinementShape, type IssueFlow } from "./issue-type.ts";
 import { OpenSearchClient } from "./opensearch.ts";
 import {
+	buildProductCatalog,
 	findMcpbBin,
 	loadProductsMap,
 	McpbClient,
 	McpbError,
 	resolveProductFromMapDetailed,
+	resolveProductFromRepos,
+	resolveProductFromText,
 	type McpbProductContext,
+	type McpbProductSummary,
+	type ProductCatalogEntry,
 	type ProductSource,
 } from "./mcpb.ts";
 import { ProductsClient, ProductsError, type ProductContext } from "./products.ts";
 import { inferDeployment, loadSecrets, normalizeBaseUrl, saveSecrets, type JiraSecrets } from "./secrets.ts";
-import { loadLocalProducts, localProductContext } from "./local-products.ts";
+import { loadLocalProducts, localProductContext, resolveRepoPath } from "./local-products.ts";
 import { startRefinement, stopRefinement } from "./state.ts";
 import { registerFlowTools } from "./tools.ts";
 import { loadValidationDefaults, validationDefaultsMarkdown } from "./validation-defaults.ts";
@@ -215,6 +220,12 @@ function productSourceLabel(source: ProductPhaseResult["productSource"], matched
 			return `projeto${matched ? ` (${matched})` : ""} — default do mapa, confirme`;
 		case "label":
 			return `label${matched ? ` (${matched})` : ""} — match fraco, confirme`;
+		case "repo":
+			return `repositório do produto${matched ? ` (${matched})` : ""}`;
+		case "text":
+			return `texto da issue${matched ? ` ("${matched}")` : ""} — match fraco, confirme`;
+		case "user":
+			return "escolhido por você";
 		case "catalog":
 			return "catálogo de produtos (HTTP)";
 		default:
@@ -222,9 +233,9 @@ function productSourceLabel(source: ProductPhaseResult["productSource"], matched
 	}
 }
 
-/** Origem fraca (projeto/label): vale destacar no resumo antes de refinar. */
+/** Origem fraca (projeto/label/texto): vale destacar no resumo antes de refinar. */
 function isWeakProductSource(source: ProductPhaseResult["productSource"]): boolean {
-	return source === "project" || source === "label";
+	return source === "project" || source === "label" || source === "text";
 }
 
 function looksLikeRepo(dir: string): boolean {
@@ -236,13 +247,19 @@ function looksLikeRepo(dir: string): boolean {
  *   1. `--product <nome>` (explícito) + `mcpb context`;
  *   2. `products-map.json` (component -> project -> label) + `mcpb context`
  *      (produto, repos com paths locais, overview curado e frescura);
- *   3. catálogo HTTP de produtos (quando configurado e o mcpb não resolveu);
- *   4. `--repo` -> `cwd` (confirmado no TUI) -> pergunta.
+ *   3. reverse-lookup do repo: `--repo`/`cwd` é checkout de um produto do
+ *      catálogo (`mcpb products` + `products.json`); só resolve se for de um
+ *      único produto (`pw2` é compartilhado e fica ambíguo);
+ *   4. match do texto da issue (resumo/componentes/labels) contra
+ *      nome/displayName/aliases do catálogo; só resolve com match único;
+ *   5. ambíguo no TUI -> pergunta qual produto antes de cair no fallback;
+ *   6. catálogo HTTP de produtos (quando configurado e nada acima resolveu);
+ *   7. `--repo` -> `cwd` (confirmado no TUI) -> pergunta.
  */
 async function runProductPhase(
 	secrets: JiraSecrets,
 	key: string,
-	issue: Pick<FilteredIssue, "components" | "labels">,
+	issue: Pick<FilteredIssue, "summary" | "components" | "labels">,
 	repoFlag: string | undefined,
 	productFlag: string | undefined,
 	cwd: string,
@@ -255,6 +272,8 @@ async function runProductPhase(
 	let productSource: ProductPhaseResult["productSource"] = null;
 	let matchedValue: string | null = null;
 	let productDescription: string | null = null;
+	/** Componente de processo casou em `ignore`: não tentar reverse-lookup/match de texto. */
+	let ignoredMapping = false;
 	const notes: string[] = [];
 	const appendNote = (message: string): void => {
 		if (message && !notes.includes(message)) notes.push(message);
@@ -304,6 +323,81 @@ async function runProductPhase(
 		return true;
 	};
 
+	/** Lista de produtos do mcpb (cacheada); `[]` quando o CLI não está disponível. */
+	let mcpbProducts: McpbProductSummary[] | null = null;
+	const loadMcpbProducts = async (): Promise<McpbProductSummary[]> => {
+		if (mcpbProducts) return mcpbProducts;
+		if (!mcpbBin) return (mcpbProducts = []);
+		ctx.ui.setStatus(STATUS_KEY, "Listando os produtos do índice local (mcpb)...");
+		try {
+			mcpbProducts = await new McpbClient(mcpbBin).products(ctx.signal);
+		} catch (error) {
+			const message = error instanceof McpbError ? error.message : String(error);
+			appendNote(`não foi possível listar os produtos do mcpb (${message})`);
+			mcpbProducts = [];
+		} finally {
+			clearStatus(ctx);
+		}
+		return mcpbProducts;
+	};
+
+	/**
+	 * Catálogo do reverse-lookup e do match de texto: produtos do mcpb (repos já
+	 * resolvidos) unidos ao registro local, que acrescenta os `aliases` em pt-BR e
+	 * os produtos ainda não indexados.
+	 */
+	const buildCatalog = async (): Promise<ProductCatalogEntry[]> => {
+		const localForCatalog: Record<
+			string,
+			{ displayName: string; repos: { name: string; path?: string }[]; aliases?: string[] }
+		> = {};
+		for (const [name, product] of Object.entries(localProducts)) {
+			localForCatalog[name] = {
+				displayName: product.displayName,
+				repos: product.repos.map((repo) => {
+					const resolved = resolveRepoPath(repo, cwd);
+					return { name: repo, ...(resolved ? { path: resolved } : {}) };
+				}),
+				...(product.aliases?.length ? { aliases: product.aliases } : {}),
+			};
+		}
+		return buildProductCatalog(await loadMcpbProducts(), localForCatalog);
+	};
+
+	/** Carrega o contexto do produto (mcpb ou registro local) e fixa a origem. */
+	const adoptProduct = async (
+		product: string,
+		source: ProductPhaseResult["productSource"],
+		matched: string | null,
+	): Promise<boolean> => {
+		await loadMcpbContext(product);
+		if (!productContext && !applyLocalProductFallback(product)) return false;
+		productSource = source;
+		matchedValue = matched;
+		return true;
+	};
+
+	/** Passo 5: sem match único, o usuário escolhe entre os produtos do catálogo. */
+	const askProduct = async (catalog: ProductCatalogEntry[]): Promise<void> => {
+		const labels = catalog.map((entry) =>
+			entry.displayName && entry.displayName !== entry.name
+				? `${entry.displayName} (${entry.name})`
+				: entry.name,
+		);
+		const skip = "Nenhum — seguir com o fallback de repositório";
+		const answer = await ctx.ui.select("Qual o produto desta issue?", [...labels, skip]);
+		if (!answer || answer === skip) {
+			appendNote("produto não resolvido automaticamente nem escolhido");
+			return;
+		}
+		const index = labels.indexOf(answer);
+		const entry = index >= 0 ? catalog[index] : undefined;
+		if (!entry) return;
+		if (!(await adoptProduct(entry.name, "user", entry.name))) {
+			appendNote(`produto "${entry.name}" escolhido, mas o contexto/repos não puderam ser carregados`);
+		}
+	};
+
 	// 1. `--product` explícito vence o mapa.
 	if (productFlag?.trim()) {
 		matchedValue = productFlag.trim();
@@ -329,11 +423,32 @@ async function runProductPhase(
 				matchedValue = mapped.matched;
 			}
 		} else if (mapped) {
+			ignoredMapping = true;
 			appendNote(
 				`componente "${mapped.matched}" é de processo (não é produto); produto não resolvido`,
 			);
 		} else if (mcpbBin) {
 			appendNote("produto não mapeado em products-map.json");
+		}
+	}
+
+	// 3–5. Catálogo do mcpb + registro local: reverse-lookup do repo e match de
+	// texto da issue; ambíguo no TUI pergunta antes de cair no fallback.
+	if (!productContext && !ignoredMapping) {
+		const catalog = await buildCatalog();
+		if (catalog.length > 0) {
+			const candidates = repoFlag?.trim() ? [path.resolve(cwd, repoFlag.trim())] : [cwd];
+			const byRepo = resolveProductFromRepos(catalog, candidates);
+			if (byRepo) await adoptProduct(byRepo.product, byRepo.source, byRepo.matched);
+			if (!productContext) {
+				const byText = resolveProductFromText(catalog, {
+					summary: issue.summary,
+					components: issue.components,
+					labels: issue.labels,
+				});
+				if (byText) await adoptProduct(byText.product, byText.source, byText.matched);
+			}
+			if (!productContext && ctx.mode === "tui") await askProduct(catalog);
 		}
 	}
 
@@ -470,7 +585,7 @@ function productContextMarkdown(phase: ProductPhaseResult): string {
 		lines.push(`- Origem da resolução: ${productSourceLabel(phase.productSource)}`);
 		if (isWeakProductSource(phase.productSource)) {
 			lines.push(
-				"  - **Confirme o produto com o usuário na Fase 1**: veio do projeto/label, não de um componente do Jira.",
+				"  - **Confirme o produto com o usuário na Fase 1**: veio do projeto/label/texto, não de um componente do Jira.",
 			);
 		}
 		if (!phase.mcpbContext) {

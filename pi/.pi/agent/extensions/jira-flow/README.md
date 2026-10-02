@@ -15,7 +15,7 @@ O **harness** (esta extension) faz o I/O; a **LLM** conduz análise, investigaç
 2. Busca a issue no Jira via REST (Cloud = API v3/ADF, DC = API v2/texto) e busca filhos somente quando o tipo é Epic.
 3. Filtra o payload: ADF/texto → markdown, descartando ids internos, `self` URLs, avatares, changelog, watchers, contadores e campos vazios.
 4. Cria a pasta de trabalho e grava `jira-source.md` (auditoria + fonte do refinamento).
-5. **Fase 0** — resolve `produto` + `repos` + `overview`/frescura. Precedência: `--product` (explícito) → mapa local (`component` → `ignore` → `projects[PROJ]` → `label`) + índice `mcpb` (ou o registro local `products.json` quando o produto ainda não está indexado) → catálogo HTTP → `--repo` → `cwd` (**confirmado no TUI**) → pergunta.
+5. **Fase 0** — resolve `produto` + `repos` + `overview`/frescura. Precedência: `--product` (explícito) → mapa local (`component` → `ignore` → `projects[PROJ]` → `label`) + índice `mcpb` (ou o registro local `products.json` quando o produto ainda não está indexado) → **reverse-lookup do repo** (`--repo`/`cwd` é checkout de um produto do catálogo) → **match do texto da issue** (resumo/componente/label contra nome/aliases) → pergunta no TUI quando ambíguo → catálogo HTTP → `--repo` → `cwd` (**confirmado no TUI**) → pergunta.
 6. Classifica a issue em Epic, Story, Manutenção, Apoio ao cliente, Documentação ou genérico.
 7. Mostra um resumo (issue, fluxo, produto, repos) e pede confirmação.
 8. Dispara o turno do LLM com o conteúdo filtrado + contexto do produto + instruções específicas do fluxo.
@@ -188,8 +188,23 @@ componente em `ignore` (**não é produto**, e não cai no default do projeto) �
 
 `projects` está **vazio de propósito**: a key do projeto (ex.: `DRHJNES`) é só a
 nomenclatura do time, não identifica produto. O produto vem do **componente**
-do Jira (ou de `--product`/label). Sem componente, a issue fica **não
-resolvida** e o harness pede confirmação em vez de chutar.
+do Jira (ou de `--product`/label).
+
+Quando o mapa não resolve, a Fase 0 consulta o catálogo de produtos (união do
+`mcpb products` com o registro local `products.json`) e tenta, em ordem:
+
+1. **reverse-lookup do repo** — se `--repo` (ou o `cwd`) é o checkout de um
+   produto do catálogo, adota esse produto. Só resolve quando o repo pertence a
+   **um** produto: `pw2`, compartilhado por PontoWeb/Férias/Espelho, fica
+   ambíguo e não resolve.
+2. **match do texto** — resumo + componentes + labels contra `name`,
+   `displayName` e `aliases` (sinônimos em pt-BR, ex.: `vacations` -> `ferias`).
+   Só resolve com match único.
+3. **pergunta no TUI** — se ainda ambíguo, o usuário escolhe entre os produtos
+   do catálogo (ou segue com o fallback de repositório).
+
+O campo opcional `aliases` do `products.json` existe para esses sinônimos que o
+Jira escreve em pt-BR e que não batem com o nome do produto.
 
 A lista `ignore` é para componentes de **processo/gestão** (OKR, PLR, IA, Score
 de Risco, `para_refinar`, `Demanda de cliente`, `JORNARQ-*`…): eles existem no
@@ -197,9 +212,9 @@ Jira mas não identificam produto — sem isso, um issue marcado só com `OKR` c
 no default do projeto.
 
 O harness registra **a origem da resolução** (`componente`, `projeto`, `label`,
-`--product` ou `catálogo`) no resumo e no prompt. Quando vem de `projeto` ou
-`label` — match mais fraco — ele marca para confirmar com o usuário antes de
-investir.
+`repositório`, `texto`, `escolhido por você`, `--product` ou `catálogo`) no
+resumo e no prompt. Quando vem de `projeto`, `label` ou `texto` — match mais
+fraco — ele marca para confirmar com o usuário antes de investir.
 
 Se o produto não resolver, `consult_specialist` **não** falha em silêncio:
 devolve a lista de produtos do índice local para a LLM escolher e passar em

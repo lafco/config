@@ -1,8 +1,12 @@
 import { describe, expect, test } from "bun:test";
 import {
+	buildProductCatalog,
 	loadProductsMap,
 	resolveProductFromMap,
 	resolveProductFromMapDetailed,
+	resolveProductFromRepos,
+	resolveProductFromText,
+	type ProductCatalogEntry,
 	type ProductsMap,
 } from "./mcpb.ts";
 
@@ -60,6 +64,149 @@ describe("resolveProductFromMapDetailed", () => {
 
 	test("a versão simples devolve só o produto", () => {
 		expect(resolveProductFromMap(map, { project: "DRHJNES", components: [], labels: [] })).toBe("vacations");
+	});
+});
+
+const catalog: ProductCatalogEntry[] = [
+	{ name: "pontoweb", displayName: "PontoWeb", repos: [{ name: "pw2", path: "/ahg/pw2" }] },
+	{
+		name: "vacations",
+		displayName: "Vacations",
+		repos: [
+			{ name: "pw2", path: "/ahg/pw2" },
+			{ name: "vacations-client", path: "/ahg/vacations-client" },
+		],
+		aliases: ["ferias", "férias"],
+	},
+	{
+		name: "rostering",
+		displayName: "Rostering",
+		repos: [
+			{ name: "rostering-api", path: "/ahg/rostering-api" },
+			{ name: "rostering-ui", path: "/ahg/rostering-ui" },
+		],
+		aliases: ["escalas"],
+	},
+];
+
+describe("resolveProductFromRepos", () => {
+	test("repo exclusivo de um produto resolve pelo caminho", () => {
+		expect(resolveProductFromRepos(catalog, ["/ahg/rostering-api"])).toEqual({
+			product: "rostering",
+			source: "repo",
+			matched: "/ahg/rostering-api",
+		});
+	});
+
+	test("subdiretório do repo também resolve", () => {
+		expect(resolveProductFromRepos(catalog, ["/ahg/rostering-api/src/modules"])).toEqual({
+			product: "rostering",
+			source: "repo",
+			matched: "/ahg/rostering-api/src/modules",
+		});
+	});
+
+	test("repo sem path no catálogo casa pelo basename", () => {
+		const withNameOnly: ProductCatalogEntry[] = [{ name: "espelho", displayName: "Espelho", repos: [{ name: "mirror-client" }] }];
+		expect(resolveProductFromRepos(withNameOnly, ["/home/x/ahg/mirror-client"])).toEqual({
+			product: "espelho",
+			source: "repo",
+			matched: "/home/x/ahg/mirror-client",
+		});
+	});
+
+	test("pw2 é compartilhado: ambíguo, não resolve", () => {
+		expect(resolveProductFromRepos(catalog, ["/ahg/pw2"])).toBeNull();
+	});
+
+	test("repo desconhecido não resolve", () => {
+		expect(resolveProductFromRepos(catalog, ["/ahg/dotfiles"])).toBeNull();
+	});
+
+	test("candidato ambíguo não aborta o próximo candidato", () => {
+		expect(resolveProductFromRepos(catalog, ["/ahg/pw2", "/ahg/vacations-client"])).toEqual({
+			product: "vacations",
+			source: "repo",
+			matched: "/ahg/vacations-client",
+		});
+	});
+});
+
+describe("resolveProductFromText", () => {
+	test("casa o nome do produto no resumo", () => {
+		expect(
+			resolveProductFromText(catalog, { summary: "Rostering - publicar escala", components: [], labels: [] }),
+		).toEqual({ product: "rostering", source: "text", matched: "rostering" });
+	});
+
+	test("casa o alias em pt-BR (acento-insensível)", () => {
+		expect(resolveProductFromText(catalog, { summary: "Férias - parcelamento", components: [], labels: [] })).toEqual({
+			product: "vacations",
+			source: "text",
+			matched: "ferias",
+		});
+	});
+
+	test("casa por componente ou label quando o resumo não ajuda", () => {
+		expect(resolveProductFromText(catalog, { summary: "Ajuste", components: ["escalas"], labels: [] })).toEqual({
+			product: "rostering",
+			source: "text",
+			matched: "escalas",
+		});
+	});
+
+	test("sem match, devolve null", () => {
+		expect(
+			resolveProductFromText(catalog, { summary: "Atlas - publicar escala", components: [], labels: [] }),
+		).toBeNull();
+	});
+
+	test("match ambíguo (dois produtos com o mesmo alias) não resolve", () => {
+		const ambiguous = [...catalog, { name: "outro", displayName: "Outro", repos: [], aliases: ["escalas"] }];
+		expect(resolveProductFromText(ambiguous, { summary: "escalas", components: [], labels: [] })).toBeNull();
+	});
+});
+
+describe("buildProductCatalog", () => {
+	test("o mcpb manda em repos/displayName; o local acrescenta aliases", () => {
+		const catalog = buildProductCatalog(
+			[{ name: "vacations", displayName: "Vacations", repos: [{ name: "pw2", path: "/ahg/pw2" }] }],
+			{
+				vacations: {
+					displayName: "Vacations (local)",
+					repos: [
+						{ name: "pw2", path: "/ahg/pw2" },
+						{ name: "vacations-client", path: "/ahg/vacations-client" },
+					],
+					aliases: ["ferias"],
+				},
+			},
+		);
+		expect(catalog).toEqual([
+			{
+				name: "vacations",
+				displayName: "Vacations",
+				repos: [{ name: "pw2", path: "/ahg/pw2" }],
+				aliases: ["ferias"],
+			},
+		]);
+	});
+
+	test("produto só local entra com repos e aliases", () => {
+		const catalog = buildProductCatalog([], {
+			folgas: { displayName: "Folgas", repos: [{ name: "folgas-api" }], aliases: ["dayoff"] },
+		});
+		expect(catalog).toEqual([
+			{ name: "folgas", displayName: "Folgas", repos: [{ name: "folgas-api" }], aliases: ["dayoff"] },
+		]);
+	});
+
+	test("mcpb sem repos cai nos repos do registro local", () => {
+		const catalog = buildProductCatalog(
+			[{ name: "rostering", displayName: "Rostering", repos: [] }],
+			{ rostering: { displayName: "Rostering", repos: [{ name: "rostering-api", path: "/ahg/rostering-api" }] } },
+		);
+		expect(catalog[0]?.repos).toEqual([{ name: "rostering-api", path: "/ahg/rostering-api" }]);
 	});
 });
 
