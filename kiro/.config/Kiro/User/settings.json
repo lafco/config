@@ -20,5 +20,6 @@
     "php.codeLens.enabled": false,
     "editor.minimap.enabled": false,
     "terminal.integrated.cursorStyle": "underline",
-    "editor.cursorStyle": "underline"
+    "editor.cursorStyle": "underline",
+    "files.simpleDialog.enable": true
 }

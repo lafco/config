@@ -136,6 +136,14 @@
         "command": "workbench.action.files.openFolder"
     },
     {
+        "key": "ctrl+shift+e",
+        "command": "-workbench.view.explorer"
+    },
+    {
+        "key": "ctrl+shift+e",
+        "command": "lafco.epicsQuickOpen"
+    },
+    {
         "key": "ctrl+shift+f",
         "command": "-workbench.action.findInFiles"
     },

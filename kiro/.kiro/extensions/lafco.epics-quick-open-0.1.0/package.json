@@ -1,0 +1,25 @@
+{
+  "name": "epics-quick-open",
+  "displayName": "Epics Quick Open",
+  "description": "Open any file under ~/epics from any Kiro workspace.",
+  "version": "0.1.0",
+  "publisher": "lafco",
+  "engines": {
+    "vscode": "^1.75.1"
+  },
+  "extensionKind": [
+    "ui"
+  ],
+  "activationEvents": [
+    "onCommand:lafco.epicsQuickOpen"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "lafco.epicsQuickOpen",
+        "title": "Epics: Quick Open File"
+      }
+    ]
+  }
+}
