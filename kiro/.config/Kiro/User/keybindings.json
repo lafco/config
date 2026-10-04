@@ -460,10 +460,6 @@
         "when": "!terminalFocus && !findWidgetFocused"
     },
     {
-        "key": "alt+g",
-        "command": "lafco.scmQuickOpen"
-    },
-    {
         "key": "ctrl+n",
         "command": "workbench.action.compareEditor.nextChange",
         "when": "isInDiffEditor && editorTextFocus"
@@ -507,25 +503,23 @@
     },
     {
         "key": "ctrl+n",
-        "command": "runCommands",
-        "when": "editorTextFocus && editorLangId == scminput",
-        "args": {
-            "commands": [
-                "workbench.view.scm",
-                "list.focusDown"
-            ]
-        }
+        "command": "workbench.scm.action.focusNextResourceGroup",
+        "when": "editorLangId == scminput"
     },
     {
         "key": "ctrl+p",
-        "command": "runCommands",
-        "when": "editorTextFocus && editorLangId == scminput",
-        "args": {
-            "commands": [
-                "workbench.view.scm",
-                "list.focusUp"
-            ]
-        }
+        "command": "workbench.scm.action.focusPreviousResourceGroup",
+        "when": "editorLangId == scminput"
+    },
+    {
+        "key": "ctrl+n",
+        "command": "list.focusDown",
+        "when": "listFocus && !inQuickOpen"
+    },
+    {
+        "key": "ctrl+p",
+        "command": "list.focusUp",
+        "when": "listFocus && !inQuickOpen"
     },
     {
         "key": "ctrl+c",
