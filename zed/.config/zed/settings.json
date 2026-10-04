@@ -7,6 +7,18 @@
 // custom settings, run `zed: open default settings` from the
 // command palette (cmd-shift-p / ctrl-shift-p)
 {
+  "cli_default_open_behavior": "existing_window",
+  // Usa o picker proprio do Zed (ctrl-shift-o -> workspace::Open) em vez do
+  // dialogo do sistema. Tambem vale para o "Save As".
+  "use_system_path_prompts": false,
+  "session": {
+    "trust_all_worktrees": true
+  },
+  "telemetry": {
+    "diagnostics": false,
+    "metrics": false,
+    "anthropic_retention": false
+  },
   "agent_ui_font_size": 14.0,
   "ui_font_family": "Ubuntu Sans",
   "buffer_line_height": "comfortable",
@@ -14,7 +26,10 @@
   "buffer_font_family": "JetBrains Mono",
   "icon_theme": "Colored Zed Icons Theme Dark",
   "project_panel": {
-    "dock": "left"
+    "dock": "left",
+    "file_icons": false,
+    "folder_icons": false,
+    "git_status": false
   },
   "outline_panel": {
     "dock": "left"
@@ -32,11 +47,76 @@
     "dock": "left"
   },
   "vim_mode": false,
+
+  // ---- clean: sem cromo ----
+  // Sem tab bar a troca entre arquivos abertos fica no tab switcher do Zed
+  // (ctrl-tab / ctrl-shift-tab, default que as binds deste repo nao deslocam).
+  "tab_bar": {
+    "show": false
+  },
+  "toolbar": {
+    "breadcrumbs": false,
+    "quick_actions": false,
+    "selections_menu": false,
+    "code_actions": false
+  },
+  "scrollbar": {
+    "show": "never"
+  },
+  "gutter": {
+    "line_numbers": false,
+    "runnables": false,
+    "bookmarks": false,
+    "breakpoints": false,
+    "folds": false
+  },
+  "indent_guides": {
+    "enabled": false
+  },
+  // A status bar some inteira: sem branch, LSP, cursor e encoding no rodape.
+  "status_bar": {
+    "experimental.show": false
+  },
+  // Sobram na barra de titulo apenas os botoes de janela (o GNOME Wayland nao
+  // aceita window_decorations "server", entao a barra em si nao pode sair).
+  "title_bar": {
+    "show_branch_status_icon": false,
+    "show_branch_name": false,
+    "show_worktree_name": false,
+    "show_project_items": false,
+    "show_onboarding_banner": false,
+    "show_user_picture": false,
+    "show_user_menu": false,
+    "show_sign_in": false
+  },
   "ui_font_size": 14.0,
   "buffer_font_size": 13.0,
   "theme": {
     "mode": "system",
     "light": "One Light",
-    "dark": "JetBrains Islands Dark"
+    "dark": "One Dark"
+  },
+
+  // ---- clean: sem bordas ----
+  // Zera as cores de borda dos dois temas (o theme_overrides e por nome de
+  // tema). border.focused fica de fora de proposito: e o contorno do input
+  // focado (busca, quick open); sem ele nao ha pista visual de foco.
+  "theme_overrides": {
+    "One Dark": {
+      "border": "#00000000",
+      "border.variant": "#00000000",
+      "border.disabled": "#00000000",
+      "border.selected": "#00000000",
+      "pane.focused_border": "#00000000",
+      "panel.focused_border": "#00000000"
+    },
+    "One Light": {
+      "border": "#00000000",
+      "border.variant": "#00000000",
+      "border.disabled": "#00000000",
+      "border.selected": "#00000000",
+      "pane.focused_border": "#00000000",
+      "panel.focused_border": "#00000000"
+    }
   }
 }
