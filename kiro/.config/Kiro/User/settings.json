@@ -21,5 +21,7 @@
     "editor.minimap.enabled": false,
     "terminal.integrated.cursorStyle": "underline",
     "editor.cursorStyle": "underline",
-    "files.simpleDialog.enable": true
+    "files.simpleDialog.enable": true,
+    "workbench.sideBar.location": "right",
+    "git.openRepositoryInParentFolders": "never"
 }

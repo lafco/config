@@ -94,7 +94,13 @@
     },
     {
         "key": "ctrl+q",
-        "command": "workbench.action.closeActiveEditor"
+        "command": "workbench.action.closeActiveEditor",
+        "when": "!kiroAgent.chatFocus"
+    },
+    {
+        "key": "ctrl+q",
+        "command": "kiroAgent.chat.closeSessionTab",
+        "when": "kiroAgent.chatFocus"
     },
     {
         "key": "ctrl+w",
@@ -156,6 +162,14 @@
         "command": "workbench.action.files.openFile"
     },
     {
+        "key": "ctrl+shift+w",
+        "command": "-workbench.action.closeWindow"
+    },
+    {
+        "key": "ctrl+shift+w",
+        "command": "lafco.workspacesQuickOpen"
+    },
+    {
         "key": "ctrl+shift+n",
         "command": "-workbench.action.newWindow"
     },
@@ -175,6 +189,16 @@
     {
         "key": "ctrl+p",
         "command": "workbench.action.quickOpenNavigatePrevious",
+        "when": "inQuickOpen"
+    },
+    {
+        "key": "alt+j",
+        "command": "workbench.action.quickOpenSelectNext",
+        "when": "inQuickOpen"
+    },
+    {
+        "key": "alt+k",
+        "command": "workbench.action.quickOpenSelectPrevious",
         "when": "inQuickOpen"
     },
     {
@@ -436,6 +460,10 @@
         "when": "!terminalFocus && !findWidgetFocused"
     },
     {
+        "key": "alt+g",
+        "command": "lafco.scmQuickOpen"
+    },
+    {
         "key": "ctrl+n",
         "command": "workbench.action.compareEditor.nextChange",
         "when": "isInDiffEditor && editorTextFocus"
@@ -448,12 +476,12 @@
     {
         "key": "alt+j",
         "command": "list.focusDown",
-        "when": "listFocus"
+        "when": "listFocus && !inQuickOpen"
     },
     {
         "key": "alt+k",
         "command": "list.focusUp",
-        "when": "listFocus"
+        "when": "listFocus && !inQuickOpen"
     },
     {
         "key": "alt+j",
@@ -461,7 +489,7 @@
         "when": "editorTextFocus && editorLangId == scminput",
         "args": {
             "commands": [
-                "workbench.scm",
+                "workbench.view.scm",
                 "list.focusDown"
             ]
         }
@@ -472,7 +500,29 @@
         "when": "editorTextFocus && editorLangId == scminput",
         "args": {
             "commands": [
-                "workbench.scm",
+                "workbench.view.scm",
+                "list.focusUp"
+            ]
+        }
+    },
+    {
+        "key": "ctrl+n",
+        "command": "runCommands",
+        "when": "editorTextFocus && editorLangId == scminput",
+        "args": {
+            "commands": [
+                "workbench.view.scm",
+                "list.focusDown"
+            ]
+        }
+    },
+    {
+        "key": "ctrl+p",
+        "command": "runCommands",
+        "when": "editorTextFocus && editorLangId == scminput",
+        "args": {
+            "commands": [
+                "workbench.view.scm",
                 "list.focusUp"
             ]
         }
