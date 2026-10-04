@@ -480,28 +480,6 @@
         "when": "listFocus && !inQuickOpen"
     },
     {
-        "key": "alt+j",
-        "command": "runCommands",
-        "when": "editorTextFocus && editorLangId == scminput",
-        "args": {
-            "commands": [
-                "workbench.view.scm",
-                "list.focusDown"
-            ]
-        }
-    },
-    {
-        "key": "alt+k",
-        "command": "runCommands",
-        "when": "editorTextFocus && editorLangId == scminput",
-        "args": {
-            "commands": [
-                "workbench.view.scm",
-                "list.focusUp"
-            ]
-        }
-    },
-    {
         "key": "ctrl+n",
         "command": "workbench.scm.action.focusNextResourceGroup",
         "when": "editorLangId == scminput"
