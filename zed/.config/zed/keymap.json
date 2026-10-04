@@ -1,14 +1,21 @@
 // Keymap do Zed, portado do Kiro.
 // Fonte da verdade: ~/dotfiles/zed/.config/zed/keymap.json
-// (linkado em ~/.config/zed/keymap.json pelo stow - veja ~/dotfiles/dot).
+// (linkado em ~/.config/zed/keymap.json pelo home-manager - veja
+// ~/nixos/home/modules/dotfiles.nix).
 //
-// O Zed nao tem when fino, nao tem chord e nao encadeia acoes numa mesma tecla.
-// Os comentarios marcam o default do Zed que cada bind desloca.
-// O terminal nunca e afetado: as binds de painel/fluxo levam !Terminal e as de
-// editor usam o contexto Editor (que o terminal nao tem), entao as teclas do
-// shell (ctrl-e, ctrl-l, ctrl-q, ctrl-w, alt-b, ...) continuam indo pro PTY.
+// Regras do port:
+// - O terminal nunca e afetado: as binds de painel/fluxo levam !Terminal e as de
+//   editor usam o contexto Editor (que o terminal nao tem), entao as teclas do
+//   shell (ctrl-e, ctrl-l, ctrl-q, ctrl-w, alt-b, ...) continuam indo pro PTY.
+// - O Zed TEM chord nativo (o default usa "ctrl-k ctrl-z", "alt-g b") e tem
+//   workspace::SendKeystrokes para encadear acoes. Quase nada do Kiro precisou
+//   disso: os runCommands do Kiro (ctrl+/ = foco no editor + busca) viram uma
+//   acao so no Zed.
+// - O Zed nao tem when tao fino quanto o do VS Code; onde importa usamos os
+//   contextos reais (GitDiff > Editor, Editor && !agent_diff, not_editing, ...).
+// - Os comentarios marcam o default do Zed que cada bind desloca.
 [
-  // ---- paineis, pickers e fluxo ----
+  // ---- paineis, foco e fluxo ----
   {
     "context": "Workspace && !Terminal",
     "bindings": {
@@ -22,14 +29,50 @@
       "ctrl-l": "agent::ToggleFocus", // era editor::SelectLine (o ctrl-? do Zed continua valendo)
       "ctrl-'": "terminal_panel::Toggle", // era editor::ToggleSelectedDiffHunks (o ctrl-` continua valendo)
       "ctrl-shift-f": "workspace::OpenFiles", // era project_search::ToggleFocus (que agora e o ctrl-f)
-      "ctrl-shift-o": "workspace::AddFolderToProject", // nao existe workspace::OpenFolder no Zed; este e o nome real
+      "ctrl-shift-o": "workspace::Open", // "Opens a file or directory" (o Kiro usa workbench.action.files.openFolder; nao existe workspace::OpenFolder no Zed). O picker proprio do Zed em vez do dialogo do sistema vem de use_system_path_prompts=false no settings.json
       "alt-o": "project_symbols::Toggle"
     }
   },
   {
+    // O Kiro desliga "novo arquivo sem titulo" (ctrl+n) e "nova janela"
+    // (ctrl+shift+n). Aqui os dois defaults do Workspace saem de cena pelo mesmo
+    // motivo. O bind e por contexto e sem escopo mais fino de proposito: o Zed
+    // resolve por precedencia (keymap do usuario antes do default), nao por
+    // especificidade, entao isto tambem silenciaria o ctrl-n do project panel -
+    // que e reafirmado no bloco de listas (ProjectPanel && not_editing).
+    "context": "Workspace",
+    "bindings": {
+      "ctrl-n": null, // era workspace::NewFile
+      "ctrl-shift-n": null // era workspace::NewWindow
+    }
+  },
+  {
+    // Com o painel do agente focado. O Kiro faz toggle no ctrl-l (abre/foca e,
+    // se ja estiver focado, some com o sidebar); no Zed o agent::ToggleFocus do
+    // bloco acima so devolve o foco ao editor, entao aqui o ctrl-l esconde o
+    // dock. O painel do agente esta no dock da direita (settings: agent.dock).
+    "context": "AgentPanel",
+    "bindings": {
+      "ctrl-l": "workspace::ToggleRightDock", // esconde o sidebar do agente
+      "ctrl-q": "workspace::CloseActiveDock" // fecha a sessao (o ctrl-q do bloco acima fecha o item do editor)
+    }
+  },
+  {
+    // alt-c leva ao input de commit de qualquer lugar, num toque: o ctrl-g abre/foca
+    // o git panel (git_panel::FocusEditor so e tratado com o painel renderizado) e o
+    // alt-c seguinte cai no bloco do GitPanel abaixo, que foca o comentario. Se o
+    // painel ja esta focado, o contexto mais profundo (GitPanel) vence e vai direto
+    // ao input. Abrir/fechar o painel fica so no ctrl-g. O !BufferSearchBar mantem
+    // o alt-c da busca alternando case sensitive.
     "context": "Workspace && !Terminal && !BufferSearchBar",
     "bindings": {
-      "alt-c": "git_panel::ToggleFocus" // dentro da busca o alt-c continua alternando case sensitive
+      "alt-c": ["workspace::SendKeystrokes", "ctrl-g alt-c"]
+    }
+  },
+  {
+    "context": "GitPanel && !BufferSearchBar",
+    "bindings": {
+      "alt-c": "git_panel::FocusEditor" // no Kiro o alt-c leva direto pro input do commit
     }
   },
   {
@@ -38,9 +81,13 @@
       "ctrl-w": "editor::ToggleFocus" // voltar pro editor quando o foco esta em painel/picker
     }
   },
-  // ---- editor: movimentos, selecao, simbolos, diff/git ----
+
+  // ---- editor: movimento, selecao e clipboard ----
   {
-    "context": "Editor",
+    // !Picker: o input dos pickers tambem e um Editor. Sem isto, os binds deste
+    // bloco (e os de busca abaixo) valeriam dentro do quick open e quebrariam a
+    // navegacao da lista e a edicao do campo de busca.
+    "context": "Editor && !Picker",
     "bindings": {
       "alt-h": "editor::MoveLeft",
       "alt-l": "editor::MoveRight",
@@ -56,34 +103,128 @@
       "shift-alt-k": "editor::SelectUp",
       "shift-alt-b": "editor::SelectToPreviousWordStart",
       "shift-alt-e": "editor::SelectToNextWordEnd",
-      "shift-alt-[": "editor::MoveToStartOfLargerSyntaxNode",
-      "shift-alt-]": "editor::MoveToEndOfLargerSyntaxNode",
-      "ctrl-d": "editor::MovePageDown", // era editor::SelectNext (que segue no ctrl-shift-down)
+      "shift-alt-[": "editor::SelectToBeginningOfLine", // era editor::MoveToStartOfLargerSyntaxNode; no Kiro e selecao ate o inicio da linha
+      "shift-alt-]": "editor::SelectToEndOfLine", // era editor::MoveToEndOfLargerSyntaxNode
+      "ctrl-d": "editor::MovePageDown", // era editor::SelectNext (que agora e o ctrl-n)
       "ctrl-u": "editor::MovePageUp", // era editor::UndoSelection
-      "ctrl-j": "editor::MoveToEnclosingBracket", // era workspace::ToggleBottomDock
-      "ctrl-r": "editor::ExpandAllDiffHunks", // era projects::OpenRecent
-      "ctrl-n": "editor::GoToHunk", // era menu::SelectNext / workspace::NewFile
-      "ctrl-p": "editor::GoToPreviousHunk",
+      "ctrl-j": "editor::MoveToEnclosingBracket" // era workspace::ToggleBottomDock
+    }
+  },
+  {
+    "context": "Editor && !agent_diff",
+    "bindings": {
+      // Copiar/colar do Kiro. O contexto !agent_diff e o mesmo do default que
+      // sai daqui (alt-y = git::StageAndNext); no diff do agente o predicado
+      // !agent_diff nao casa, entao o alt-y de la (agent::Keep) continua valendo.
+      "alt-y": "editor::Copy", // era git::StageAndNext (o stage segue no alt-s)
+      "alt-v": "editor::Paste"
+    }
+  },
+
+  // ---- editor: busca, ocorrencias, simbolos e git ----
+  {
+    "context": "Editor && !Picker",
+    "bindings": {
+      "ctrl-/": "buffer_search::Deploy", // era editor::ToggleComments
+      "ctrl-n": ["editor::SelectNext", { "replace_newest": false }], // era editor::MoveDown; no Kiro e a proxima ocorrencia da palavra
+      "ctrl-shift-n": "editor::SelectPrevious", // era editor::SelectDown; no Kiro e a ocorrencia anterior
+      "ctrl-p": "file_finder::Toggle", // era editor::MoveUp; no Kiro o ctrl-p no editor abre o quick open (Go to File)
+      "ctrl-k": "editor::ShowCompletions", // era editor::KillRingCut; no Kiro o ctrl-k abre as recomendacoes do language server. ATENCAO: isto poe uma bind cheia num prefixo de chord do Zed (ctrl-k z soft wrap, ctrl-k q rewrap, ctrl-k p copy path, ctrl-k r reveal, ctrl-k e/t/u fechar abas) - se os chords pararem de responder, troque por "ctrl-space": "editor::ShowCompletions" (default do Zed) e devolva o ctrl-k
+      "ctrl-r": "git::OpenFileDiff", // era projects::OpenRecent; no Kiro o ctrl-r abre o diff do arquivo atual
+      "ctrl-w": "outline::Toggle", // no Zed 1.17 nao existe mais picker de simbolos do arquivo: e o painel Outline
       "alt-n": "editor::GoToNextChange",
       "alt-p": "editor::GoToPreviousChange",
       "alt-d": "editor::GoToImplementation",
       "alt-u": "editor::FindAllReferences",
       "alt-s": "git::ToggleStaged",
-      "alt-x": "editor::RevertSelectedHunks",
-      "ctrl-w": "outline::Toggle", // no Zed 1.16 nao existe mais picker de simbolos do arquivo: e o painel Outline
-      "ctrl-/": "buffer_search::Deploy" // era editor::ToggleComments
+      "alt-x": "editor::RevertSelectedHunks"
     }
   },
   {
-    "context": "Editor && !BufferSearchBar",
+    "context": "Editor && !Picker && !BufferSearchBar",
     "bindings": {
       "alt-w": "outline::Toggle" // dentro da busca o alt-w continua alternando whole word
     }
   },
   {
+    "context": "GitDiff > Editor",
+    "bindings": {
+      // No Kiro o ctrl-n/ctrl-p no diff pula de mudanca em mudanca; no editor
+      // normal as mesmas teclas andam pelas ocorrencias da palavra.
+      "ctrl-n": "editor::GoToHunk",
+      "ctrl-p": "editor::GoToPreviousHunk"
+    }
+  },
+
+  // ---- barra de busca ----
+  {
     "context": "BufferSearchBar",
     "bindings": {
-      "ctrl-c": "buffer_search::Dismiss"
+      "ctrl-c": "buffer_search::Dismiss",
+      "ctrl-n": "search::SelectNextMatch", // era menu::SelectNext; no Kiro ctrl-n/ctrl-p andam pelos resultados
+      "ctrl-p": "search::SelectPreviousMatch",
+      "ctrl-shift-n": "search::SelectPreviousMatch"
+    }
+  },
+
+  // ---- listas: alt-j/alt-k descem e sobem (list.focusDown/Up do Kiro) ----
+  {
+    // So `Picker` (e nao `Picker || menu`): com a lista de completions aberta o
+    // alt-j/alt-k precisa continuar movendo o cursor, nao a lista.
+    "context": "Picker",
+    "bindings": {
+      "alt-j": "menu::SelectNext", // quick open, command palette, pickers de simbolo
+      "alt-k": "menu::SelectPrevious",
+      "ctrl-c": "menu::Cancel" // o default so vale quando o foco esta na lista; no input do picker a secao Editor do Zed poe editor::Copy ali
+    }
+  },
+  {
+    "context": "ProjectPanel && not_editing",
+    "bindings": {
+      "alt-j": "menu::SelectNext",
+      "alt-k": "menu::SelectPrevious"
+    }
+  },
+  {
+    // ctrl-n/ctrl-p/ctrl-shift-n/alt-j/alt-k andam a lista de alteracoes. O
+    // ctrl-n/ctrl-p/ctrl-shift-n precisam ser reafirmados aqui: o "ctrl-n": null e o
+    // "ctrl-shift-n": null do bloco Workspace (binding de usuario) suprimem os
+    // defaults globais (menu::SelectNext/Previous), entao sem isto nao fazem nada.
+    // menu::SelectNext/Previous movem so a selecao, como o alt-j/alt-k ja fazia.
+    "context": "GitPanel && ChangesList && !GitBranchSelector && !GitRepositorySelector",
+    "bindings": {
+      "ctrl-n": "menu::SelectNext",
+      "ctrl-p": "menu::SelectPrevious",
+      "ctrl-shift-n": "menu::SelectPrevious",
+      "alt-j": "menu::SelectNext",
+      "alt-k": "menu::SelectPrevious"
+    }
+  },
+  {
+    "context": "OutlinePanel && not_editing",
+    "bindings": {
+      "alt-j": "menu::SelectNext",
+      "alt-k": "menu::SelectPrevious"
+    }
+  },
+  {
+    "context": "ProjectSearchView",
+    "bindings": {
+      "alt-j": "menu::SelectNext", // resultados do ctrl-f
+      "alt-k": "menu::SelectPrevious"
+    }
+  },
+  {
+    "context": "ThreadsSidebar && !Editor",
+    "bindings": {
+      "alt-j": "menu::SelectNext", // lista de conversas do painel do agente
+      "alt-k": "menu::SelectPrevious"
     }
   }
+
+  // ---- sem equivalente no Zed (sem bind) ----
+  //   ctrl+y, ctrl+k ctrl+k -> kiro.views.specExplorer.focus (spec explorer do Kiro)
+  //   ctrl+shift+e          -> lafco.epicsQuickOpen (extensao propria do Kiro)
+  //   alt+x na busca        -> search.action.remove (o Zed nao remove resultado focado)
+  //   ctrl+c no multibuffer -> closeReferenceSearch (no Zed o ctrl-c ali copia; use escape)
 ]
