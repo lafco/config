@@ -24,7 +24,7 @@
   "buffer_line_height": "comfortable",
   "buffer_font_weight": 400.0,
   "buffer_font_family": "JetBrains Mono",
-  "icon_theme": "Colored Zed Icons Theme Dark",
+  "icon_theme": "Zed (Default)",
   "project_panel": {
     "dock": "left",
     "file_icons": true,
