@@ -7,6 +7,12 @@
 export PATH="$HOME/.local/bin:$HOME/.cargo/bin:/usr/local/bin:$PATH"
 export PATH="$HOME/.local/share/pi-node/current/bin:$PATH"
 
+# pnpm: binários globais (`pnpm add -g`) vão para $PNPM_HOME, não para o
+# prefixo do node (read-only no /nix/store) — sem esta linha o que for
+# instalado globalmente não é encontrado (`pnpm bin -g` avisa).
+export PNPM_HOME="$HOME/.local/share/pnpm"
+export PATH="$PNPM_HOME/bin:$PATH"
+
 # ── Editor ────────────────────────────────────────────────────────────────────
 export EDITOR="nvim"
 export VISUAL="nvim"
