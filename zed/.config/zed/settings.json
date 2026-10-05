@@ -27,8 +27,8 @@
   "icon_theme": "Colored Zed Icons Theme Dark",
   "project_panel": {
     "dock": "left",
-    "file_icons": false,
-    "folder_icons": false,
+    "file_icons": true,
+    "folder_icons": true,
     "git_status": false
   },
   "outline_panel": {
