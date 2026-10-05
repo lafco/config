@@ -247,21 +247,22 @@
   },
   {
     // Navegacao da arvore do explorer. O ProjectPanel registra
-    // menu::SelectNext/Previous (project_panel.rs:7064-7065) e o contexto dele ja
-    // inclui o flag not_editing (dispatch_context, project_panel.rs:6657), entao
-    // estes binds casam no proprio no do painel - mais fundo que o default
-    // global. Sem eles o ctrl-n do painel cria arquivo (project_panel::NewFile,
-    // default do painel) e o ctrl-p cai no menu::SelectPrevious global (que
-    // funciona, mas por sorte). Com o ctrl-n explicito aqui, o NewFile do
-    // default perde no empate por estar antes no arquivo. Ao renomear/criar
-    // arquivo o foco vai pro Editor de dentro do painel, que casa mais fundo:
-    // la valem os binds do [Editor && !Picker].
+    // menu::SelectNext/Previous - os handlers vem do crate menu
+    // (use menu::{...}, project_panel.rs:33) e sao ligados em
+    // project_panel.rs:7066-7067 (select_previous/select_next, 1689/2983) - e o
+    // contexto dele ja inclui o flag not_editing (dispatch_context,
+    // project_panel.rs:6653-6666), entao estes binds casam no proprio no do
+    // painel, na profundidade maxima da pilha. O ctrl-n explicito aqui vence o
+    // project_panel::NewFile do default do painel (empate em profundidade,
+    // desempate por vir depois no arquivo). Ao renomear/criar arquivo o foco vai
+    // pro Editor de dentro do painel, que casa mais fundo: la valem os binds do
+    // [Editor && !Picker].
     "context": "ProjectPanel && not_editing",
     "bindings": {
       "alt-j": "menu::SelectNext",
       "alt-k": "menu::SelectPrevious",
       "ctrl-n": "menu::SelectNext", // era project_panel::NewFile (default do painel)
-      "ctrl-p": "menu::SelectPrevious" // era o menu::SelectPrevious global (o default do Zed ja chegava aqui)
+      "ctrl-p": "file_finder::Toggle" // era menu::SelectPrevious (o default global), que aqui so andava a lista. Com o foco no explorer o ctrl-p abre o quick open, igual ao editor
     }
   },
   {
