@@ -23,5 +23,6 @@
     "editor.cursorStyle": "underline",
     "files.simpleDialog.enable": true,
     "workbench.sideBar.location": "right",
-    "git.openRepositoryInParentFolders": "never"
+    "git.openRepositoryInParentFolders": "never",
+    "kiroAgent.configureMCP": "Disabled"
 }

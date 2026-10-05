@@ -19,16 +19,18 @@
   {
     // Historico, fluxo de arquivo/pasta e fechar aba. O contexto "!Terminal" e
     // nao-positivo de proposito: sem identificador positivo o depth_of cai na
-    // profundidade maxima da pilha, entao estas 5 vencem os defaults que moram
+    // profundidade maxima da pilha, entao estas 6 vencem os defaults que moram
     // mais fundo (ctrl-o/workspace::OpenFiles e ctrl-q/zed::Quit sao globais;
-    // ctrl-i/editor::ShowSignatureHelp e ctrl-shift-o/outline::Toggle sao do
-    // Editor). Um contexto que casa no no Workspace - como o bloco logo abaixo -
-    // e raso e perde para eles. O !Terminal mantem a regra do arquivo: no
-    // terminal o ctrl-q e o ctrl-o seguem indo pro PTY.
+    // ctrl-i/editor::ShowSignatureHelp, ctrl-shift-o/outline::Toggle e
+    // ctrl-;/editor::ToggleLineNumbers sao do Editor). Um contexto que casa no no
+    // Workspace - como o bloco logo abaixo - e raso e perde para eles. O
+    // !Terminal mantem a regra do arquivo: no terminal o ctrl-q e o ctrl-o seguem
+    // indo pro PTY.
     "context": "!Terminal",
     "bindings": {
       "ctrl-o": "pane::GoBack", // era workspace::OpenFiles (abrir arquivo vai pro ctrl-shift-f)
       "ctrl-i": "pane::GoForward", // era editor::ShowSignatureHelp
+      "ctrl-;": "go_to_line::Toggle", // pular pro numero da linha. Tem que estar aqui: no bloco [Workspace && !Terminal] ele perdia pro default [Editor] editor::ToggleLineNumbers, porque o no Editor e mais fundo que o Workspace
       "ctrl-q": "pane::CloseActiveItem", // era zed::Quit global (sair do Zed fica no menu / alt+F4). No AgentPanel o bloco de ctrl-q casa no empate e vence por vir depois
       "ctrl-shift-f": "workspace::OpenFiles", // era project_search::ToggleFocus no Pane (que agora e o ctrl-f)
       "ctrl-shift-o": "workspace::Open" // era outline::Toggle no Editor. "Opens a file or directory" (o Kiro usa workbench.action.files.openFolder; nao existe workspace::OpenFolder no Zed). O picker proprio do Zed em vez do dialogo do sistema vem de use_system_path_prompts=false no settings.json
@@ -38,8 +40,8 @@
     "context": "Workspace && !Terminal",
     "bindings": {
       "ctrl-e": "project_panel::ToggleFocus", // era file_finder::Toggle (o file finder segue no ctrl-p)
-      "ctrl-g": "git_panel::ToggleFocus", // era go_to_line::Toggle (gotoLine vai pro ctrl-;)
-      "ctrl-;": "go_to_line::Toggle", // era editor::ToggleLineNumbers
+      "ctrl-g": "go_to_line::Toggle", // era git_panel::ToggleFocus. O default do Zed ja e este (no [Editor && mode == full]); explicito aqui pra valer fora do editor tambem
+      "ctrl-shift-g": "git_panel::ToggleFocus", // era git_panel::ToggleFocus no ctrl-g (o default do Zed ja usa o ctrl-shift-g no [Workspace]); explicito pra nao depender do default
       // era buffer_search::Deploy (busca no arquivo vai pro ctrl-/)
       "ctrl-l": "agent::ToggleFocus", // era editor::SelectLine (o ctrl-? do Zed continua valendo)
       "ctrl-'": "terminal_panel::Toggle", // era editor::ToggleSelectedDiffHunks (o ctrl-` continua valendo)
@@ -73,15 +75,22 @@
     }
   },
   {
-    // alt-c leva ao input de commit de qualquer lugar, num toque: o ctrl-g abre/foca
-    // o git panel (git_panel::FocusEditor so e tratado com o painel renderizado) e o
-    // alt-c seguinte cai no bloco do GitPanel abaixo, que foca o comentario. Se o
-    // painel ja esta focado, o contexto mais profundo (GitPanel) vence e vai direto
-    // ao input. Abrir/fechar o painel fica so no ctrl-g. O !BufferSearchBar mantem
-    // o alt-c da busca alternando case sensitive.
-    "context": "Workspace && !Terminal && !BufferSearchBar",
+    // alt-c abre a mensagem de commit de qualquer lugar, num toque. A acao e
+    // git::ExpandCommitEditor, que o proprio Workspace registra
+    // (crates/git_ui/src/git_panel.rs:513) e que chama CommitModal::toggle: abre o
+    // painel do git e sobe o modal com o editor da mensagem (mesmo buffer do input
+    // inline do painel). Antes era um SendKeystrokes "ctrl-g alt-c", que dependia
+    // do painel ja estar renderizado - e no editor o ctrl-g e go_to_line, entao o
+    // alt-c acabava abrindo o goto line. De novo fecha (e toggle); escape tambem
+    // fecha (default do GitCommit > Editor). O contexto e "!Terminal &&
+    // !BufferSearchBar" em vez de "Workspace && ...": o default [Pane] alt-c ->
+    // search::ToggleCaseSensitive casa no no Pane, que e mais fundo que o
+    // Workspace, e engolia o alt-c no editor. Sem identificador positivo o bloco
+    // casa na profundidade maxima e ganha de qualquer default; o !BufferSearchBar
+    // mantem o alt-c da busca alternando case sensitive.
+    "context": "!Terminal && !BufferSearchBar",
     "bindings": {
-      "alt-c": ["workspace::SendKeystrokes", "ctrl-g alt-c"]
+      "alt-c": "git::ExpandCommitEditor"
     }
   },
   {
@@ -201,10 +210,34 @@
     }
   },
 
+  // ---- caixas de opcoes do editor: alt-j/alt-k/ctrl-n/ctrl-p andam a lista ----
+  {
+    // As completions do LSP, as code actions do alt-enter e as caixas do painel
+    // do agente ("@" mencoes, "/" slash commands) sao o mesmo completion menu do
+    // editor: o PromptCompletionProvider do agent_ui implementa CompletionProvider
+    // (crates/agent_ui/src/completion_provider.rs:1412), entao o flag
+    // showing_completions vale para elas. O default do Zed ja liga ctrl-n/ctrl-p
+    // em editor::ContextMenuNext/Previous neste contexto, mas o bloco
+    // [Editor && !Picker] deste arquivo casa no mesmo no (Editor) e vence por vir
+    // depois do default - era ele que devolvia o ctrl-p pro file_finder e o
+    // ctrl-n pro SelectNext com o menu aberto, e o alt-j/alt-k pro cursor. Este
+    // bloco vem depois dele e devolve as quatro teclas pra lista. Com a lista
+    // fechada nada muda (o ctrl-p segue abrindo o quick open no editor).
+    "context": "Editor && (showing_code_actions || showing_completions)",
+    "bindings": {
+      "alt-j": "editor::ContextMenuNext",
+      "alt-k": "editor::ContextMenuPrevious",
+      "ctrl-n": "editor::ContextMenuNext",
+      "ctrl-p": "editor::ContextMenuPrevious"
+    }
+  },
+
   // ---- listas: alt-j/alt-k descem e sobem (list.focusDown/Up do Kiro) ----
   {
-    // So `Picker` (e nao `Picker || menu`): com a lista de completions aberta o
-    // alt-j/alt-k precisa continuar movendo o cursor, nao a lista.
+    // So `Picker` (e nao `Picker || menu`): dentro de um picker quem manda no
+    // alt-j/alt-k com uma caixa de opcoes aberta e o bloco do Editor acima (no do
+    // Editor, mais fundo que o do Picker) - a lista de completions anda e o
+    // picker fica parado; sem caixa aberta o alt-j/alt-k anda o picker.
     "context": "Picker",
     "bindings": {
       "alt-j": "menu::SelectNext", // quick open, command palette, pickers de simbolo
@@ -213,10 +246,22 @@
     }
   },
   {
+    // Navegacao da arvore do explorer. O ProjectPanel registra
+    // menu::SelectNext/Previous (project_panel.rs:7064-7065) e o contexto dele ja
+    // inclui o flag not_editing (dispatch_context, project_panel.rs:6657), entao
+    // estes binds casam no proprio no do painel - mais fundo que o default
+    // global. Sem eles o ctrl-n do painel cria arquivo (project_panel::NewFile,
+    // default do painel) e o ctrl-p cai no menu::SelectPrevious global (que
+    // funciona, mas por sorte). Com o ctrl-n explicito aqui, o NewFile do
+    // default perde no empate por estar antes no arquivo. Ao renomear/criar
+    // arquivo o foco vai pro Editor de dentro do painel, que casa mais fundo:
+    // la valem os binds do [Editor && !Picker].
     "context": "ProjectPanel && not_editing",
     "bindings": {
       "alt-j": "menu::SelectNext",
-      "alt-k": "menu::SelectPrevious"
+      "alt-k": "menu::SelectPrevious",
+      "ctrl-n": "menu::SelectNext", // era project_panel::NewFile (default do painel)
+      "ctrl-p": "menu::SelectPrevious" // era o menu::SelectPrevious global (o default do Zed ja chegava aqui)
     }
   },
   {
@@ -414,18 +459,6 @@
     "context": "ThreadsSidebar",
     "unbind": {
       "ctrl-n": "agents_sidebar::NewThreadInGroup"
-    }
-  },
-  {
-    "context": "Editor && (showing_code_actions || showing_completions)",
-    "unbind": {
-      "ctrl-n": "editor::ContextMenuNext"
-    }
-  },
-  {
-    "context": "ProjectPanel",
-    "unbind": {
-      "ctrl-n": "project_panel::NewFile"
     }
   },
   {

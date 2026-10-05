@@ -39,6 +39,12 @@
     "dock": "left"
   },
   "agent": {
+    "default_model": {
+      "provider": "deepseek",
+      "model": "deepseek-v4-flash",
+      "enable_thinking": true,
+      "effort": "high"
+    },
     "dock": "right",
     "favorite_models": [],
     "model_parameters": []
