@@ -1,0 +1,25 @@
+{
+  "name": "workspaces-quick-open",
+  "displayName": "Workspaces Quick Open",
+  "description": "Open any workspace under ~/.kiro/workspaces from any Kiro window.",
+  "version": "0.1.0",
+  "publisher": "lafco",
+  "engines": {
+    "vscode": "^1.75.1"
+  },
+  "extensionKind": [
+    "ui"
+  ],
+  "activationEvents": [
+    "onCommand:lafco.workspacesQuickOpen"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "lafco.workspacesQuickOpen",
+        "title": "Workspaces: Quick Open"
+      }
+    ]
+  }
+}
