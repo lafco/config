@@ -13,6 +13,10 @@ export PATH="$HOME/.local/share/pi-node/current/bin:$PATH"
 export PNPM_HOME="$HOME/.local/share/pnpm"
 export PATH="$PNPM_HOME/bin:$PATH"
 
+# ── bun ───────────────────────────────────────────────────────────────────────
+export BUN_INSTALL="$HOME/.bun"
+export PATH="$BUN_INSTALL/bin:$PATH"
+
 # ── Editor ────────────────────────────────────────────────────────────────────
 export EDITOR="nvim"
 export VISUAL="nvim"
@@ -55,6 +59,13 @@ if command -v starship &>/dev/null; then
     eval "$(starship init bash)"
 fi
 
+# ── mise (gerenciador de runtime) ─────────────────────────────────────────────
+# Tem que vir antes do zoxide: as duas ativações redefinem `cd` e a última vence.
+# O mise continua reagindo pelo `_mise_hook` no PROMPT_COMMAND.
+if command -v mise &>/dev/null; then
+    eval "$(mise activate bash)"
+fi
+
 # ── zoxide (smart cd) ─────────────────────────────────────────────────────────
 if command -v zoxide &>/dev/null; then
     eval "$(zoxide init bash --cmd cd)"
@@ -81,6 +92,13 @@ fi
 export DOCKER_BUILDKIT=1
 export COMPOSE_DOCKER_CLI_BUILD=1
 
+# ── mcpb / opencode ──────────────────────────────────────────────────────────
+# >>> mcpb MCPB_PATH >>>
+export MCPB_PATH="$HOME/mcpb"
+# <<< mcpb MCPB_PATH <<<
+export OPENCODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS=true
+export OPENCODE_ENABLE_EXA=1
+
 # ── Rust ─────────────────────────────────────────────────────────────────────
 [[ -f "$HOME/.cargo/env" ]] && source "$HOME/.cargo/env"
 
@@ -104,6 +122,11 @@ DOTFILES_DIR="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"
 export PATH="/run/wrappers/bin:$PATH"
 
 # ── atuin (histórico de comandos) ─────────────────────────────────────────────
+# O instalador oficial põe o binário em ~/.atuin/bin e exporta o PATH só em
+# ~/.profile — que o bash ignora quando existe ~/.bash_profile.
+[ -f "$HOME/.atuin/bin/env" ] && . "$HOME/.atuin/bin/env"
 if command -v atuin &>/dev/null; then
     eval "$(atuin init bash)"
 fi
+
+[[ "$TERM_PROGRAM" == "kiro" ]] && . "$(kiro --locate-shell-integration-path bash)"
