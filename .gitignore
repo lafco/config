@@ -33,6 +33,15 @@ pi/.pi/agent/skills/opensearch-request
 pi/.pi/agent/extensions/debug-bridge
 pi/.pi/agent/extensions/debug-bridge.md
 
+# skills de produto — ficam só nesta máquina
+# (ahg: mongo local + códigos de empresa; vacations: fluxo do cron de férias do PW2)
+pi/.pi/agent/skills/ahg-local-mongo
+pi/.pi/agent/skills/vacations-cron-estagiario
+pi/.pi/agent/skills/description-story
+
+# workspaces do Kiro — dados pessoais (path absoluto com o usuário desta máquina)
+kiro/.kiro/workspaces/
+
 # Editor / system
 *~
 *.swp
