@@ -23,6 +23,8 @@
     "editor.cursorStyle": "underline",
     "files.simpleDialog.enable": true,
     "workbench.sideBar.location": "right",
+    "workbench.secondarySideBar.defaultVisibility": "hidden",
     "git.openRepositoryInParentFolders": "never",
-    "kiroAgent.configureMCP": "Disabled"
+    "kiroAgent.configureMCP": "Disabled",
+    "workbench.startupEditor": "none"
 }
