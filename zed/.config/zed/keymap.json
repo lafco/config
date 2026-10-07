@@ -152,6 +152,7 @@
       "ctrl-/": "buffer_search::Deploy", // era editor::ToggleComments
       "ctrl-n": ["editor::SelectNext", { "replace_newest": false }], // era editor::MoveDown; no Kiro e a proxima ocorrencia da palavra
       "ctrl-shift-n": "editor::SelectPrevious", // era editor::SelectDown; no Kiro e a ocorrencia anterior
+      "ctrl-alt-n": "workspace::NewFile", // buffer novo e vazio (o ctrl-n virou "proximo item"; no explorer o default alt-ctrl-n cria pasta)
       "ctrl-p": "file_finder::Toggle", // era editor::MoveUp; no Kiro o ctrl-p no editor abre o quick open (Go to File)
       "ctrl-k": "editor::ShowCompletions", // era editor::KillRingCut; no Kiro o ctrl-k abre as recomendacoes do language server. ATENCAO: isto poe uma bind cheia num prefixo de chord do Zed (ctrl-k z soft wrap, ctrl-k q rewrap, ctrl-k p copy path, ctrl-k r reveal, ctrl-k e/t/u fechar abas) - se os chords pararem de responder, troque por "ctrl-space": "editor::ShowCompletions" (default do Zed) e devolva o ctrl-k
       "ctrl-r": "git::OpenFileDiff", // era projects::OpenRecent; no Kiro o ctrl-r abre o diff do arquivo atual
@@ -440,24 +441,36 @@
   },
   {
     "context": "AgentPanel",
+    "bindings": {
+      "ctrl-alt-n": "agent::NewThread"
+    },
     "unbind": {
       "ctrl-n": "agent::NewThread"
     }
   },
   {
     "context": "AcpThread",
+    "bindings": {
+      "ctrl-alt-n": "agent::NewThread"
+    },
     "unbind": {
       "ctrl-n": "agent::NewThread"
     }
   },
   {
     "context": "AgentPanel > Terminal",
+    "bindings": {
+      "ctrl-alt-n": "agent::NewThread"
+    },
     "unbind": {
       "ctrl-n": "agent::NewThread"
     }
   },
   {
     "context": "ThreadsSidebar",
+    "bindings": {
+      "ctrl-alt-n": "agents_sidebar::NewThreadInGroup"
+    },
     "unbind": {
       "ctrl-n": "agents_sidebar::NewThreadInGroup"
     }
@@ -478,6 +491,29 @@
     "context": "AcpThreadSearchBar > Editor",
     "bindings": {
       "ctrl-p": "agent::SelectPreviousThreadMatch"
+    }
+  },
+  {
+    // O editor de mensagem do agente e um Editor dentro do AcpThread. O default
+    // [Editor] shift-alt-a -> editor::ToggleBlockComments casa na profundidade
+    // maxima e vence o [AcpThread] agent::AllowOnce (mais raso): no markdown isso
+    // digita "<!-- -->" e a permissao nunca chega. Reafirmar aqui (mesma
+    // profundidade, ordem posterior no arquivo) devolve permitir/negar sem tirar
+    // o foco do chat. O shift-alt-x nao tem colisao no [Editor], mas vai junto
+    // para as duas teclas terem a mesma garantia.
+    "context": "AcpThread > Editor",
+    "bindings": {
+      "shift-alt-a": "agent::AllowOnce",
+      "shift-alt-x": "agent::RejectOnce"
+    }
+  },
+  {
+    // ctrl-alt-n com o foco no editor de mensagem cria thread nova. Precisa
+    // deste no: o [Editor && !Picker] acima (ctrl-alt-n -> workspace::NewFile)
+    // casa na mesma profundidade e so perde por vir antes no arquivo.
+    "context": "AcpThread > Editor",
+    "bindings": {
+      "ctrl-alt-n": "agent::NewThread"
     }
   }
 ]
