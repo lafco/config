@@ -126,6 +126,18 @@ export PATH="/run/wrappers/bin:$PATH"
 # ~/.profile — que o bash ignora quando existe ~/.bash_profile.
 [ -f "$HOME/.atuin/bin/env" ] && . "$HOME/.atuin/bin/env"
 if command -v atuin &>/dev/null; then
+    # No bash o atuin depende do bash-preexec para os hooks rodarem; sem isso
+    # __atuin_precmd/__atuin_preexec nunca são invocados e nada é gravado.
+    if [[ -z "${bash_preexec_imported:-}" && -z "${__bp_imported:-}" && -z "${BLE_ATTACHED:-}" ]]; then
+        for _atuin_candidate in \
+            "${BASH_PREEXEC_SH:-}" \
+            "$HOME/.nix-profile/share/bash/bash-preexec.sh" \
+            "/etc/profiles/per-user/$(id -un)/share/bash/bash-preexec.sh" \
+            /usr/share/bash-preexec/bash-preexec.sh; do
+            [[ -n "$_atuin_candidate" && -f "$_atuin_candidate" ]] && { source "$_atuin_candidate"; break; }
+        done
+        unset _atuin_candidate
+    fi
     eval "$(atuin init bash)"
 fi
 
