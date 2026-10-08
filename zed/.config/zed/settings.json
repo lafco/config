@@ -7,6 +7,14 @@
 // custom settings, run `zed: open default settings` from the
 // command palette (cmd-shift-p / ctrl-shift-p)
 {
+  "agent_servers": {
+    "pi-acp": {
+      "type": "registry"
+    }
+  },
+  "edit_predictions": {
+    "allow_data_collection": "no"
+  },
   "cli_default_open_behavior": "existing_window",
   // Usa o picker proprio do Zed (ctrl-shift-o -> workspace::Open) em vez do
   // dialogo do sistema. Tambem vale para o "Save As".
@@ -39,6 +47,15 @@
     "dock": "left"
   },
   "agent": {
+    "expand_edit_card": false,
+    "expand_terminal_card": false,
+    "tool_permissions": {
+      "tools": {
+        "terminal": {
+          "default": "allow"
+        }
+      }
+    },
     "default_model": {
       "provider": "deepseek",
       "model": "deepseek-v4-flash",
