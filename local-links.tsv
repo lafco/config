@@ -1,0 +1,28 @@
+# Links locais - conteúdo privado, fora do stow
+#
+# Cada linha tem duas colunas separadas por TAB:
+#   <caminho relativo a $HOME>\t<alvo do symlink>
+#
+# O alvo é escrito literalmente no symlink (relativo ao diretório do link).
+# Todos apontam para <home>/repos/<repo>/..., que não é versionado aqui; por
+# isso o `.gitignore` ignora cada caminho da primeira coluna - lá o mesmo
+# arquivo aparece como `pi/.pi/agent/...` (dentro do pacote stow `pi`).
+#
+# Por que existe: `~/.pi/agent/extensions` e `~/.pi/agent/skills` são symlinks
+# dobrados pelo stow para dentro do pacote `pi`, então um link criado a mão aí
+# mora fisicamente no repo e o git o ignora. Em 2026-09-30 um `dot stow` que
+# tratava link como conflito moveu todos para ~/.dotfiles-backup e nada os
+# recriou: o pi subiu sem `pw2_request` e ninguém foi avisado.
+#
+# Criados/consertados por: `dot links` (também roda no `dot init`, `dot update`
+# e `dot stow`). Verificados por: `dot doctor`.
+
+.pi/agent/extensions/ahg-request	../../../../../repos/ahg-request/extensions
+.pi/agent/extensions/ahg-request.md	../../../../../repos/ahg-request/README.md
+.pi/agent/extensions/opensearch	../../../../../repos/opensearch-request/extensions/opensearch
+.pi/agent/extensions/opensearch-request.md	../../../../../repos/opensearch-request/README.md
+.pi/agent/extensions/debug-bridge	../../../../../repos/debug-bridge/extensions
+.pi/agent/extensions/debug-bridge.md	../../../../../repos/debug-bridge/README.md
+.pi/agent/skills/pw2-request	../../../../../repos/ahg-request/skills/pw2-request
+.pi/agent/skills/folgas-request	../../../../../repos/ahg-request/skills/folgas-request
+.pi/agent/skills/opensearch-request	../../../../../repos/opensearch-request/skills/opensearch-request

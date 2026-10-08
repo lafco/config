@@ -55,6 +55,7 @@ dot update                # git pull + re-stow
 dot doctor                # diagnóstico do ambiente
 dot stow                  # (re)aplica symlinks
 dot stow -n               # dry-run
+dot links                 # (re)cria os links locais (repos privados em ~/repos)
 dot retry-failed          # reinstala ferramentas que falharam
 dot link | dot unlink     # instala/remove o comando em ~/.local/bin
 dot edit                  # abre os dotfiles no $EDITOR
@@ -69,6 +70,7 @@ Cada pasta é um "pacote". `dot stow` cria symlinks de `~/dotfiles/<pasta>/` par
 ~/dotfiles/
 ├── dot              # CLI de instalação/manutenção
 ├── bootstrap.sh     # one-liner: clona + dot init
+├── local-links.tsv  # manifesto dos links locais (conteúdo privado, fora do stow)
 ├── bash/            # .bashrc, .bash_profile, .aliases, .functions
 ├── nvim/            # ~/.config/nvim/ (LazyVim)
 ├── pi/              # ~/.pi/agent/ (settings, extensions, skills)
@@ -81,6 +83,26 @@ Cada pasta é um "pacote". `dot stow` cria symlinks de `~/dotfiles/<pasta>/` par
 ├── gh-dash/         # ~/.config/gh-dash/config.yml (dashboard GitHub)
 └── packages/        # failed_tools.txt (runtime, não versionado)
 ```
+
+## Links locais (conteúdo privado)
+
+`~/.pi/agent/extensions` e `~/.pi/agent/skills` são symlinks dobrados pelo stow
+para dentro do pacote `pi`. Um link criado à mão aí mora fisicamente no repo e o
+git o ignora — então um clone novo não o recria, e um `stow` que o trate como
+conflito o move para `~/.dotfiles-backup/` sem avisar ninguém. Foi o que derrubou
+o `pw2_request` em 2026-09-30.
+
+`local-links.tsv` (versionado) é a fonte de verdade: cada linha tem
+`<caminho relativo a $HOME>` + TAB + `<alvo do symlink>`, e os alvos apontam
+para repos privados em `~/repos/` que não são versionados aqui.
+
+```bash
+dot links     # cria/conserta os links a partir do manifesto
+dot doctor    # acusa link local ausente ou quebrado
+```
+
+`dot init`, `dot update` e `dot stow` rodam `dot links` no fim. Numa máquina sem
+os repos privados os alvos ausentes viram aviso, não erro.
 
 ## Dia a dia
 

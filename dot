@@ -13,7 +13,7 @@
 #   - Symlinks via GNU Stow (pacotes: bash nvim pi wezterm zellij television
 #     starship atuin gh-dash herdr kiro)
 #
-# Comandos: init | update | doctor | stow | retry-failed | link | unlink | edit | help
+# Comandos: init | update | doctor | stow | links | retry-failed | link | unlink | edit | help
 
 set -euo pipefail
 
@@ -28,6 +28,7 @@ readonly PACKAGES_DIR="${DOTFILES_DIR}/packages"
 readonly FAILED_TOOLS_FILE="${PACKAGES_DIR}/failed_tools.txt"
 readonly LOCAL_BIN="${HOME}/.local/bin"
 readonly LOCAL_OPT="${HOME}/.local/opt"
+readonly LOCAL_LINKS_FILE="${DOTFILES_DIR}/local-links.tsv"
 readonly DOT_LOG="${XDG_CACHE_HOME:-${HOME}/.cache}/dot/init.log"
 
 # Modo silencioso (dot init -q): suprime progresso e saída dos instaladores
@@ -36,6 +37,10 @@ QUIET=false
 # Backup de conflitos do stow (--no-backup desativa)
 NO_BACKUP=false
 BACKUP_DIR=""
+
+# Links locais fora do stow (dot links / dot doctor)
+LOCAL_LINKS_ISSUES=0
+LOCAL_LINKS_RELS=()
 
 # Pacotes Stow (lista explícita — evita stowar diretórios que não são pacotes)
 readonly STOW_PACKAGES="bash nvim pi wezterm zellij television starship atuin gh-dash herdr kiro vscode zed"
@@ -412,6 +417,7 @@ INIT_STEPS=(
     "Ferramentas ;; fn:__step_tools ;; false ;; -"
     "Fontes ;; fn:__step_fonts ;; false ;; SKIP_FONT"
     "Stow dotfiles ;; fn:__step_stow ;; true ;; -"
+    "Links locais ;; fn:__step_local_links ;; false ;; -"
     "Link comando dot ;; fn:__step_link ;; false ;; -"
 )
 
@@ -547,6 +553,117 @@ __step_fonts() {
     __print_success "fontes instaladas em ~/.local/share/fonts"
 }
 
+# ── Links locais (conteúdo privado, fora do stow) ──────────────────────────────
+#
+# `~/.pi/agent/extensions` e `~/.pi/agent/skills` são symlinks dobrados pelo stow
+# para dentro do pacote `pi`. Um link local criado aí mora fisicamente no repo e
+# o git o ignora, então nada o recria quando ele se perde — e o pi sobe sem a
+# tool, sem avisar ninguém. ${LOCAL_LINKS_FILE} é a fonte de verdade:
+# `dot links` cria/conserta a partir dele e `dot doctor` verifica.
+
+__read_local_links() {
+    [[ -f "$LOCAL_LINKS_FILE" ]] || return 1
+    local line
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        line="${line%$'\r'}"
+        [[ -z "$line" || "$line" == \#* ]] && continue
+        [[ "$line" == *$'\t'* ]] || continue
+        printf '%s\n' "$line"
+    done < "$LOCAL_LINKS_FILE"
+}
+
+__count_local_links() {
+    __read_local_links | wc -l | tr -d ' '
+}
+
+# Cache dos caminhos (relativos a $HOME) para o matcher do __backup_conflicts.
+__load_local_links() {
+    LOCAL_LINKS_RELS=()
+    local rel target
+    while IFS=$'\t' read -r rel target; do
+        LOCAL_LINKS_RELS+=("$rel")
+    done < <(__read_local_links)
+}
+
+__is_local_link() { # $1 = caminho relativo a $HOME
+    local r
+    for r in "${LOCAL_LINKS_RELS[@]}"; do
+        [[ "$r" == "$1" ]] && return 0
+    done
+    return 1
+}
+
+# Cria/atualiza os links do manifesto. Retorna 1 se algum alvo não existir (o
+# esperado numa máquina sem os repos privados) ou se um link não puder ser criado.
+__ensure_local_links() {
+    local rel target base resolved previous created=0 kept=0 missing=0 failed=0
+    if [[ ! -f "$LOCAL_LINKS_FILE" ]]; then
+        __print_warning "manifesto de links locais não encontrado: ${LOCAL_LINKS_FILE}"
+        return 1
+    fi
+    while IFS=$'\t' read -r rel target; do
+        base="$(dirname "${HOME}/${rel}")"
+        resolved="$(readlink -m "${base}/${target}")"
+        if [[ ! -e "$resolved" ]]; then
+            __print_warning "alvo ausente: ~/${rel} -> ${target}"
+            (( ++missing ))
+            continue
+        fi
+        if [[ -d "${HOME}/${rel}" && ! -L "${HOME}/${rel}" ]]; then
+            __print_error "~/${rel} é um diretório real — mova/remova antes de linkar"
+            (( ++failed ))
+            continue
+        fi
+        previous="$(readlink "${HOME}/${rel}" 2>/dev/null || true)"
+        mkdir -p "$base"
+        if ! ln -sfn "$target" "${HOME}/${rel}"; then
+            __print_error "falha ao linkar ~/${rel}"
+            (( ++failed ))
+            continue
+        fi
+        if [[ "$previous" == "$target" ]]; then
+            (( ++kept ))
+        else
+            (( ++created ))
+        fi
+    done < <(__read_local_links)
+    __print_info "links locais: ${kept} ok, ${created} criado(s), ${missing} alvo(s) ausente(s), ${failed} falha(s)"
+    (( missing == 0 && failed == 0 ))
+}
+
+__step_local_links() {
+    if __ensure_local_links; then
+        __print_success "links locais em dia ($(__count_local_links))"
+        return 0
+    fi
+    __print_warning "links locais incompletos — rode: ${SCRIPT_NAME} links"
+    return 1
+}
+
+# Preenche LOCAL_LINKS_ISSUES com o número de links ausentes/quebrados.
+__verify_local_links() {
+    LOCAL_LINKS_ISSUES=0
+    local rel target count=0
+    if [[ ! -f "$LOCAL_LINKS_FILE" ]]; then
+        __print_warning "manifesto de links locais não encontrado: ${LOCAL_LINKS_FILE}"
+        (( ++LOCAL_LINKS_ISSUES ))
+        return 0
+    fi
+    while IFS=$'\t' read -r rel target; do
+        (( ++count ))
+        if [[ ! -L "${HOME}/${rel}" ]]; then
+            __print_error "link local ausente: ~/${rel} — rode: ${SCRIPT_NAME} links"
+            (( ++LOCAL_LINKS_ISSUES ))
+        elif [[ ! -e "${HOME}/${rel}" ]]; then
+            __print_error "link local quebrado: ~/${rel} -> $(readlink "${HOME}/${rel}")"
+            (( ++LOCAL_LINKS_ISSUES ))
+        fi
+    done < <(__read_local_links)
+    if [[ "$LOCAL_LINKS_ISSUES" -eq 0 ]]; then
+        __print_success "links locais: ${count} ok"
+    fi
+}
+
 # ── Conflitos antes do stow ────────────────────────────────────────────────────
 
 # Alvos que já existem em $HOME e não são links do stow fazem o stow abortar.
@@ -559,6 +676,9 @@ __backup_conflicts() {
     BACKUP_DIR=""
     local hm_conflicts=() pkg rel target link_dest pkg_dir backup_root
     backup_root="${HOME}/.dotfiles-backup/$(date +%Y%m%d-%H%M%S)"
+
+    # links locais têm dono próprio (`dot links`) — nunca viram "conflito"
+    __load_local_links
 
     # Sem argumentos varre todos os pacotes (caso do `dot init`); com argumentos,
     # só os pacotes que foram passados ao stow (ex.: `dot stow kiro`).
@@ -573,6 +693,11 @@ __backup_conflicts() {
             rel="${rel#./}"
             [[ -n "$rel" ]] || continue
             target="${HOME}/${rel}"
+
+            # link local do manifesto: o dono é `dot links`, não o stow
+            if __is_local_link "$rel"; then
+                continue
+            fi
 
             # nada existe no destino → ok
             if [[ ! -e "$target" && ! -L "$target" ]]; then
@@ -714,6 +839,8 @@ cmd_update() {
         return 1
     fi
 
+    __step_local_links || true
+
     if [[ -f "$FAILED_TOOLS_FILE" ]] && [[ -s "$FAILED_TOOLS_FILE" ]]; then
         __print_warning "há ferramentas com falha pendente — rode: ${SCRIPT_NAME} retry-failed"
     fi
@@ -770,6 +897,11 @@ cmd_doctor() {
         __print_success "nenhum symlink quebrado"
     fi
 
+    __verify_local_links
+    if (( LOCAL_LINKS_ISSUES > 0 )); then
+        issues=$(( issues + LOCAL_LINKS_ISSUES ))
+    fi
+
     if [[ -s "$FAILED_TOOLS_FILE" ]]; then
         __print_warning "falhas pendentes em ${FAILED_TOOLS_FILE} — rode: ${SCRIPT_NAME} retry-failed"
         (( ++issues ))
@@ -800,6 +932,18 @@ cmd_stow() {
         __backup_conflicts $pkgs || return 1
     fi
     __run stow -R -v -d "$DOTFILES_DIR" -t "$HOME" "${args[@]}" $pkgs
+    $dry_run || __step_local_links || true
+}
+
+cmd_links() {
+    [[ $# -gt 0 ]] && { __print_error "links não aceita argumentos"; return 1; }
+    __print_header "Links locais"
+    if __ensure_local_links; then
+        __print_success "links locais em dia ($(__count_local_links))"
+    else
+        __print_warning "links locais incompletos — veja os avisos acima"
+        return 1
+    fi
 }
 
 cmd_retry_failed() {
@@ -874,15 +1018,16 @@ ${SCRIPT_NAME} init — instalação completa (novas máquinas)
   ${SCRIPT_NAME} init --only nvim        # só uma ferramenta
   ${SCRIPT_NAME} init --no-backup        # não faz backup de conflitos existentes
 
-Ordem: pacotes do sistema → ferramentas → fontes → stow → link.
+Ordem: pacotes do sistema → ferramentas → fontes → stow → links locais → link.
 Antes do stow, arquivos existentes em ~ que conflitam são movidos para
 ~/.dotfiles-backup/<timestamp>/ (links do home-manager nunca são tocados).
 Ferramentas com falha não interrompem o init (rodar ${SCRIPT_NAME} retry-failed depois).
 EOF
             ;;
-        doctor) echo "${SCRIPT_NAME} doctor — diagnóstico do ambiente (ferramentas, PATH, symlinks)" ;;
+        doctor) echo "${SCRIPT_NAME} doctor — diagnóstico do ambiente (ferramentas, PATH, symlinks, links locais)" ;;
         update) echo "${SCRIPT_NAME} update — git pull + re-stow dos pacotes" ;;
         stow)   echo "${SCRIPT_NAME} stow [pkg|-n|--no-backup] — (re)aplica symlinks; -n = dry-run" ;;
+        links)  echo "${SCRIPT_NAME} links — (re)cria os links locais do manifesto local-links.tsv (repos privados em ~/repos)" ;;
         retry-failed) echo "${SCRIPT_NAME} retry-failed — reinstala ferramentas registradas em packages/failed_tools.txt" ;;
         link)   echo "${SCRIPT_NAME} link|unlink — instala/remove o comando em ~/.local/bin" ;;
         edit)   echo "${SCRIPT_NAME} edit — abre os dotfiles no \$EDITOR" ;;
@@ -897,6 +1042,7 @@ Comandos:
   update        git pull + re-stow
   doctor        diagnóstico do ambiente
   stow [pkg|-n] (re)aplica symlinks; -n = dry-run (conflitos vão para ~/.dotfiles-backup)
+  links         (re)cria os links locais fora do stow (repos privados em ~/repos)
   retry-failed  reinstala ferramentas que falharam no init
   link|unlink   instala/remove o comando dot em ~/.local/bin
   edit          abre os dotfiles no \$EDITOR
@@ -937,6 +1083,7 @@ main() {
         update)       cmd_update "$@" ;;
         doctor)       cmd_doctor "$@" ;;
         stow)         cmd_stow "$@" ;;
+        links)        cmd_links "$@" ;;
         retry-failed) cmd_retry_failed "$@" ;;
         link)         cmd_link "$@" ;;
         unlink)       cmd_unlink "$@" ;;
