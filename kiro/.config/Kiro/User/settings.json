@@ -25,6 +25,6 @@
     "workbench.sideBar.location": "right",
     "workbench.secondarySideBar.defaultVisibility": "hidden",
     "git.openRepositoryInParentFolders": "never",
-    "kiroAgent.configureMCP": "Disabled",
+    "kiroAgent.configureMCP": "Enabled",
     "workbench.startupEditor": "none"
 }

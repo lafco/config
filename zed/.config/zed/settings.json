@@ -12,6 +12,11 @@
       "type": "registry"
     }
   },
+  "context_servers": {
+    "mcpb": {
+      "command": "/home/vinicius.falconi@sp01.local/.local/bin/mcpb-mcp"
+    }
+  },
   "edit_predictions": {
     "allow_data_collection": "no"
   },
