@@ -58,7 +58,7 @@
     },
     "default_model": {
       "provider": "deepseek",
-      "model": "deepseek-v4-flash",
+      "model": "deepseek-flash",
       "enable_thinking": true,
       "effort": "high"
     },
