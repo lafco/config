@@ -5,8 +5,17 @@ local config = wezterm.config_builder()
 -- Font settings
 config.font_size = 10
 config.line_height = 1.1
+-- 'JetBrains Mono Regular' nao existe como familia: o pacote nixpkgs registra
+-- a familia 'JetBrains Mono' (Regular e o style). O fontconfig respondia isso
+-- com o default sans (Ubuntu Sans) e o wezterm avisava que a fonte nao fora
+-- encontrada (wezterm.org/config/fonts.html#troubleshooting-fonts).
+-- O wezterm NAO usa o fallback do fontconfig, entao CJK e emoji precisam ser
+-- declarados aqui um a um.
 config.font = wezterm.font_with_fallback {
-  { family = 'JetBrains Mono Regular' },
+  { family = 'JetBrains Mono' },
+  { family = 'Noto Sans CJK SC' },
+  { family = 'Noto Color Emoji' },
+  { family = 'Symbols Nerd Font Mono' },
 }
 
 -- Colors (Catppuccin Mocha)
