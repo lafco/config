@@ -26,5 +26,6 @@
     "workbench.secondarySideBar.defaultVisibility": "hidden",
     "git.openRepositoryInParentFolders": "never",
     "kiroAgent.configureMCP": "Enabled",
+    "kiroAgent.trustedTools": ["mcp_wrapper"],
     "workbench.startupEditor": "none"
 }
