@@ -1,0 +1,24 @@
+rules:
+  - capability: shell
+    effect: allow
+    match:
+      - grep *
+      - sort *
+      - ls *
+      - mkdir *
+  # Tool MCP (as 7 do mcpb): não pede aprovação por chamada.
+  - capability: mcp
+    effect: allow
+  # Shell: roda sem perguntar...
+  - capability: shell
+    effect: allow
+    match:
+      - "*"
+  # ...exceto o destrutivo.
+  - capability: shell
+    effect: deny
+    match:
+      - "rm -rf *"
+      - "git push *"
+      - "docker rm *"
+      - "docker compose down *"
