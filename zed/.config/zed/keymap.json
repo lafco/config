@@ -515,5 +515,16 @@
     "bindings": {
       "ctrl-alt-n": "agent::NewThread"
     }
+  },
+  {
+    // ctrl-w devolve o foco ao editor (no Kiro: !editorTextFocus ->
+    // focusActiveEditorGroup). O [Editor && !Picker] acima casa na mesma
+    // profundidade (o input do chat tambem e um Editor) e da outline::Toggle,
+    // entao o retorno nunca acontecia com o foco no painel do agente. Mesmo
+    // remedio do ctrl-alt-n: reafirmar depois.
+    "context": "AcpThread > Editor",
+    "bindings": {
+      "ctrl-w": "editor::ToggleFocus"
+    }
   }
 ]
