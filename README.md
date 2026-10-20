@@ -73,7 +73,7 @@ Cada pasta é um "pacote". `dot stow` cria symlinks de `~/dotfiles/<pasta>/` par
 ├── local-links.tsv  # manifesto dos links locais (conteúdo privado, fora do stow)
 ├── bash/            # .bashrc, .bash_profile, .aliases, .functions
 ├── nvim/            # ~/.config/nvim/ (LazyVim)
-├── pi/              # ~/.pi/agent/ (settings, extensions, skills)
+├── pi/              # ~/.pi/agent/ (settings, extensions, skills; sem folding)
 ├── wezterm/         # ~/.config/wezterm/ (terminal)
 ├── zellij/          # ~/.config/zellij/ (multiplexer)
 ├── herdr/           # ~/.config/herdr/ (AI workspace manager)
@@ -84,17 +84,32 @@ Cada pasta é um "pacote". `dot stow` cria symlinks de `~/dotfiles/<pasta>/` par
 └── packages/        # failed_tools.txt (runtime, não versionado)
 ```
 
+## Conteúdo local, fora do stow
+
+O pacote `pi` é stowado com `--no-folding` (ver `NO_FOLD_PACKAGES` no script
+`dot`). Em vez de dobrar `~/.pi/agent/skills` num symlink para o repo, o stow cria
+diretórios reais e linka só as folhas versionadas. Consequências:
+
+- conteúdo de máquina (skills, agents, prompts e extensões privadas) mora em
+  `~/.pi/agent/{skills,extensions,agents,prompts}` como arquivo comum, **fora do
+  checkout** — não aparece em `git status`, não precisa de `.gitignore` e um
+  `git clean -xdf` não apaga;
+- `stow -R` não encosta nesse conteúdo nem o transforma em conflito;
+- um clone novo do dotfiles traz só o que é genérico; o que é de trabalho você
+  repõe à mão naquela máquina.
+
+Se um dia `~/.pi/agent/skills` virar symlink de novo (stow sem a flag num
+diretório que não existe), o conteúdo local fica preso dentro do checkout. Foi o
+que motivou a mudança: antes o `.gitignore` listava nome por nome e o repositório
+público acabava nomeando coisa interna.
+
 ## Links locais (conteúdo privado)
 
-`~/.pi/agent/extensions` e `~/.pi/agent/skills` são symlinks dobrados pelo stow
-para dentro do pacote `pi`. Um link criado à mão aí mora fisicamente no repo e o
-git o ignora — então um clone novo não o recria, e um `stow` que o trate como
-conflito o move para `~/.dotfiles-backup/` sem avisar ninguém. Foi o que derrubou
-o `pw2_request` em 2026-09-30.
-
-`local-links.tsv` (versionado) é a fonte de verdade: cada linha tem
-`<caminho relativo a $HOME>` + TAB + `<alvo do symlink>`, e os alvos apontam
-para repos privados em `~/repos/` que não são versionados aqui.
+Os repos privados de trabalho ficam em `~/repos/` e entram no pi por symlink
+dentro dos diretórios reais acima — não por cópia. `local-links.tsv`
+(versionado) é a fonte de verdade: cada linha tem `<caminho relativo a $HOME>` +
+TAB + `<alvo do symlink>`, e o alvo sobe 3 níveis até `$HOME`
+(`../../../repos/<repo>/...`).
 
 ```bash
 dot links     # cria/conserta os links a partir do manifesto
@@ -102,7 +117,10 @@ dot doctor    # acusa link local ausente ou quebrado
 ```
 
 `dot init`, `dot update` e `dot stow` rodam `dot links` no fim. Numa máquina sem
-os repos privados os alvos ausentes viram aviso, não erro.
+os repos privados os alvos ausentes viram aviso, não erro. Nenhum desses links
+entra no checkout, então perdê-los não suja o git — só derruba a tool no pi sem
+avisar. Em 2026-09-30 um `dot stow` que tratava link como conflito moveu todos
+para `~/.dotfiles-backup/` e nada os recriou: o pi subiu sem `pw2_request`.
 
 ## Dia a dia
 
@@ -124,6 +142,9 @@ mkdir -p ~/dotfiles/meu-app/.config/meu-app
 echo "..." > ~/dotfiles/meu-app/.config/meu-app/config.yaml
 # 1. adicione "meu-app" à lista STOW_PACKAGES no script `dot`
 # 2. dot stow meu-app
+
+# Se o pacote precisar de diretórios reais em $HOME para conteúdo local
+# (caso do `pi`), adicione-o também a NO_FOLD_PACKAGES.
 ```
 
 ## Adicionar/remover ferramenta

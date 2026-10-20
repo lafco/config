@@ -45,6 +45,16 @@ LOCAL_LINKS_RELS=()
 # Pacotes Stow (lista explícita — evita stowar diretórios que não são pacotes)
 readonly STOW_PACKAGES="bash nvim pi wezterm zellij television starship atuin gh-dash herdr kiro vscode zed"
 
+# Pacotes stowados sem folding: o stow cria o diretório real em $HOME e linka só
+# as folhas do repo. É o que permite conteúdo local (não versionado) morar em
+# ~/.pi/agent/{skills,extensions,agents,prompts} sem entrar no checkout, sem
+# virar "conflito" a cada re-stow e sem o .gitignore listar o que é local.
+# Ver README ("Conteúdo local, fora do stow").
+readonly NO_FOLD_PACKAGES="pi"
+
+# Flags extras do stow (ex.: -n no dry-run), preenchidas por quem chama __stow_all.
+STOW_FLAGS=()
+
 # Cores
 readonly RED='\033[0;31m'
 readonly GREEN='\033[0;32m'
@@ -555,11 +565,14 @@ __step_fonts() {
 
 # ── Links locais (conteúdo privado, fora do stow) ──────────────────────────────
 #
-# `~/.pi/agent/extensions` e `~/.pi/agent/skills` são symlinks dobrados pelo stow
-# para dentro do pacote `pi`. Um link local criado aí mora fisicamente no repo e
-# o git o ignora, então nada o recria quando ele se perde — e o pi sobe sem a
-# tool, sem avisar ninguém. ${LOCAL_LINKS_FILE} é a fonte de verdade:
-# `dot links` cria/conserta a partir dele e `dot doctor` verifica.
+# O pacote `pi` é stowado com --no-folding (ver NO_FOLD_PACKAGES), então
+# `~/.pi/agent/{skills,extensions,agents,prompts}` são diretórios reais em $HOME:
+# conteúdo local mora ali e nunca aparece no checkout. Os links para os repos
+# privados em ~/repos vivem nesses diretórios e são derrubados se alguém apagar
+# o diretório — o pi sobe sem a tool, sem avisar ninguém. ${LOCAL_LINKS_FILE} é a
+# fonte de verdade: `dot links` cria/conserta a partir dele e `dot doctor`
+# verifica. Os alvos são relativos ao dono do link, ou seja, ao diretório real
+# em $HOME (3 níveis acima), não ao repo.
 
 __read_local_links() {
     [[ -f "$LOCAL_LINKS_FILE" ]] || return 1
@@ -746,13 +759,36 @@ __backup_conflicts() {
 
 # ── Etapa: stow ────────────────────────────────────────────────────────────────
 
+# Stow em duas passadas: os pacotes de NO_FOLD_PACKAGES com --no-folding, o resto
+# sem flag. Sem argumentos usa STOW_PACKAGES. Honra STOW_FLAGS (ex.: -n).
+__stow_all() {
+    local pkgs=("$@") nofold=() plain=() p
+    (( ${#pkgs[@]} )) || pkgs=($STOW_PACKAGES)
+    for p in "${pkgs[@]}"; do
+        if [[ " ${NO_FOLD_PACKAGES} " == *" ${p} "* ]]; then
+            nofold+=("$p")
+        else
+            plain+=("$p")
+        fi
+    done
+
+    if (( ${#plain[@]} )); then
+        __run stow -R -v -d "$DOTFILES_DIR" -t "$HOME" "${STOW_FLAGS[@]}" "${plain[@]}" || return 1
+    fi
+    if (( ${#nofold[@]} )); then
+        __run stow -R -v --no-folding -d "$DOTFILES_DIR" -t "$HOME" "${STOW_FLAGS[@]}" "${nofold[@]}" || return 1
+    fi
+    return 0
+}
+
 __step_stow() {
     if ! __command_exists stow; then
         __print_error "GNU Stow não está instalado — instale com seu gerenciador de pacotes"
         return 1
     fi
     __backup_conflicts || return 1
-    if __run stow -R -v -d "$DOTFILES_DIR" -t "$HOME" $STOW_PACKAGES; then
+    STOW_FLAGS=()
+    if __stow_all; then
         return 0
     fi
     __print_error "stow falhou — veja os conflitos com: ${SCRIPT_NAME} stow -n"
@@ -832,7 +868,8 @@ cmd_update() {
     __print_success "repositório atualizado"
 
     __print_info "re-stow..."
-    if __run stow -R -v -d "$DOTFILES_DIR" -t "$HOME" $STOW_PACKAGES; then
+    STOW_FLAGS=()
+    if __stow_all; then
         __print_success "symlinks atualizados"
     else
         __print_error "stow falhou"
@@ -931,7 +968,8 @@ cmd_stow() {
     if ! $dry_run; then
         __backup_conflicts $pkgs || return 1
     fi
-    __run stow -R -v -d "$DOTFILES_DIR" -t "$HOME" "${args[@]}" $pkgs
+    STOW_FLAGS=("${args[@]}")
+    __stow_all $pkgs || return 1
     $dry_run || __step_local_links || true
 }
 
