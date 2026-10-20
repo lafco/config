@@ -26,6 +26,12 @@
     "workbench.secondarySideBar.defaultVisibility": "hidden",
     "git.openRepositoryInParentFolders": "never",
     "kiroAgent.configureMCP": "Enabled",
+    "kiroAgent.agentIgnoreFiles": [".kiroignore"],
     "kiroAgent.trustedTools": ["mcp_wrapper"],
-    "workbench.startupEditor": "none"
+    "workbench.startupEditor": "none",
+    "kiroAgent.trust.defaultPattern": "base",
+    "explorer.confirmDelete": false,
+    "diffEditor.ignoreTrimWhitespace": false,
+    "chat.permissions.default": "autoApprove",
+    "kiroAgent.trust.defaultScope": "user"
 }

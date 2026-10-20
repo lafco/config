@@ -7,6 +7,7 @@
 // custom settings, run `zed: open default settings` from the
 // command palette (cmd-shift-p / ctrl-shift-p)
 {
+  "disable_ai": false,
   "agent_servers": {
     "pi-acp": {
       "type": "registry"
@@ -39,9 +40,9 @@
   "buffer_font_family": "JetBrains Mono",
   "icon_theme": "Zed (Default)",
   "project_panel": {
+    "folder_indicator": "icon",
     "dock": "left",
     "file_icons": true,
-    "folder_icons": true,
     "git_status": false
   },
   "outline_panel": {
@@ -52,6 +53,16 @@
     "dock": "left"
   },
   "agent": {
+    "sandbox_permissions": {
+      "allow_unsandboxed": true,
+      "network_hosts": [
+        "registry.npmjs.org"
+      ]
+    },
+    "default_profile": "write",
+    "threads_sidebar": {
+      "auto_open": false
+    },
     "expand_edit_card": false,
     "expand_terminal_card": false,
     "tool_permissions": {
