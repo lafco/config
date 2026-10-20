@@ -142,3 +142,6 @@ if command -v atuin &>/dev/null; then
 fi
 
 [[ "$TERM_PROGRAM" == "kiro" ]] && . "$(kiro --locate-shell-integration-path bash)"
+
+# Vite+ bin (https://viteplus.dev)
+. "/home/vinicius.falconi@sp01.local/.config/vite-plus/env"
