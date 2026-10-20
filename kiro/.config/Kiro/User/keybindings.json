@@ -250,16 +250,6 @@
     },
     {
         "key": "ctrl+n",
-        "command": "list.focusDown",
-        "when": "referenceSearchVisible && listFocus"
-    },
-    {
-        "key": "ctrl+p",
-        "command": "list.focusUp",
-        "when": "referenceSearchVisible && listFocus"
-    },
-    {
-        "key": "ctrl+n",
         "command": "cursorDown",
         "when": "referenceSearchVisible && editorTextFocus"
     },
@@ -282,16 +272,6 @@
         "key": "ctrl+shift+n",
         "command": "editor.action.previousMatchFindAction",
         "when": "findWidgetFocused"
-    },
-    {
-        "key": "ctrl+n",
-        "command": "list.focusDown",
-        "when": "searchViewletFocus && !searchInputBoxFocus"
-    },
-    {
-        "key": "ctrl+p",
-        "command": "list.focusUp",
-        "when": "searchViewletFocus && !searchInputBoxFocus"
     },
     {
         "key": "ctrl+shift+n",
@@ -488,16 +468,6 @@
         "key": "ctrl+p",
         "command": "workbench.scm.action.focusPreviousResourceGroup",
         "when": "editorLangId == scminput"
-    },
-    {
-        "key": "ctrl+n",
-        "command": "list.focusDown",
-        "when": "listFocus && !inQuickOpen"
-    },
-    {
-        "key": "ctrl+p",
-        "command": "list.focusUp",
-        "when": "listFocus && !inQuickOpen"
     },
     {
         "key": "ctrl+c",
