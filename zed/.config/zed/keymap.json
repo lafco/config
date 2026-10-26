@@ -42,6 +42,7 @@
       "ctrl-e": "project_panel::ToggleFocus", // era file_finder::Toggle (o file finder segue no ctrl-p)
       "ctrl-g": "go_to_line::Toggle", // era git_panel::ToggleFocus. O default do Zed ja e este (no [Editor && mode == full]); explicito aqui pra valer fora do editor tambem
       "ctrl-shift-g": "git_panel::ToggleFocus", // era git_panel::ToggleFocus no ctrl-g (o default do Zed ja usa o ctrl-shift-g no [Workspace]); explicito pra nao depender do default
+      "alt-g d": "git::Diff", // abre o Project Diff de qualquer lugar. O ctrl-g d default so vale no [GitPanel] e o ctrl-g cheio acima quebra o chord no resto do workspace
       // era buffer_search::Deploy (busca no arquivo vai pro ctrl-/)
       "ctrl-l": "agent::ToggleFocus", // era editor::SelectLine (o ctrl-? do Zed continua valendo)
       "ctrl-'": "terminal_panel::Toggle", // era editor::ToggleSelectedDiffHunks (o ctrl-` continua valendo)
@@ -172,12 +173,35 @@
     }
   },
   {
+    // Atalhos do Project Diff. O ctrl-k cheio do [Editor && !Picker]
+    // (ShowCompletions) come os chords ctrl-k ctrl-l (editor::ToggleFold) e
+    // ctrl-k ctrl-r (git::RestoreAndNext) do default, entao as acoes abaixo
+    // ganham teclas diretas. Tudo aqui e so no diff: no editor normal o
+    // alt-u/alt-d/etc. continuam com o sentido do bloco [Editor && !Picker].
     "context": "GitDiff > Editor",
     "bindings": {
       // No Kiro o ctrl-n/ctrl-p no diff pula de mudanca em mudanca; no editor
       // normal as mesmas teclas andam pelas ocorrencias da palavra.
       "ctrl-n": "editor::GoToHunk",
-      "ctrl-p": "editor::GoToPreviousHunk"
+      "ctrl-p": "editor::GoToPreviousHunk",
+
+      // "Fold Excerpt"/"Unfold Excerpt" do cabecalho do excerpt (o proprio
+      // tooltip do Zed). No multibuffer o ToggleFold dobra/desdobra os excerpts
+      // do arquivo sob o cursor; o ToggleFoldAll e o "toggle all" do tooltip.
+      "alt-z": "editor::ToggleFold",
+      "shift-alt-z": "editor::ToggleFoldAll",
+
+      // Stage/unstage por hunk. O shift-alt-y (UnstageAndNext) ja e default, mas
+      // o alt-y default (StageAndNext) foi tomado pelo Copy do bloco
+      // [Editor && !agent_diff], entao o shift-alt-s devolve o stage-and-next.
+      // O alt-u espelha o alt+u do Kiro e o alt-s (ToggleStaged) / alt-x
+      // (Restore) do bloco [Editor && !Picker] seguem valendo no diff.
+      "shift-alt-s": "git::StageAndNext",
+      "alt-u": "git::UnstageAndNext",
+      "shift-alt-x": "git::RestoreAndNext", // descarta o hunk e vai pro proximo; substitui o ctrl-k ctrl-r default que nao responde
+
+      // Alterna split/unified. No editor normal o alt-d continua GoToImplementation.
+      "alt-d": "editor::ToggleSplitDiff"
     }
   },
 
