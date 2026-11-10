@@ -40,7 +40,7 @@
     "context": "Workspace && !Terminal",
     "bindings": {
       "ctrl-e": "project_panel::ToggleFocus", // era file_finder::Toggle (o file finder segue no ctrl-p)
-      "ctrl-g": "go_to_line::Toggle", // era git_panel::ToggleFocus. O default do Zed ja e este (no [Editor && mode == full]); explicito aqui pra valer fora do editor tambem
+      "ctrl-g": "git_panel::ToggleFocus", // igual ao ctrl-shift-g. O go_to_line fica so no ctrl-; (o default [Editor && mode == full] ctrl-g sai no unbind la embaixo). No painel do git o ctrl-g e prefixo de chord (ctrl-g ctrl-g fetch, ctrl-g up push...), entao la ele espera ~1s antes de fechar; o ctrl-shift-g fecha na hora
       "ctrl-shift-g": "git_panel::ToggleFocus", // era git_panel::ToggleFocus no ctrl-g (o default do Zed ja usa o ctrl-shift-g no [Workspace]); explicito pra nao depender do default
       "alt-g d": "git::Diff", // abre o Project Diff de qualquer lugar. O ctrl-g d default so vale no [GitPanel] e o ctrl-g cheio acima quebra o chord no resto do workspace
       // era buffer_search::Deploy (busca no arquivo vai pro ctrl-/)
@@ -151,8 +151,8 @@
     "context": "Editor && !Picker",
     "bindings": {
       "ctrl-/": "buffer_search::Deploy", // era editor::ToggleComments
-      "ctrl-n": ["editor::SelectNext", { "replace_newest": false }], // era editor::MoveDown; no Kiro e a proxima ocorrencia da palavra
-      "ctrl-shift-n": "editor::SelectPrevious", // era editor::SelectDown; no Kiro e a ocorrencia anterior
+      "ctrl-n": ["editor::SelectNext", { "replace_newest": false }], // era editor::MoveDown; proxima ocorrencia da palavra
+      "ctrl-shift-n": "editor::UndoSelection", // volta o ultimo ctrl-n (tira a ocorrencia que ele somou). Antes era editor::SelectPrevious, que nao volta: soma a ocorrencia de cima e, depois de um ctrl-n, o 1o toque nao faz nada
       "ctrl-alt-n": "workspace::NewFile", // buffer novo e vazio (o ctrl-n virou "proximo item"; no explorer o default alt-ctrl-n cria pasta)
       "ctrl-p": "file_finder::Toggle", // era editor::MoveUp; no Kiro o ctrl-p no editor abre o quick open (Go to File)
       "ctrl-k": "editor::ShowCompletions", // era editor::KillRingCut; no Kiro o ctrl-k abre as recomendacoes do language server. ATENCAO: isto poe uma bind cheia num prefixo de chord do Zed (ctrl-k z soft wrap, ctrl-k q rewrap, ctrl-k p copy path, ctrl-k r reveal, ctrl-k e/t/u fechar abas) - se os chords pararem de responder, troque por "ctrl-space": "editor::ShowCompletions" (default do Zed) e devolva o ctrl-k
@@ -182,8 +182,8 @@
     "bindings": {
       // No Kiro o ctrl-n/ctrl-p no diff pula de mudanca em mudanca; no editor
       // normal as mesmas teclas andam pelas ocorrencias da palavra.
-      "ctrl-n": "editor::GoToHunk",
-      "ctrl-p": "editor::GoToPreviousHunk",
+      "alt-n": "editor::GoToHunk",
+      "alt-p": "editor::GoToPreviousHunk",
 
       // "Fold Excerpt"/"Unfold Excerpt" do cabecalho do excerpt (o proprio
       // tooltip do Zed). No multibuffer o ToggleFold dobra/desdobra os excerpts
@@ -210,8 +210,7 @@
     "context": "BufferSearchBar",
     "bindings": {
       "ctrl-c": "buffer_search::Dismiss", // era menu::SelectNext; no Kiro ctrl-n/ctrl-p andam pelos resultados
-      "ctrl-p": "search::SelectPreviousMatch",
-      "ctrl-shift-n": "search::SelectPreviousMatch"
+      "alt-p": "search::SelectPreviousMatch"
     }
   },
   {
@@ -223,15 +222,15 @@
     // SelectPrevious/NextMatch e a mesma acao do shift-enter/enter na barra.
     "context": "BufferSearchBar > Editor",
     "bindings": {
-      "ctrl-p": "search::SelectPreviousMatch",
-      "ctrl-n": "search::SelectNextMatch"
+      "alt-p": "search::SelectPreviousMatch",
+      "alt-n": "search::SelectNextMatch"
     }
   },
   {
     "context": "ProjectSearchBar > Editor",
     "bindings": {
-      "ctrl-p": "search::SelectPreviousMatch",
-      "ctrl-n": "search::SelectNextMatch"
+      "alt-p": "search::SelectPreviousMatch",
+      "alt-n": "search::SelectNextMatch"
     }
   },
 
@@ -252,8 +251,8 @@
     "bindings": {
       "alt-j": "editor::ContextMenuNext",
       "alt-k": "editor::ContextMenuPrevious",
-      "ctrl-n": "editor::ContextMenuNext",
-      "ctrl-p": "editor::ContextMenuPrevious"
+      "alt-n": "editor::ContextMenuNext",
+      "alt-p": "editor::ContextMenuPrevious"
     }
   },
 
@@ -283,11 +282,15 @@
     // pro Editor de dentro do painel, que casa mais fundo: la valem os binds do
     // [Editor && !Picker].
     "context": "ProjectPanel && not_editing",
+    "unbind": {
+      "ctrl-n": "project_panel::NewFile"
+    },
     "bindings": {
       "alt-j": "menu::SelectNext",
       "alt-k": "menu::SelectPrevious",
-      "ctrl-n": "menu::SelectNext", // era project_panel::NewFile (default do painel)
-      "ctrl-p": "file_finder::Toggle" // era menu::SelectPrevious (o default global), que aqui so andava a lista. Com o foco no explorer o ctrl-p abre o quick open, igual ao editor
+      "alt-n": "menu::SelectNext",
+      "alt-p": "menu::SelectPrevious",
+      "ctrl-p": "file_finder::Toggle" // quick open tambem com o foco no explorer
     }
   },
   {
@@ -298,9 +301,9 @@
     // menu::SelectNext/Previous movem so a selecao, como o alt-j/alt-k.
     "context": "GitPanel && ChangesList && !GitBranchSelector && !GitRepositorySelector",
     "bindings": {
-      "ctrl-n": "menu::SelectNext",
-      "ctrl-p": "menu::SelectPrevious",
-      "ctrl-shift-n": "menu::SelectPrevious",
+      "alt-n": "menu::SelectNext",
+      "alt-p": "menu::SelectPrevious",
+      "ctrl-p": "file_finder::Toggle",
       "alt-j": "menu::SelectNext",
       "alt-k": "menu::SelectPrevious"
     }
@@ -378,7 +381,8 @@
   {
     "context": "Editor && mode == full",
     "unbind": {
-      "ctrl-f": "buffer_search::Deploy"
+      "ctrl-f": "buffer_search::Deploy",
+      "ctrl-g": "go_to_line::Toggle" // o ctrl-g abre o painel do git (bloco Workspace); go to line no ctrl-;
     }
   },
   {
@@ -502,19 +506,21 @@
   {
     "context": "BufferSearchBar",
     "bindings": {
-      "ctrl-n": "search::SelectNextMatch"
+      "alt-n": "search::SelectNextMatch"
     }
   },
   {
     "context": "AcpThreadSearchBar",
     "bindings": {
-      "ctrl-p": "agent::SelectPreviousThreadMatch"
+      "alt-p": "agent::SelectPreviousThreadMatch",
+      "alt-n": "agent::SelectNextThreadMatch"
     }
   },
   {
     "context": "AcpThreadSearchBar > Editor",
     "bindings": {
-      "ctrl-p": "agent::SelectPreviousThreadMatch"
+      "alt-p": "agent::SelectPreviousThreadMatch",
+      "alt-n": "agent::SelectNextThreadMatch"
     }
   },
   {
@@ -549,6 +555,49 @@
     "context": "AcpThread > Editor",
     "bindings": {
       "ctrl-w": "editor::ToggleFocus"
+    }
+  },
+  {
+    // ctrl-' com o foco no terminal: o bloco [Workspace && !Terminal] la em cima
+    // nao casa aqui, entao sem isto o ctrl-' iria pro PTY. terminal_panel::Toggle
+    // foca o terminal se ele esta fechado ou sem foco, e minimiza se ja tem foco.
+    "context": "Terminal",
+    "bindings": {
+      "ctrl-'": "terminal_panel::Toggle"
+    }
+  },
+  {
+    // Painel do git: alt-t alterna Changes <-> History.
+    "context": "GitPanel",
+    "bindings": {
+      "alt-t": "git_panel::ActivateHistoryTab"
+    }
+  },
+  {
+    "context": "GitPanel && HistoryList",
+    "bindings": {
+      "alt-t": "git_panel::ActivateChangesTab",
+      "alt-j": "menu::SelectNext",
+      "alt-k": "menu::SelectPrevious",
+      "alt-n": "menu::SelectNext",
+      "alt-p": "menu::SelectPrevious"
+    }
+  },
+  {
+    // Trocar repositorio ativo e branch, de qualquer lugar fora do terminal.
+    "context": "Workspace && !Terminal",
+    "bindings": {
+      "alt-r": "git::SelectRepo",
+      "alt-m": "git::Switch" // no editor o alt-b e MoveToPreviousWordStart, entao la a branch fica no alt-m
+    }
+  },
+  {
+    // alt-b troca a branch onde nao conflita: fora do editor (alt-b = palavra
+    // anterior) e do terminal (alt-b vai pro shell). Vale no painel do git, no
+    // explorer, no outline, etc.
+    "context": "!Editor && !Terminal",
+    "bindings": {
+      "alt-b": "git::Switch"
     }
   }
 ]

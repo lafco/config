@@ -103,7 +103,7 @@
     "show": "never"
   },
   "gutter": {
-    "line_numbers": false,
+    "line_numbers": true,
     "runnables": false,
     "bookmarks": false,
     "breakpoints": false,
