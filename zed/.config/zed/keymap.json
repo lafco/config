@@ -46,7 +46,16 @@
       // era buffer_search::Deploy (busca no arquivo vai pro ctrl-/)
       "ctrl-l": "agent::ToggleFocus", // era editor::SelectLine (o ctrl-? do Zed continua valendo)
       "ctrl-'": "terminal_panel::Toggle", // era editor::ToggleSelectedDiffHunks (o ctrl-` continua valendo)
-      "alt-o": "project_symbols::Toggle"
+      "alt-o": "project_symbols::Toggle",
+      "ctrl-t": "task::Rerun", // era project_symbols::Toggle (os simbolos do projeto seguem no alt-o). Roda de novo a ultima task/teste
+      "alt-t": ["action::Sequence", ["git_panel::ToggleFocus", "git_panel::ActivateHistoryTab"]] // era task::Rerun (agora no ctrl-t). Fora do painel do git abre o History; dentro dele o bloco GitPanel alterna Changes <-> History
+    }
+  },
+  {
+    "context": "Workspace",
+    "unbind": {
+      "ctrl-t": "project_symbols::Toggle",
+      "alt-t": "task::Rerun"
     }
   },
   {
