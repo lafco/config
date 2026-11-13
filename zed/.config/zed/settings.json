@@ -7,6 +7,12 @@
 // custom settings, run `zed: open default settings` from the
 // command palette (cmd-shift-p / ctrl-shift-p)
 {
+  "language_models": {
+    "opencode": {
+      "show_go_models": true,
+      "show_zen_models": false
+    }
+  },
   "disable_ai": false,
   "agent_servers": {
     "pi-acp": {
@@ -67,16 +73,28 @@
     "expand_terminal_card": false,
     "tool_permissions": {
       "tools": {
+        "create_directory": {
+          "default": "allow"
+        },
+        "skill": {
+          "default": "allow"
+        },
+        "fetch": {
+          "default": "allow"
+        },
+        "copy_path": {
+          "default": "allow"
+        },
         "terminal": {
           "default": "allow"
         }
       }
     },
     "default_model": {
-      "provider": "deepseek",
-      "model": "deepseek-flash",
+      "provider": "opencode",
+      "model": "go/deepseek-v4-pro",
       "enable_thinking": true,
-      "effort": "high"
+      "effort": "max"
     },
     "dock": "right",
     "favorite_models": [],
