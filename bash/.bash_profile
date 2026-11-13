@@ -3,5 +3,7 @@
 
 [[ -f ~/.bashrc ]] && source ~/.bashrc
 
-# Vite+ bin (https://viteplus.dev)
-. "/home/vinicius.falconi@sp01.local/.config/vite-plus/env"
+# Vite+ bin (https://viteplus.dev) — só existe onde o CLI `vp` foi instalado
+# (~/.config/vite-plus/env). O caminho era absoluto da máquina da empresa e
+# quebrava todo shell de login nas outras.
+[ -f "$HOME/.config/vite-plus/env" ] && . "$HOME/.config/vite-plus/env"
