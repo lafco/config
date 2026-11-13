@@ -1,0 +1,43 @@
+# Ghostty — espelho do wezterm do repo de dotfiles (wezterm/.config/wezterm).
+# Distribuído por symlink (home/modules/dotfiles.nix no nixos repo) e pelo
+# `dot stow` nas máquinas sem Nix.
+#
+# O que NÃO foi portado do wezterm, de propósito:
+#   - enable_wayland = false, prefer_egl, max_fps: eram workarounds do wezterm
+#     (janela maximizada perdendo tamanho no Wayland nativo, wezterm#2536); o
+#     ghostty é Wayland nativo e o fps vem do vsync.
+#   - enable_kitty_keyboard = false: no ghostty o protocolo de teclado é fixo
+#     (não há opção). Se o herdr voltar a tratar Esc como "lone escape",
+#     resolver com keybind em vez de config.
+#   - hide_tab_bar_if_only_one_tab: o default do ghostty
+#     (window-show-tab-bar = auto) já só mostra a barra com mais de uma aba.
+
+# Fonte. O ghostty usa o fallback do fontconfig (ao contrário do wezterm), mas
+# a lista explícita mantém CJK/emoji/nerd glyphs na mesma ordem do wezterm —
+# repetir `font-family` acrescenta fallback.
+font-family = JetBrains Mono
+font-family = Noto Sans CJK SC
+font-family = Noto Color Emoji
+font-family = Symbols Nerd Font Mono
+font-size = 10
+# Equivalente ao line_height = 1.1 do wezterm: 10% a mais na altura da célula.
+adjust-cell-height = 10%
+
+# Cores: mesmo esquema do wezterm (tema embutido do ghostty).
+theme = Catppuccin Mocha
+
+# Aparência: sem decoração de janela (o GNOME desenha o resto), padding de 5px
+# balanceado e cursor sem piscar (cursor_blink_rate = 0 no wezterm).
+cursor-style-blink = false
+window-decoration = none
+window-padding-x = 5
+window-padding-y = 5
+window-padding-balance = true
+
+# Shell: o wezterm usava default_prog = { 'bash', '-l' } porque no NixOS o bash
+# não vive em /usr/bin. Aqui `bash` é resolvido pelo PATH (que inclui
+# /run/current-system/sw/bin) e o -l mantém o encadeamento
+# .bash_profile -> .bashrc dos dotfiles. A shell integration do ghostty
+# (shell-integration = detect, default) continua funcionando: ela detecta pelo
+# nome do processo.
+command = bash -l
