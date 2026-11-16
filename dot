@@ -43,7 +43,7 @@ LOCAL_LINKS_ISSUES=0
 LOCAL_LINKS_RELS=()
 
 # Pacotes Stow (lista explícita — evita stowar diretórios que não são pacotes)
-readonly STOW_PACKAGES="bash nvim pi wezterm zellij television starship atuin gh-dash herdr kiro vscode zed"
+readonly STOW_PACKAGES="bash nvim pi wezterm zellij television starship atuin gh-dash herdr kiro vscode zed skills"
 
 # Pacotes stowados sem folding: o stow cria o diretório real em $HOME e linka só
 # as folhas do repo. É o que permite conteúdo local (não versionado) morar em
