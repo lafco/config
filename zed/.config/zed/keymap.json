@@ -177,7 +177,7 @@
       "ctrl-p": "file_finder::Toggle", // era editor::MoveUp; no Kiro o ctrl-p no editor abre o quick open (Go to File)
       "ctrl-k": "editor::ShowCompletions", // era editor::KillRingCut; no Kiro o ctrl-k abre as recomendacoes do language server. ATENCAO: isto poe uma bind cheia num prefixo de chord do Zed (ctrl-k z soft wrap, ctrl-k q rewrap, ctrl-k p copy path, ctrl-k r reveal, ctrl-k e/t/u fechar abas) - se os chords pararem de responder, troque por "ctrl-space": "editor::ShowCompletions" (default do Zed) e devolva o ctrl-k
       "ctrl-r": "git::OpenFileDiff", // era projects::OpenRecent; no Kiro o ctrl-r abre o diff do arquivo atual
-      "ctrl-w": "outline::Toggle", // com o foco no arquivo o ctrl-w abre o find symbol do buffer (o painel Outline; no Zed 1.17 nao existe mais o picker de simbolos do arquivo)
+      "ctrl-w": "outline_panel::ToggleFocus", // com o foco no arquivo o ctrl-w abre o find symbol do buffer (o painel Outline com o filtro ja focado; no Zed 1.17 nao existe mais o picker de simbolos). O outline::Toggle nao abre o painel na pratica (testado): so o ToggleFocus funciona
       "alt-n": "editor::GoToNextChange",
       "alt-p": "editor::GoToPreviousChange",
       "alt-d": "editor::GoToImplementation",
@@ -189,7 +189,7 @@
   {
     "context": "Editor && !Picker && !BufferSearchBar",
     "bindings": {
-      "alt-w": "outline::Toggle" // dentro da busca o alt-w continua alternando whole word
+      "alt-w": "outline_panel::ToggleFocus" // dentro da busca o alt-w continua alternando whole word (o outline::Toggle nao abre o painel na pratica; ver o ctrl-w acima)
     }
   },
   {
