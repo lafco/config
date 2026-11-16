@@ -7,8 +7,7 @@
   "hideThinkingBlock": false,
   "packages": [
     "../../mcpb",
-    "git:github.com/lafco/pi-cze-theme",
-    "git:github.com/obra/superpowers"
+    "git:github.com/lafco/pi-cze-theme"
   ],
   "theme": "cze",
   "enableSkillCommands": true
