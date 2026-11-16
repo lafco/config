@@ -16,14 +16,19 @@ skills/
         ├── ptm -> ../../../pstack/skills/ptm
         └── ...
 
-pstack/                 # cópia fiel do plugin (fonte da verdade)
+pstack/                 # cópia do plugin (fonte da verdade)
 ├── skills/             # os SKILL.md de verdade
 ├── agents/             # subagents do Cursor (poteto-agent, comment-sicko)
 ├── automations/        # pack benny (Cursor-only)
 ├── docs/  assets/  plugin.json  .cursor-plugin/
-├── update.sh           # diff/apply contra o upstream
-└── UPSTREAM.md         # origem, commit e como atualizar
+├── local/              # overrides locais anexados pelo update.sh
+├── update.sh           # diff/apply contra o upstream (+ rename e overlay)
+└── UPSTREAM.md         # origem, commit, divergência local e como atualizar
 ```
+
+O upstream chama o skill de `poteto-mode`; aqui ele é `ptm` (`/ptm`). O
+`update.sh` reaplica o rename no clone antes de comparar/aplicar — detalhes em
+`pstack/UPSTREAM.md`.
 
 O pacote stow `skills` linka `~/.agents/skills` para
 `~/dotfiles/skills/.agents/skills`. Editar um skill (por qualquer um dos
@@ -104,6 +109,13 @@ diretório real, adicione `skills` a `NO_FOLD_PACKAGES` no `dot`.
 - Skills que dependem de recurso do Cursor (`setup-pstack`, `ketchup-video`,
   `make-bot-ui`, autopilot, etc.) vão precisar de adaptação ao pi/zed — é parte
   da modificação desta cópia.
+- Quatro skills citadas pelo `ptm` não existem aqui: `create-skill` (built-in do
+  Cursor) e `deslop`, `control-cli`, `control-ui` (plugin `cursor-team-kit`).
+  O fallback (uma linha de skip + o passo equivalente do harness) está em
+  `pstack/local/ptm-hub.md`, anexado a `skills/ptm/SKILL.md` pelo `update.sh`.
+  Para acrescentar outro override local, crie o arquivo em `pstack/local/` e
+  anexe-o no `update.sh`; arquivo editado só em `pstack/skills/` some no
+  próximo `--apply`.
 
 ## Atualizar do upstream
 
@@ -112,4 +124,6 @@ diretório real, adicione `skills` a `NO_FOLD_PACKAGES` no `dot`.
 ~/dotfiles/pstack/update.sh --apply  # sobrescreve com o upstream
 ```
 
+O diff já vem normalizado (rename `ptm` + overlay de `pstack/local/`), então
+sair limpo significa "hub igual ao upstream + as divergências locais".
 Veja `pstack/UPSTREAM.md` para a origem exata e o commit vendored.
