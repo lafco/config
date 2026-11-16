@@ -11,7 +11,7 @@
 #   - Instalação resiliente: ferramenta com falha não interrompe o init;
 #     as falhas ficam registradas em packages/failed_tools.txt (dot retry-failed)
 #   - Symlinks via GNU Stow (pacotes: bash nvim pi wezterm zellij television
-#     starship atuin gh-dash herdr kiro)
+#     starship atuin gh-dash herdr kiro t3code)
 #
 # Comandos: init | update | doctor | stow | links | retry-failed | link | unlink | edit | help
 
@@ -43,14 +43,16 @@ LOCAL_LINKS_ISSUES=0
 LOCAL_LINKS_RELS=()
 
 # Pacotes Stow (lista explícita — evita stowar diretórios que não são pacotes)
-readonly STOW_PACKAGES="bash nvim pi wezterm zellij television starship atuin gh-dash herdr kiro vscode zed skills"
+readonly STOW_PACKAGES="bash nvim pi wezterm zellij television starship atuin gh-dash herdr kiro vscode zed skills t3code"
 
 # Pacotes stowados sem folding: o stow cria o diretório real em $HOME e linka só
 # as folhas do repo. É o que permite conteúdo local (não versionado) morar em
 # ~/.pi/agent/{skills,extensions,agents,prompts} sem entrar no checkout, sem
 # virar "conflito" a cada re-stow e sem o .gitignore listar o que é local.
+# Vale também para ~/.t3/userdata (t3code): lá vive o estado do app (sqlite de
+# threads, logs, caches, secrets) e só keybindings.json é versionado.
 # Ver README ("Conteúdo local, fora do stow").
-readonly NO_FOLD_PACKAGES="pi"
+readonly NO_FOLD_PACKAGES="pi t3code"
 
 # Flags extras do stow (ex.: -n no dry-run), preenchidas por quem chama __stow_all.
 STOW_FLAGS=()
