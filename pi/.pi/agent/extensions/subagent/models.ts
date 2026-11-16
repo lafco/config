@@ -9,9 +9,10 @@
  * Precedência:
  *   1. `model` do despacho — existe para o retry escalar o worker depois de um
  *      review com achados `execucao`; não é para uso rotineiro;
- *   2. lista do agente no `models.json`;
+ *   2. lista do agente no `models.json` (hoje vazia, ver README: o modelo é o da
+ *      sessão, porque slug fixo quebra com `403 Model access is disabled`);
  *   3. `model:` no frontmatter do agente;
- *   4. modelo da sessão — último recurso, nunca o primeiro.
+ *   4. modelo da sessão — o caminho normal aqui.
  *
  * Cada lista é ordenada: o primeiro que rodar vence, os seguintes são
  * fallback. Ponha o fallback **em outro provider** — dois modelos do mesmo

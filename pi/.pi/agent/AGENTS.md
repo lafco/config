@@ -62,6 +62,13 @@ Leitura pura dispensa go-ahead; o resto segue a seção Colaboração.
 - `edit` — edições pontuais
 - `bash` — comandos shell
 
+## Subagentes
+
+- Todo subagente roda no modelo da conversa. Omita `model` em `subagent` e `target` em `delegate_task`: sem o campo, o filho herda a sessão. O `models.json` da extensão `subagent` só define `thinking`.
+- Nunca escolha slug de modelo por conta própria. Os defaults dos skills do pstack (`claude-fable-*`, `claude-opus-*`, `gemini-*`) não existem neste ambiente e falham com `403 Model access is disabled`.
+- Onde o skill pedir painel (arena, architect, interrogate, reflect), `inherit-parent` e `auto` são os únicos valores válidos. Painel de N runners = N despachos no mesmo modelo da conversa; a diversidade vem do brief, não do modelo.
+- Só passe `model` ou `target` depois que aquele slug já respondeu com sucesso na mesma conversa, e mantenha o modelo da conversa como fallback.
+
 ## Refinamento de epics
 
 - Para refinar uma issue vinda do Jira: `/refinar-issue <KEY> [--repo <path>] [--product <nome>]` (ex.: `/refinar-issue PROJ-123`).

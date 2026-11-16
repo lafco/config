@@ -124,12 +124,15 @@ describe("loadModelConfig", () => {
 		fs.rmSync(dir, { recursive: true, force: true });
 	});
 
-	test("o models.json do repo cobre os agentes que a esteira despacha", () => {
+	test("o models.json do repo não fixa modelo: a subagente herda a sessão", () => {
 		const loaded = loadModelConfig(import.meta.dir, path.join(import.meta.dir, "models.json"));
+		// Slug fixo quebra quando a organização desabilita o modelo (403 Model access is
+		// disabled). O modelo vem da sessão; o arquivo decide só o esforço.
+		expect(loaded.agents).toEqual({});
 		for (const agent of ["worker", "task-reviewer", "validator", "scout", "planner"]) {
-			expect(loaded.agents[agent]?.length ?? 0).toBeGreaterThanOrEqual(2);
+			expect(loaded.thinking[agent], agent).toBeDefined();
 		}
-		// Fallback em outro provider: dois modelos do mesmo gateway caem juntos.
+		// Se listas voltarem, cada uma precisa de fallback em outro provider.
 		for (const [agent, list] of Object.entries(loaded.agents)) {
 			const providers = new Set(list.map((model: string) => model.split("/")[0]));
 			expect(providers.size, `${agent} precisa de fallback em outro provider`).toBeGreaterThanOrEqual(2);

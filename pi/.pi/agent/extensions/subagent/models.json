@@ -1,17 +1,4 @@
 {
-  "agents": {
-    "scout": ["opencode-go/deepseek-v4.1-flash", "deepseek/deepseek-flash"],
-    "research": ["opencode-go/deepseek-v4.1-flash", "deepseek/deepseek-flash"],
-    "planner": ["opencode-go/deepseek-v4.1-flash", "deepseek/deepseek-flash"],
-    "worker": ["opencode-go/deepseek-v4.1-flash", "deepseek/deepseek-flash"],
-    "validator": ["opencode-go/deepseek-v4.1-flash", "deepseek/deepseek-flash"],
-    "reviewer": ["opencode-go/deepseek-v4.1-flash", "deepseek/deepseek-flash"],
-    "task-reviewer": ["opencode-go/deepseek-v4.1-flash", "deepseek/deepseek-flash"],
-    "explainer": ["opencode-go/deepseek-v4.1-flash", "deepseek/deepseek-flash"],
-    "pw2-endpoint-mapper": ["opencode-go/deepseek-v4.1-flash", "deepseek/deepseek-flash"],
-    "folgas-endpoint-mapper": ["opencode-go/deepseek-v4.1-flash", "deepseek/deepseek-flash"],
-    "opensearch-index-mapper": ["opencode-go/deepseek-v4.1-flash", "deepseek/deepseek-flash"]
-  },
   "thinking": {
     "scout": "low",
     "research": "high",
