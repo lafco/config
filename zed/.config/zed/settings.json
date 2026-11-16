@@ -45,19 +45,33 @@
   "buffer_font_weight": 400.0,
   "buffer_font_family": "JetBrains Mono",
   "icon_theme": "Zed (Default)",
+  // ---- layout dos docks ----
+  // Dock esquerdo: so o chat do agente (agent.dock abaixo). Dock direito:
+  // explorer, changes e outline. O ctrl-l e o toggle do chat: abre/foca ou
+  // fecha e devolve o foco pro arquivo. O ctrl-w minimiza o chat e deixa o
+  // arquivo ocupando a tela toda (com o foco no arquivo, o ctrl-w abre o
+  // find symbol do buffer).
+  // Fecha o painel quando o ToggleFocus dele e acionado com ele ja focado: e
+  // o que faz o ctrl-l fechar o chat (e devolver o foco pro arquivo) em vez
+  // de so desfocar. Vale para os ToggleFocus dos outros paineis tambem
+  // (ctrl-e/explorer, ctrl-shift-g/changes) - no Kiro o toggle e assim.
+  "close_panel_on_toggle": true,
   "project_panel": {
     "folder_indicator": "icon",
-    "dock": "left",
+    "dock": "right",
     "file_icons": true,
     "git_status": false
   },
   "outline_panel": {
-    "dock": "left"
+    "dock": "right"
   },
   "collaboration_panel": {
     "button": false,
-    "dock": "left"
+    "dock": "right"
   },
+  // Explorer, changes e outline redimensionam juntos no dock direito;
+  // o chat (dock esquerdo) redimensiona sozinho.
+  "resize_all_panels_in_dock": ["left", "right"],
   "agent": {
     "sandbox_permissions": {
       "allow_unsandboxed": true,
@@ -96,12 +110,13 @@
       "enable_thinking": true,
       "effort": "max"
     },
-    "dock": "right",
+    // Chat no dock esquerdo (ver o comentario de layout dos docks acima).
+    "dock": "left",
     "favorite_models": [],
     "model_parameters": []
   },
   "git_panel": {
-    "dock": "left"
+    "dock": "right"
   },
   "vim_mode": false,
 

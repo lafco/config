@@ -43,7 +43,10 @@
       "ctrl-g": "go_to_line::Toggle", // era git_panel::ToggleFocus. O default do Zed ja e este (no [Editor && mode == full]); explicito aqui pra valer fora do editor tambem
       "ctrl-shift-g": "git_panel::ToggleFocus", // era git_panel::ToggleFocus no ctrl-g (o default do Zed ja usa o ctrl-shift-g no [Workspace]); explicito pra nao depender do default
       "alt-g d": "git::Diff", // abre o Project Diff de qualquer lugar. O ctrl-g d default so vale no [GitPanel] e o ctrl-g cheio acima quebra o chord no resto do workspace
-      // era buffer_search::Deploy (busca no arquivo vai pro ctrl-/)
+      // ctrl-l e o toggle do chat: abre/foca o painel do agente; com o painel
+      // ja focado, fecha ele e devolve o foco pro arquivo (quem fecha e o
+      // close_panel_on_toggle do settings.json). O ctrl-w minimiza o chat e
+      // devolve o arquivo.
       "ctrl-l": "agent::ToggleFocus", // era editor::SelectLine (o ctrl-? do Zed continua valendo)
       "ctrl-'": "terminal_panel::Toggle", // era editor::ToggleSelectedDiffHunks (o ctrl-` continua valendo)
       "alt-o": "project_symbols::Toggle"
@@ -65,11 +68,14 @@
     }
   },
   {
-    // Com o painel do agente focado. O Kiro faz toggle no ctrl-l (abre/foca e,
-    // se ja estiver focado, some com o sidebar); no Zed o agent::ToggleFocus do
-    // bloco acima so devolve o foco ao editor, entao aqui o ctrl-l esconde o
-    // dock. O painel do agente esta no dock da direita (settings: agent.dock).
-    "context": "AgentPanel",
+    // Foco na barra do painel do agente (fora do thread e do terminal). O chat
+    // mora no dock esquerdo (settings: agent.dock). O ctrl-l (bloco Workspace
+    // acima + close_panel_on_toggle do settings) fecha o chat e devolve o foco
+    // pro arquivo; o ctrl-w que minimiza o chat fica num bloco mais abaixo
+    // (empate com o [!Editor && !Terminal] resolvido pela ordem). O !Terminal
+    // preserva a regra do arquivo: em terminal thread as teclas vao pro PTY. O
+    // ctrl-q segue fechando o dock.
+    "context": "AgentPanel && !Terminal",
     "bindings": {
       // esconde o sidebar do agente
       "ctrl-q": "workspace::CloseActiveDock" // fecha a sessao (o ctrl-q do bloco acima fecha o item do editor)
@@ -103,7 +109,21 @@
   {
     "context": "!Editor && !Terminal",
     "bindings": {
-      "ctrl-w": "editor::ToggleFocus" // voltar pro editor quando o foco esta em painel/picker
+      // "Vista arquivo": volta pro editor quando o foco esta em painel/picker
+      // (no chat, o ctrl-w fecha o dock - blocos AgentPanel/AcpThread abaixo).
+      "ctrl-w": "editor::ToggleFocus"
+    }
+  },
+  {
+    // ctrl-w com o foco na barra do painel do agente: foca o arquivo e fecha o
+    // dock do chat (o ToggleFocus com o painel ja focado foca o editor e, com o
+    // close_panel_on_toggle, fecha o painel; o CloseActiveDock so fechava o
+    // dock sem devolver o foco). Precisa vir depois do bloco [!Editor &&
+    // !Terminal] acima: os dois casam na mesma profundidade e o empate e
+    // resolvido pela ordem no arquivo.
+    "context": "AgentPanel && !Terminal",
+    "bindings": {
+      "ctrl-w": "agent::ToggleFocus"
     }
   },
 
@@ -157,7 +177,7 @@
       "ctrl-p": "file_finder::Toggle", // era editor::MoveUp; no Kiro o ctrl-p no editor abre o quick open (Go to File)
       "ctrl-k": "editor::ShowCompletions", // era editor::KillRingCut; no Kiro o ctrl-k abre as recomendacoes do language server. ATENCAO: isto poe uma bind cheia num prefixo de chord do Zed (ctrl-k z soft wrap, ctrl-k q rewrap, ctrl-k p copy path, ctrl-k r reveal, ctrl-k e/t/u fechar abas) - se os chords pararem de responder, troque por "ctrl-space": "editor::ShowCompletions" (default do Zed) e devolva o ctrl-k
       "ctrl-r": "git::OpenFileDiff", // era projects::OpenRecent; no Kiro o ctrl-r abre o diff do arquivo atual
-      "ctrl-w": "outline::Toggle", // no Zed 1.17 nao existe mais picker de simbolos do arquivo: e o painel Outline
+      "ctrl-w": "outline::Toggle", // com o foco no arquivo o ctrl-w abre o find symbol do buffer (o painel Outline; no Zed 1.17 nao existe mais o picker de simbolos do arquivo)
       "alt-n": "editor::GoToNextChange",
       "alt-p": "editor::GoToPreviousChange",
       "alt-d": "editor::GoToImplementation",
@@ -446,9 +466,16 @@
     }
   },
   {
+    // ctrl-w com o foco no thread do chat (lista de mensagens, fora do input):
+    // foca o arquivo e fecha o dock do chat, que deixa de ocupar a tela (o
+    // ToggleFocus foca o editor e o close_panel_on_toggle fecha o painel; o
+    // CloseActiveDock so fechava o dock sem devolver o foco). O ctrl-l nao
+    // precisa de bind aqui: o bloco [Workspace && !Terminal] acima + o
+    // close_panel_on_toggle do settings ja fecham o chat e devolvem o foco pro
+    // arquivo.
     "context": "AcpThread",
     "bindings": {
-      "ctrl-l": "workspace::ToggleRightDock"
+      "ctrl-w": "agent::ToggleFocus"
     }
   },
   {
@@ -541,14 +568,15 @@
     }
   },
   {
-    // ctrl-w devolve o foco ao editor (no Kiro: !editorTextFocus ->
+    // ctrl-w com o foco no input do chat: foca o arquivo e fecha o dock do
+    // chat, que deixa de ocupar a tela (no Kiro: !editorTextFocus ->
     // focusActiveEditorGroup). O [Editor && !Picker] acima casa na mesma
     // profundidade (o input do chat tambem e um Editor) e da outline::Toggle,
-    // entao o retorno nunca acontecia com o foco no painel do agente. Mesmo
-    // remedio do ctrl-alt-n: reafirmar depois.
+    // entao o retorno nunca acontecia; mesmo remedio do ctrl-alt-n: reafirmar
+    // depois.
     "context": "AcpThread > Editor",
     "bindings": {
-      "ctrl-w": "editor::ToggleFocus"
+      "ctrl-w": "agent::ToggleFocus"
     }
   }
 ]
