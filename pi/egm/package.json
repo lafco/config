@@ -1,0 +1,8 @@
+{
+  "name": "egm-for-pi",
+  "private": true,
+  "description": "Elephant-Goldfish Model vendorizado para o pi, com revisores goldfish locais.",
+  "pi": {
+    "skills": ["./vendor/skills"]
+  }
+}
