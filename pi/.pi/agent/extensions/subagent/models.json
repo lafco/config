@@ -1,15 +1,17 @@
 {
   "thinking": {
-    "scout": "low",
-    "research": "high",
-    "planner": "high",
-    "worker": "low",
-    "validator": "high",
-    "reviewer": "high",
-    "task-reviewer": "high",
-    "explainer": "high",
-    "pw2-endpoint-mapper": "low",
-    "folgas-endpoint-mapper": "low",
-    "opensearch-index-mapper": "low"
+    "code-reviewer": "high",
+    "test-engineer": "high",
+    "security-auditor": "high",
+    "web-performance-auditor": "high",
+    "accessibility-auditor": "high",
+    "egm-zoom-out": "high",
+    "egm-design": "high",
+    "egm-codebase-details": "high",
+    "egm-comprehension": "high",
+    "egm-implementation-readiness": "high",
+    "egm-inventive-catalyst": "high",
+    "egm-structural": "low",
+    "egm-style": "low"
   }
 }

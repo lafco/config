@@ -22,7 +22,7 @@ Configuração padrão do pi para uso geral (fora de projetos específicos).
 - Prefira mudanças incrementais a lotes grandes: o custo de revisar um diff gigante é maior que o de gerá-lo.
 - Diante de objetivo ou abordagem ambíguos, pergunte em vez de assumir. Não decida sozinho o que é escolha do usuário.
 - Mostre trade-offs e alternativas quando existirem, curtos e com sua recomendação.
-- Fluxos autônomos pedidos explicitamente (`/implement`, `/implement-story`, `/auto`) valem como go-ahead para o escopo declarado; mesmo neles, pare e pergunte diante de ambiguidade, bloqueio ou decisão de projeto.
+- Fluxos autônomos pedidos explicitamente (`/build auto`, `/ship`) valem como go-ahead para o escopo declarado; mesmo neles, pare e pergunte diante de ambiguidade, bloqueio ou decisão de projeto.
 
 ## Comunicação
 
@@ -62,33 +62,21 @@ Leitura pura dispensa go-ahead; o resto segue a seção Colaboração.
 - `edit` — edições pontuais
 - `bash` — comandos shell
 
+## Skills e agentes
+
+- O pacote `pi-agent-skills` (`~/repos/pi-agent-skills`) é a fonte das skills: 26 do Addy Osmani (ciclo de código) + 8 do Elephant-Goldfish Model (revisão de documento) + os comandos em `prompts/`.
+- Instalar ou atualizar: `~/repos/pi-agent-skills/scripts/install-pi.sh` (`--check` verifica, `--uninstall` remove). Os arquivos em `~/.pi/agent/agents/` são **gerados** — edite a persona no repo, nunca ali.
+- Ciclo de código: `/spec` → `/plan` → `/build [auto]` → `/test` → `/review` → `/ship`, mais `/constraints`, `/a11y`, `/webperf`, `/code-simplify`.
+- Documento de design: `/skill:egm-brainstorm`, `/skill:egm-draft`, `/skill:egm-review`, `/skill:egm-review-loop`, `/skill:egm-resolve`, `/skill:egm-drift-report`.
+- Regra de roteamento: documento e decisão de design vão para o EGM; código vai para o ciclo do Addy. Nunca dois árbitros no mesmo artefato. Detalhe em `~/repos/pi-agent-skills/docs/fusion.md`.
+
 ## Subagentes
 
 - Todo subagente roda no modelo da conversa. Omita `model` em `subagent` e `target` em `delegate_task`: sem o campo, o filho herda a sessão. O `models.json` da extensão `subagent` só define `thinking`.
-- Nunca escolha slug de modelo por conta própria. Os defaults dos skills do pstack (`claude-fable-*`, `claude-opus-*`, `gemini-*`) não existem neste ambiente e falham com `403 Model access is disabled`.
-- Onde o skill pedir painel (arena, architect, interrogate, reflect), `inherit-parent` e `auto` são os únicos valores válidos. Painel de N runners = N despachos no mesmo modelo da conversa; a diversidade vem do brief, não do modelo.
+- Nunca escolha slug de modelo por conta própria: slug fixo quebra quando a organização desabilita o modelo, e o erro chega como `403 Model access is disabled`.
+- Fan-out (N revisores em paralelo) é uma chamada de `subagent` com `tasks: [...]`. Persona não delega a outra persona.
 - Só passe `model` ou `target` depois que aquele slug já respondeu com sucesso na mesma conversa, e mantenha o modelo da conversa como fallback.
-
-## Refinamento de epics
-
-- Para refinar uma issue vinda do Jira: `/refinar-issue <KEY> [--repo <path>] [--product <nome>]` (ex.: `/refinar-issue PROJ-123`).
-  O pull do Jira, o catálogo de produtos, o filtro e a gravação dos arquivos são feitos pela extension `jira-flow`; a LLM só analisa e quebra.
-- A quebra depende do tipo da issue:
-  - **Epic** → **histórias** (`stories/STORY-NN-*.md`). Cada história é refinada depois individualmente.
-  - **Story** → **tarefas implementáveis** (`tasks/TASK-NN-*.md`), com `repo`, `filesLikelyTouched` e `validation` (pw2/unit-tests/manual).
-  - **Manutenção/Apoio** → tarefas (formato plano, por enquanto).
-- Artefatos ficam em `~/epics/<KEY>/` (ou no diretório configurado em `epicsDir`/`EPICS_DIR`).
-- Credenciais: rode `/refinar-issue --setup` (grava `~/.pi/agent/secrets.json`, 0600) — ver `.pi/agent/extensions/jira-flow/README.md`.
-
-## Implementação
-
-- Tarefa avulsa: `/implement <tarefa>` (encadeia `scout` → `planner` → `worker`).
-  Para implementar, revisar e aplicar o feedback: `/implement-and-review <tarefa>`.
-  Para só planejar, sem implementar: `/scout-and-plan <tarefa>`.
-- Tarefas de uma story refinada, em ondas paralelas: `/implement-story <STORY-KEY> [--wave N]`.
-  O `epic-runner` prepara uma `git worktree` por tarefa, despacha um `worker` por tarefa (via `subagent`),
-  valida conforme o `validation` declarado (`pw2_request` quando for `pw2`) e registra a evidência em `evidence/`.
-  As branches não são mergeadas automaticamente.
+- Personas de review são somente leitura (`read, grep, find, ls`, com `bash` nas do Addy). Elas devolvem relatório; quem aplica é a sessão principal, com go-ahead.
 
 ## Análises e reviews
 
@@ -98,7 +86,8 @@ Leitura pura dispensa go-ahead; o resto segue a seção Colaboração.
   - `<sha7>` são os 7 primeiros dígitos do head revisado;
   - quando a branch for de uma issue já refinada (`DRHJNES-1065`), a pasta coincide com `~/epics/<KEY>/`.
 - Formato do documento (padrão da casa): metadados (repo, branch, base = merge-base com `origin/master`, head, data, escopo), Commits, Objetivo da branch, Arquivos alterados (tabela arquivo -> mudança), Execução dos testes (comando + resultado), Achados por severidade (Critical/Important/Minor, citando `arquivo:linha`), Recommendations, Fora de julgamento e Próximos passos.
-- Análise de issue refinada continua em `~/epics/<KEY>/` (ver Refinamento de epics; a execução da story grava `evidence/` e `review/` via `epic-runner`).
+- `/review` devolve o relatório no chat; o documento em `~/epics` é escrito depois, com o mesmo conteúdo mais os metadados da branch.
+- Refinamento de issue vindo do Jira não tem ferramenta instalada neste ambiente. Faça à mão, com o mesmo layout (`~/epics/<KEY>/stories/`, `tasks/`), até existir uma extensão dedicada.
 
 ---
 

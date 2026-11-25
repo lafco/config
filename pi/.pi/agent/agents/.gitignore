@@ -1,0 +1,8 @@
+# gerados por ~/repos/pi-agent-skills/scripts/install-pi.sh
+# a fonte são as personas em vendor/addy/agents e vendor/egm/agents
+accessibility-auditor.md
+code-reviewer.md
+security-auditor.md
+test-engineer.md
+web-performance-auditor.md
+egm-*.md

@@ -1,129 +1,42 @@
 # Skills de agente — hub central
 
-Skills no formato [Agent Skills](https://agentskills.io/specification) (uma pasta
-com `SKILL.md` por skill), compartilhadas por todas as ferramentas de agente
-através de `~/.agents/skills/`. É uma cópia vendored do plugin
-[pstack](https://github.com/cursor/plugins/tree/main/pstack) (58 skills),
-feita para ser modificada.
-
-## Layout
+Este diretório é o hub comum (`~/.agents/skills/`) que **pi**, **Zed** e **opencode**
+leem nativamente. Ele está vazio de propósito: as skills vêm do pacote
+[`pi-agent-skills`](file:///home/lafco/repos/pi-agent-skills), e o hub carrega
+symlinks para elas.
 
 ```
-skills/
-├── README.md           # este arquivo
-└── .agents/
-    └── skills/         # symlinks para pstack/skills/<nome>
-        ├── ptm -> ../../../pstack/skills/ptm
-        └── ...
+~/repos/pi-agent-skills/          fonte (git)
+├── vendor/addy/skills/           26 skills do Addy Osmani (MIT)
+├── vendor/egm/skills/            8 skills do Elephant-Goldfish Model (Apache-2.0)
+└── skills/                       skills nossas
 
-pstack/                 # cópia do plugin (fonte da verdade)
-├── skills/             # os SKILL.md de verdade
-├── agents/             # subagents do Cursor (poteto-agent, comment-sicko)
-├── automations/        # pack benny (Cursor-only)
-├── docs/  assets/  plugin.json  .cursor-plugin/
-├── local/              # overrides locais anexados pelo update.sh
-├── update.sh           # diff/apply contra o upstream (+ rename e overlay)
-└── UPSTREAM.md         # origem, commit, divergência local e como atualizar
+~/.agents/skills/                 hub -> symlinks para as pastas acima
 ```
 
-O upstream chama o skill de `poteto-mode`; aqui ele é `ptm` (`/ptm`). O
-`update.sh` reaplica o rename no clone antes de comparar/aplicar — detalhes em
-`pstack/UPSTREAM.md`.
-
-O pacote stow `skills` linka `~/.agents/skills` para
-`~/dotfiles/skills/.agents/skills`. Editar um skill (por qualquer um dos
-symlinks) edita o arquivo versionado.
+Regenerar os links: `~/repos/pi-agent-skills/scripts/install-pi.sh` (que também
+instala os agentes do pi e registra o pacote).
 
 ## Onde cada ferramenta enxerga
 
-| Ferramenta | Global | Por projeto | Observação |
-|---|---|---|---|
-| pi | `~/.agents/skills/` | `.agents/skills/` (descoberto subindo a árvore até a raiz do repo) | suporte nativo, segue a spec |
-| Zed | `~/.agents/skills/` | `<worktree>/.agents/skills/` | aceita symlink; só carrega de worktrees confiáveis |
-| opencode | `~/.agents/skills/` (fonte de compatibilidade) | `.agents/skills/` (compat) | lê o hub direto — nada a linkar |
-| Projeto t3/outro | — | `.agents/skills/` dentro do repo | quem roda ali é o pi/zed/opencode do projeto |
+| Ferramenta | Global | Por projeto |
+|---|---|---|
+| pi | `~/.agents/skills/` + as skills do pacote | `.agents/skills/` |
+| Zed | `~/.agents/skills/` | `<worktree>/.agents/skills/` |
+| opencode | `~/.agents/skills/` | `.agents/skills/` |
 
-Nenhuma cópia é feita para as ferramentas: todas leem o mesmo diretório (ou um
-symlink para ele), então qualquer mudança vale na hora em todas.
+## Adicionar uma skill
 
-## Uso
+Skill nossa vai em `/home/lafco/repos/pi-agent-skills/skills/<nome>/SKILL.md`.
+Depois rode `scripts/install-pi.sh` para criar o symlink no hub. Não crie a skill
+direto aqui: o hub é gerado.
 
-- **pi**: `/skill:ptm ...` (força uma skill) — os skills aparecem em
-  `/skill:` e o modelo pode invocá-los sozinho quando a descrição casar.
-- **Zed**: `/` no message editor e selecione o skill pelo nome, ou `@skill`.
-- **opencode**: mencione a skill no prompt com `@ptm ...` (com
-  `disable-model-invocation` ela não entra na lista automática do modelo, mas
-  carrega por menção explícita).
+Skill específica de um projeto não entra no hub. Coloque em
+`<repo>/.agents/skills/<nome>/SKILL.md` e versione junto com o projeto.
 
-### Projeto (ex.: app t3-stack)
+## Regras de formato
 
-Para ter as skills também dentro de um projeto (versão por projeto):
-
-```bash
-cd ~/repos/meu-app
-ln -s ~/dotfiles/skills/.agents/skills .agents/skills
-```
-
-Isso é opcional: o caminho global já cobre todos os projetos. Use o link no
-projeto quando quiser compartilhar as skills com quem clona o repo (o symlink
-não funciona para terceiros — copie ou versione os arquivos).
-
-## Adicionar skill própria
-
-Criar uma pasta com `SKILL.md`:
-
-```bash
-mkdir -p ~/dotfiles/skills/.agents/skills/minha-skill
-```
-
-```markdown
----
-name: minha-skill
-description: O que ela faz e quando usar.
----
-
-Instruções...
-```
-
-Regras: nome em minúsculas, números e hífens (máx. 64 chars), descrição até
-1024 chars, SKILL.md de preferência com menos de 500 linhas (Zed recomenda).
-Rode `dot stow skills` se criar a pasta direto em `~` (não precisa se criar no
-repo — o symlink de `~/.agents/skills` já aponta para cá).
-
-Nota: o stow dobra o pacote num link único `~/.agents` → repo. Qualquer coisa
-que uma ferramenta escrever em `~/.agents` (ex.: skill criada pela UI do Zed no
-escopo User) cai no checkout e aparece como arquivo não rastreado — é a
-proposta: tudo versionado no hub. Se um dia outro tool exigir `~/.agents` como
-diretório real, adicione `skills` a `NO_FOLD_PACKAGES` no `dot`.
-
-## Compatibilidade (o que veio do Cursor e precisa de atenção)
-
-- Quase todas as skills vêm com `disable-model-invocation: true`: o modelo não
-  as invoca sozinho — só por comando (`/skill:nome` no pi, `/` no Zed). Remova a
-  linha do frontmatter nas que quiser ativar por roteamento automático.
-- Frontmatter `icon`, `color` e `paths` são específicos do Cursor. O pi apenas
-  avisa; o Zed ignora. Podem ser removidos sem efeito nas duas ferramentas.
-- `agents/`, `automations/`, `plugin.json` e `.cursor-plugin/` são
-  Cursor-only e ficam aqui como referência (ex.: portar `poteto-agent` para
-  `~/.pi/agent/agents/` ou para subagents do Zed, quando quiser).
-- Skills que dependem de recurso do Cursor (`setup-pstack`, `ketchup-video`,
-  `make-bot-ui`, autopilot, etc.) vão precisar de adaptação ao pi/zed — é parte
-  da modificação desta cópia.
-- Quatro skills citadas pelo `ptm` não existem aqui: `create-skill` (built-in do
-  Cursor) e `deslop`, `control-cli`, `control-ui` (plugin `cursor-team-kit`).
-  O fallback (uma linha de skip + o passo equivalente do harness) está em
-  `pstack/local/ptm-hub.md`, anexado a `skills/ptm/SKILL.md` pelo `update.sh`.
-  Para acrescentar outro override local, crie o arquivo em `pstack/local/` e
-  anexe-o no `update.sh`; arquivo editado só em `pstack/skills/` some no
-  próximo `--apply`.
-
-## Atualizar do upstream
-
-```bash
-~/dotfiles/pstack/update.sh          # diff contra cursor/plugins (sem mexer)
-~/dotfiles/pstack/update.sh --apply  # sobrescreve com o upstream
-```
-
-O diff já vem normalizado (rename `ptm` + overlay de `pstack/local/`), então
-sair limpo significa "hub igual ao upstream + as divergências locais".
-Veja `pstack/UPSTREAM.md` para a origem exata e o commit vendored.
+- nome em minúsculas, números e hífens (até 64 chars), igual ao diretório
+- `description` diz o que faz **e** quando se aplica — é o que roteia
+- `SKILL.md` abaixo de 500 linhas; material pesado em `references/` ao lado
+- `disable-model-invocation: true` só quando a skill deve ser exclusivamente manual

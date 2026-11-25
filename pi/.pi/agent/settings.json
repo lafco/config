@@ -6,9 +6,8 @@
   "enabledModels": [],
   "hideThinkingBlock": false,
   "packages": [
-    "../../mcpb",
     "git:github.com/lafco/pi-cze-theme",
-    "../../dotfiles/pi/egm"
+    "../../repos/pi-agent-skills"
   ],
   "theme": "cze",
   "enableSkillCommands": true

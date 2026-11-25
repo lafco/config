@@ -81,34 +81,32 @@ Cada pasta é um "pacote". `dot stow` cria symlinks de `~/dotfiles/<pasta>/` par
 ├── starship/        # ~/.config/starship.toml (prompt)
 ├── atuin/           # ~/.config/atuin/config.toml (histórico)
 ├── gh-dash/         # ~/.config/gh-dash/config.yml (dashboard GitHub)
-├── skills/          # ~/.agents/skills/ (hub central de agent skills — pstack)
-├── pstack/          # cópia vendored do plugin pstack (fonte das skills)
+├── skills/          # ~/.agents/skills/ (hub de symlinks para o pacote pi-agent-skills)
 ├── t3code/          # ~/.t3/userdata/keybindings.json (hotkeys; sem folding)
 └── packages/        # failed_tools.txt (runtime, não versionado)
 ```
 
 ## Skills de agente (hub central)
 
-O pacote `skills` linka `~/.agents/skills/` para o repo: um hub único de agent
-skills (formato [Agent Skills](https://agentskills.io/specification), pasta com
-`SKILL.md`) que **pi**, **Zed** e **opencode** leem nativamente, sem cópia por
-ferramenta. É a
-cópia vendored do [pstack](https://github.com/cursor/plugins/tree/main/pstack)
-(58 skills), feita para ser modificada — os arquivos ficam em `pstack/skills/` e
-`skills/.agents/skills/` só tem symlinks para lá.
+O pacote `skills` linka `~/.agents/skills/` para o repo: um hub único que **pi**,
+**Zed** e **opencode** leem nativamente, sem cópia por ferramenta. O conteúdo não
+mora aqui — o hub só carrega symlinks para o pacote
+[`pi-agent-skills`](/home/lafco/repos/pi-agent-skills), que versiona as 26 skills do
+Addy Osmani (MIT), as 8 do Elephant-Goldfish Model (Apache-2.0) e as nossas.
 
 ```bash
-# pi:       /skill:ptm ...   (ou deixe o modelo escolher pela descrição)
-# zed:      /ptm (slash command) ou @skill
-# opencode: @ptm ...         (lê o mesmo hub via fonte de compatibilidade)
-
-# dentro de um projeto (opcional — o global já cobre):
-cd ~/repos/meu-app && ln -s ~/dotfiles/skills/.agents/skills .agents/skills
+~/repos/pi-agent-skills/scripts/install-pi.sh   # agentes + pacote + symlinks do hub
 ```
 
-Numa máquina nova: `dot init` já traz tudo. Detalhes, compatibilidade com o
-Cursor (frontmatter `icon`/`color`/`paths`, `agents/`, `automations/`) e como
-atualizar do upstream: ver `skills/README.md` e `pstack/update.sh`.
+```bash
+# pi:       /skill:<nome> ...  ou /spec, /plan, /build, /test, /review, /ship
+# zed:      /<nome> (slash command) ou @skill
+# opencode: @<nome> ...        (lê o mesmo hub)
+```
+
+Numa máquina nova: `dot init` traz o hub, e o `install-pi.sh` do pacote popula os
+links. Layout, licenças e como atualizar os upstreams: ver `skills/README.md` e
+`~/repos/pi-agent-skills/UPSTREAM.md`.
 
 ## Conteúdo local, fora do stow
 
