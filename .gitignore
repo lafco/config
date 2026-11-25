@@ -31,9 +31,15 @@ kiro/.kiro/workspaces/
 
 # Zellij runtime
 
+# Pi agent — estado local de máquina
+pi/.pi/agent/trust.json
+
 # Herdr runtime files
 herdr/.config/herdr/*.log
+herdr/.config/herdr/*.sock
+herdr/.config/herdr/*.sock.*
 herdr/.config/herdr/session.json
+herdr/.config/herdr/session-snapshots/
 herdr/.config/herdr/.plugins.lock
 herdr/.config/herdr/release-notes.json
 
