@@ -1,5 +1,10 @@
 [
   {
+    "key": "mod+f",
+    "command": "preview.find",
+    "when": "previewFocus"
+  },
+  {
     "key": "mod+b",
     "command": "sidebar.toggle",
     "when": "!terminalFocus"
@@ -414,13 +419,13 @@
     "when": "!terminalFocus && !previewFocus"
   },
   {
-    "key": "mod+b",
-    "command": "terminal.split",
-    "when": "terminalFocus"
-  },
-  {
     "key": "mod+u",
     "command": "preview.focusUrl",
     "when": "previewFocus"
+  },
+  {
+    "key": "mod+d",
+    "command": "terminal.split",
+    "when": "terminalFocus"
   }
 ]
