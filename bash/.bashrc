@@ -29,9 +29,6 @@ export HISTTIMEFORMAT="%F %T  "
 shopt -s histappend
 PROMPT_COMMAND="history -a${PROMPT_COMMAND:+; $PROMPT_COMMAND}"
 
-# ── WSL: WezTerm (Windows GUI) ──────────────────────────────────────────────
-[[ -x /mnt/c/WezTerm/wezterm.exe ]] && alias wezterm="/mnt/c/WezTerm/wezterm.exe"
-
 # ── Shell options ─────────────────────────────────────────────────────────────
 shopt -s checkwinsize
 shopt -s globstar

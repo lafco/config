@@ -10,8 +10,8 @@
 #     binário oficial (GitHub release) para ~/.local/bin
 #   - Instalação resiliente: ferramenta com falha não interrompe o init;
 #     as falhas ficam registradas em packages/failed_tools.txt (dot retry-failed)
-#   - Symlinks via GNU Stow (pacotes: bash nvim pi wezterm zellij television
-#     starship atuin gh-dash herdr kiro t3code)
+#   - Symlinks via GNU Stow (pacotes: bash nvim pi herdr-app zellij television
+#     starship atuin gh-dash kiro vscode zed)
 #
 # Comandos: init | update | doctor | stow | links | retry-failed | link | unlink | edit | help
 
@@ -43,7 +43,7 @@ LOCAL_LINKS_ISSUES=0
 LOCAL_LINKS_RELS=()
 
 # Pacotes Stow (lista explícita — evita stowar diretórios que não são pacotes)
-readonly STOW_PACKAGES="bash nvim pi wezterm zellij television starship atuin gh-dash herdr kiro vscode zed skills t3code"
+readonly STOW_PACKAGES="bash nvim pi herdr-app zellij television starship atuin gh-dash kiro vscode zed skills t3code"
 
 # Pacotes stowados sem folding: o stow cria o diretório real em $HOME e linka só
 # as folhas do repo. É o que permite conteúdo local (não versionado) morar em
@@ -51,8 +51,11 @@ readonly STOW_PACKAGES="bash nvim pi wezterm zellij television starship atuin gh
 # virar "conflito" a cada re-stow e sem o .gitignore listar o que é local.
 # Vale também para ~/.t3/userdata (t3code): lá vive o estado do app (sqlite de
 # threads, logs, caches, secrets) e só keybindings.json é versionado.
+# Vale também para ~/.config/herdr-app (app desktop do herdr): lá o app grava
+# view.json, shared.json, icons/, frame/, mods/ e data/, então só o que é do
+# usuário (settings.json, keys.json) é linkado do repo.
 # Ver README ("Conteúdo local, fora do stow").
-readonly NO_FOLD_PACKAGES="pi t3code"
+readonly NO_FOLD_PACKAGES="pi herdr-app t3code"
 
 # Flags extras do stow (ex.: -n no dry-run), preenchidas por quem chama __stow_all.
 STOW_FLAGS=()
@@ -169,8 +172,6 @@ TOOLS=(
     "neovim | nvim | - | - | - | ghrelease:neovim/neovim"
     # ── terminal ──
     "zellij  | zellij | zellij | - | zellij | native+ghrelease:zellij-org/zellij"
-    "herdr   | herdr  | -      | - | -      | ghrelease:ogulcancelik/herdr"
-    "wezterm | wezterm | wezterm | - | - | native+appimage:wez/wezterm"
     "nushell | nu | nushell | - | nushell | native+ghrelease:nushell/nushell"
     # ── runtimes ──
     "node   | node    | nodejs npm | nodejs npm | nodejs | native"
@@ -236,7 +237,8 @@ __gh_arch_regex() {
 }
 
 # GitHub release → extrai e linka os executáveis em ~/.local/bin
-# Suporta arquivos (tar.gz/xz/zip) e binários crus sem extensão (herdr, gh-dash).
+# Suporta arquivos (tar.gz/xz/zip) e binários crus sem extensão (gh-dash,
+# starship).
 __ghrelease_install() {
     local repo="$1" bin="$2" arch asset_url tmpdir name
     arch="$(__gh_arch_regex)"
@@ -253,7 +255,7 @@ __ghrelease_install() {
             | __arch_filter || true
         )"
     fi
-    # 3) binário cru sem extensão (herdr-linux-x86_64, gh-dash_*_linux-amd64...)
+    # 3) binário cru sem extensão (starship-linux-x86_64, gh-dash_*_linux-amd64...)
     if [[ -z "$asset_url" ]]; then
         asset_url="$(
             __gh_latest_asset "$repo" "(?i)(linux.*${arch}|${arch}.*linux)" \
@@ -323,7 +325,8 @@ __pkgfile_install() {
     return $rc
 }
 
-# AppImage → ~/.local/bin (ex.: wezterm)
+# AppImage → ~/.local/bin (nenhuma ferramenta usa hoje; é o último recurso do
+# kind native+appimage:<repo>)
 __appimage_install() {
     local repo="$1" url name
     url="$(__gh_latest_asset "$repo" "AppImage$" | __arch_filter || true)"
@@ -516,20 +519,11 @@ __step_tools() {
     rm -f "$FAILED_TOOLS_FILE"
     local failed=0
 
-    if $IS_WSL; then
-        __print_info "WSL detectado — WezTerm roda como app do Windows; pulando instalação Linux"
-    fi
-
     for row in "${TOOLS[@]}"; do
         __parse_tool "$row"
 
         # --only <tool>: instala só a ferramenta pedida
         [[ -n "${ONLY_TOOL:-}" ]] && [[ "$t_name" != "$ONLY_TOOL" ]] && continue
-
-        if [[ "$t_name" == "wezterm" ]] && $IS_WSL; then
-            __print_info "wezterm: use o app do Windows (alias já configurado no .bashrc)"
-            continue
-        fi
 
         if ! __install_tool "$row"; then
             failed=$((failed + 1))

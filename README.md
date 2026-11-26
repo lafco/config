@@ -25,7 +25,7 @@ O `dot init` detecta a distro e instala:
 | Ferramentas | rg, fd, bat, eza, zoxide, fzf, tv, starship, atuin, btop, direnv, nushell |
 | Git | lazygit, jj, gh, gh-dash, diffnav |
 | Editor | neovim (release oficial) |
-| Terminal | zellij, herdr, wezterm (AppImage no apt/dnf; app do Windows no WSL) |
+| Terminal | zellij (multiplexer); no NixOS o terminal é o herdr-app, ver abaixo |
 | Runtimes | node, python, rust (rustup) |
 | Fontes | JetBrains Mono Nerd Font |
 | Configs | stow de todos os pacotes + `dot` linkado em `~/.local/bin` |
@@ -74,9 +74,8 @@ Cada pasta é um "pacote". `dot stow` cria symlinks de `~/dotfiles/<pasta>/` par
 ├── bash/            # .bashrc, .bash_profile, .aliases, .functions
 ├── nvim/            # ~/.config/nvim/ (LazyVim)
 ├── pi/              # ~/.pi/agent/ (settings, extensions, skills; sem folding)
-├── wezterm/         # ~/.config/wezterm/ (terminal)
+├── herdr-app/       # ~/.config/herdr-app/ (settings.json, keys.json; sem folding)
 ├── zellij/          # ~/.config/zellij/ (multiplexer)
-├── herdr/           # ~/.config/herdr/ (AI workspace manager)
 ├── television/      # ~/.config/television/ (fuzzy finder)
 ├── starship/        # ~/.config/starship.toml (prompt)
 ├── atuin/           # ~/.config/atuin/config.toml (histórico)
@@ -149,6 +148,28 @@ Modelos e providers **não** são config do T3 Code: a lista vem dos drivers
 
 ```bash
 dot stow t3code   # (re)aplica só o link do keybindings.json
+```
+
+## Herdr app (desktop)
+
+O `herdr-app` (nixpkgs-unstable, no NixOS vindo de `home/modules/ai.nix`) é o
+terminal principal da máquina daily. O pacote `herdr-app` versiona **só** o que
+é do usuário: `settings.json` e `keys.json`. O resto de `~/.config/herdr-app` é
+do app — `view.json`, `shared.json`, `window.json`, `installed.json`, `seen.json`,
+`data/`, `frame/`, `icons/`, `mods/`, `layouts/.state/` e os `*.d.ts` (reescritos a
+cada start) — e fica fora do checkout por causa do `--no-folding`.
+
+O app grava com `write_atomic`, que resolve o alvo do symlink antes do rename
+(`src/persist.rs`, `resolve_target`): editar pelas configurações do app ou pelo
+atalho de escape (`ctrl-alt-shift-escape`) grava direto no repo, e o symlink não
+vira arquivo comum. Basta `dot stow herdr-app` depois de clonar.
+
+O que ainda **não** é versionado, por escolha: `layouts/<nome>.json` (o app
+reescreve a cada arrasto de painel, então o repo ganharia diff constante) e
+`programs.json` (preferências de ícone/nome de programa).
+
+```bash
+dot stow herdr-app   # (re)aplica os links de settings.json e keys.json
 ```
 
 ## Links locais (conteúdo privado)

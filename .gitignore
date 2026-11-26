@@ -34,14 +34,25 @@ kiro/.kiro/workspaces/
 # Pi agent — estado local de máquina
 pi/.pi/agent/trust.json
 
-# Herdr runtime files
-herdr/.config/herdr/*.log
-herdr/.config/herdr/*.sock
-herdr/.config/herdr/*.sock.*
-herdr/.config/herdr/session.json
-herdr/.config/herdr/session-snapshots/
-herdr/.config/herdr/.plugins.lock
-herdr/.config/herdr/release-notes.json
+# Herdr app (desktop) — estado do app. O pacote é stowado com --no-folding,
+# então isto mora em ~/.config/herdr-app fora do checkout; as linhas são só rede
+# de segurança contra um stow sem a flag.
+herdr-app/.config/herdr-app/view.json
+herdr-app/.config/herdr-app/shared.json*
+herdr-app/.config/herdr-app/window.json
+herdr-app/.config/herdr-app/windows.json
+herdr-app/.config/herdr-app/installed.json
+herdr-app/.config/herdr-app/seen.json
+herdr-app/.config/herdr-app/update-notes.json
+herdr-app/.config/herdr-app/*.sock
+herdr-app/.config/herdr-app/*.d.ts
+herdr-app/.config/herdr-app/*.error
+herdr-app/.config/herdr-app/data/
+herdr-app/.config/herdr-app/frame/
+herdr-app/.config/herdr-app/icons/
+herdr-app/.config/herdr-app/mods/
+herdr-app/.config/herdr-app/update-notes-media/
+herdr-app/.config/herdr-app/layouts/.state/
 
 # dot CLI runtime (falhas de instalação)
 packages/failed_tools.txt
