@@ -81,7 +81,6 @@ Cada pasta é um "pacote". `dot stow` cria symlinks de `~/dotfiles/<pasta>/` par
 ├── atuin/           # ~/.config/atuin/config.toml (histórico)
 ├── gh-dash/         # ~/.config/gh-dash/config.yml (dashboard GitHub)
 ├── skills/          # ~/.agents/skills/ (hub de symlinks para o pacote pi-agent-skills)
-├── t3code/          # ~/.t3/userdata/keybindings.json (hotkeys; sem folding)
 └── packages/        # failed_tools.txt (runtime, não versionado)
 ```
 
@@ -125,30 +124,6 @@ Se um dia `~/.pi/agent/skills` virar symlink de novo (stow sem a flag num
 diretório que não existe), o conteúdo local fica preso dentro do checkout. Foi o
 que motivou a mudança: antes o `.gitignore` listava nome por nome e o repositório
 público acabava nomeando coisa interna.
-
-## T3 Code (hotkeys)
-
-O pacote `t3code` versiona **só** `~/.t3/userdata/keybindings.json` — o resto de
-`~/.t3/userdata` é estado do app (sqlite de threads, logs, caches, secrets) e
-fica fora do checkout por causa do `--no-folding`.
-
-O app escreve esse arquivo com rename atômico, mas resolve o alvo do symlink
-antes (`resolveSymlinkTarget`): editar hotkeys na UI grava direto no repo, e o
-symlink não é substituído por um arquivo comum.
-
-Duas coisas geram diff com o tempo: o backfill de defaults no startup (defaults
-novos entram no topo do array a cada versão) e as migrações registradas em
-`~/.t3/userdata/keybindings-migrations`. Revise e commite; reverter é seguro —
-o app recria o que faltar.
-
-Modelos e providers **não** são config do T3 Code: a lista vem dos drivers
-(`pi`, `opencode`, `codex`, `claude`...), cada um com sua própria config. O que
-é do app é a preferência de modelo por provider, em `client-settings.json`, que
-é regravado a cada mudança de preferência — por isso não é versionado.
-
-```bash
-dot stow t3code   # (re)aplica só o link do keybindings.json
-```
 
 ## Herdr app (desktop)
 
